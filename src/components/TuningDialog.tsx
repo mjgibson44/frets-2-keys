@@ -6,16 +6,19 @@ import { noteToMidi, midiToNote, TUNINGS } from '@/lib/notes';
 interface TuningDialogProps {
   isOpen: boolean;
   tuning: string[];
+  capo: number;
   onClose: () => void;
-  onSave: (tuning: string[]) => void;
+  onSave: (tuning: string[], capo: number) => void;
 }
 
-export default function TuningDialog({ isOpen, tuning, onClose, onSave }: TuningDialogProps) {
+export default function TuningDialog({ isOpen, tuning, capo, onClose, onSave }: TuningDialogProps) {
   const [editedTuning, setEditedTuning] = useState<string[]>(tuning);
+  const [editedCapo, setEditedCapo] = useState<number>(capo);
 
   useEffect(() => {
     setEditedTuning(tuning);
-  }, [tuning, isOpen]);
+    setEditedCapo(capo);
+  }, [tuning, capo, isOpen]);
 
   if (!isOpen) return null;
 
@@ -48,8 +51,15 @@ export default function TuningDialog({ isOpen, tuning, onClose, onSave }: Tuning
   };
 
   const handleSave = () => {
-    onSave(editedTuning);
+    onSave(editedTuning, editedCapo);
     onClose();
+  };
+
+  const handleCapoChange = (delta: number) => {
+    const newCapo = editedCapo + delta;
+    if (newCapo >= 0 && newCapo <= 12) {
+      setEditedCapo(newCapo);
+    }
   };
 
   // String labels from high to low (display order)
@@ -119,6 +129,36 @@ export default function TuningDialog({ isOpen, tuning, onClose, onSave }: Tuning
               </div>
             );
           })}
+        </div>
+
+        {/* Capo selector */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-zinc-600 mb-2">
+            Capo
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleCapoChange(-1)}
+              disabled={editedCapo === 0}
+              className="w-8 h-8 flex items-center justify-center bg-zinc-200 hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <span className="w-16 text-center font-mono text-lg">
+              {editedCapo === 0 ? 'None' : `Fret ${editedCapo}`}
+            </span>
+            <button
+              onClick={() => handleCapoChange(1)}
+              disabled={editedCapo === 12}
+              className="w-8 h-8 flex items-center justify-center bg-zinc-200 hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Actions */}

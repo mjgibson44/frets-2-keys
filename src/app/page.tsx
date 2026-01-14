@@ -13,13 +13,14 @@ import { identifyChord } from '@/lib/chords';
 interface Fretboard {
   id: string;
   tuning: string[];
+  capo: number;
 }
 
 export default function Home() {
   const [selectedNotes, setSelectedNotes] = useState<SelectedNote[]>([]);
   const [nextColorIndex, setNextColorIndex] = useState(0);
   const [fretboards, setFretboards] = useState<Fretboard[]>([
-    { id: '1', tuning: TUNINGS.standard.notes }
+    { id: '1', tuning: TUNINGS.standard.notes, capo: 0 }
   ]);
   const [editingFretboardId, setEditingFretboardId] = useState<string | null>(null);
   const [playMode, setPlayMode] = useState<'chord' | 'arpeggio'>('chord');
@@ -100,10 +101,10 @@ export default function Home() {
     handleChordSelect(savedChords[nextIndex]);
   };
 
-  const handleTuningSave = (newTuning: string[]) => {
+  const handleTuningSave = (newTuning: string[], newCapo: number) => {
     if (!editingFretboardId) return;
     setFretboards(prev => prev.map(fb =>
-      fb.id === editingFretboardId ? { ...fb, tuning: newTuning } : fb
+      fb.id === editingFretboardId ? { ...fb, tuning: newTuning, capo: newCapo } : fb
     ));
   };
 
@@ -111,6 +112,7 @@ export default function Home() {
     const newFretboard: Fretboard = {
       id: Date.now().toString(),
       tuning: TUNINGS.standard.notes,
+      capo: 0,
     };
     setFretboards(prev => [...prev, newFretboard]);
   };
@@ -240,6 +242,7 @@ export default function Home() {
             <div key={fretboard.id} className="flex-1 min-w-0">
               <GuitarFretboard
                 tuning={fretboard.tuning}
+                capo={fretboard.capo}
                 selectedNotes={selectedNotes}
                 onNoteSelect={handleNoteSelect}
                 onEditTuning={() => setEditingFretboardId(fretboard.id)}
@@ -259,6 +262,7 @@ export default function Home() {
       <TuningDialog
         isOpen={editingFretboardId !== null}
         tuning={editingFretboard?.tuning ?? TUNINGS.standard.notes}
+        capo={editingFretboard?.capo ?? 0}
         onClose={() => setEditingFretboardId(null)}
         onSave={handleTuningSave}
       />

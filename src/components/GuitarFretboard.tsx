@@ -5,6 +5,7 @@ import { SelectedNote, getColor } from '@/lib/colors';
 
 interface GuitarFretboardProps {
   tuning: string[];
+  capo: number;
   selectedNotes: SelectedNote[];
   onNoteSelect: (note: string) => void;
   onEditTuning: () => void;
@@ -15,7 +16,7 @@ const SINGLE_MARKERS = [3, 5, 7, 9, 15, 17, 19, 21];
 const DOUBLE_MARKERS = [12, 24];
 const NUM_FRETS = 24;
 
-export default function GuitarFretboard({ tuning, selectedNotes, onNoteSelect, onEditTuning, onDelete }: GuitarFretboardProps) {
+export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, onEditTuning, onDelete }: GuitarFretboardProps) {
   const strings = [...tuning].reverse();
 
   const getSelectedNote = (note: string): SelectedNote | undefined => {
@@ -31,6 +32,11 @@ export default function GuitarFretboard({ tuning, selectedNotes, onNoteSelect, o
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm text-zinc-500">Tuning:</span>
         <span className="font-mono text-sm text-zinc-700">{tuningDisplay}</span>
+        {capo > 0 && (
+          <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded">
+            Capo {capo}
+          </span>
+        )}
         <button
           onClick={onEditTuning}
           className="p-1.5 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
@@ -65,26 +71,33 @@ export default function GuitarFretboard({ tuning, selectedNotes, onNoteSelect, o
                   const note = getNoteAtFret(openNote, fret);
                   const selected = getSelectedNote(note);
                   const isOpen = fret === 0;
-                  const color = selected ? getColor(selected.colorIndex) : null;
+                  const isBelowCapo = fret < capo;
+                  const isCapoFret = fret === capo;
+                  const color = selected && !isBelowCapo ? getColor(selected.colorIndex) : null;
 
                   return (
                     <button
                       key={fret}
-                      onClick={() => onNoteSelect(note)}
+                      onClick={() => !isBelowCapo && onNoteSelect(note)}
+                      disabled={isBelowCapo}
                       className={`
                         w-14 h-10 flex-shrink-0 flex items-center justify-center
                         text-xs font-mono transition-colors
                         ${isOpen
                           ? 'border-r-4 border-r-zinc-400'
-                          : 'border-r border-r-zinc-300'
+                          : isCapoFret
+                            ? 'border-r-4 border-r-amber-500'
+                            : 'border-r border-r-zinc-300'
                         }
-                        ${color
-                          ? `${color.bg} ${color.text} ring-1 ring-inset ${color.ring} font-medium`
-                          : 'bg-transparent text-zinc-700 hover:bg-zinc-100'
+                        ${isBelowCapo
+                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                          : color
+                            ? `${color.bg} ${color.text} ring-1 ring-inset ${color.ring} font-medium`
+                            : 'bg-transparent text-zinc-700 hover:bg-zinc-100'
                         }
                       `}
                     >
-{note.replace(/\d+$/, '')}
+                      {isBelowCapo ? '' : note.replace(/\d+$/, '')}
                     </button>
                   );
                 })}
