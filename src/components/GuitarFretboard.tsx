@@ -105,23 +105,46 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
             ))}
           </div>
 
-          {/* Fret numbers with dot markers at bottom */}
+          {/* Capo-relative fret numbers (first row when capo active, spacer when not) */}
           <div className="flex mt-2">
+            {capo > 0 ? (
+              Array.from({ length: NUM_FRETS + 1 }, (_, fret) => {
+                const capoRelative = fret - capo;
+                return (
+                  <div
+                    key={fret}
+                    className="w-14 flex-shrink-0 flex items-center justify-center"
+                  >
+                    <span className="text-xs text-amber-600 font-mono font-medium">
+                      {fret >= capo ? capoRelative : ''}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="w-14 flex-shrink-0 flex items-center justify-center">
+                <span className="text-xs font-mono">&nbsp;</span>
+              </div>
+            )}
+          </div>
+
+          {/* Fret numbers with dot markers */}
+          <div className="flex mt-1">
             {Array.from({ length: NUM_FRETS + 1 }, (_, fret) => (
               <div
                 key={fret}
-                className="w-14 flex-shrink-0 flex flex-col items-center gap-1"
+                className="w-14 flex-shrink-0 flex items-center justify-center gap-1"
               >
                 <span className="text-xs text-zinc-500 font-mono">
                   {fret === 0 ? '' : fret}
                 </span>
                 {SINGLE_MARKERS.includes(fret) && (
-                  <div className="w-2 h-2 rounded-full bg-zinc-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                 )}
                 {DOUBLE_MARKERS.includes(fret) && (
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-zinc-400" />
-                    <div className="w-2 h-2 rounded-full bg-zinc-400" />
+                  <div className="flex flex-col gap-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                   </div>
                 )}
               </div>
