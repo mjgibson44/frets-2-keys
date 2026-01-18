@@ -5,7 +5,7 @@ import GuitarFretboard from '@/components/GuitarFretboard';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import SettingsDialog from '@/components/SettingsDialog';
 import SavedChords, { SavedChord } from '@/components/SavedChords';
-import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKey } from '@/lib/notes';
+import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKey, noteToMidi, midiToNote } from '@/lib/notes';
 import { playNote, playChord, playArpeggio } from '@/lib/audio';
 import { SelectedNote, getColor } from '@/lib/colors';
 import { identifyChord } from '@/lib/chords';
@@ -56,6 +56,23 @@ export default function Home() {
     setSelectedNotes([]);
     setNextColorIndex(0);
     setActiveChordId(null);
+  };
+
+  const handleTranspose = (semitones: number) => {
+    if (selectedNotes.length === 0) return;
+
+    // If in 'onlyInKey' mode, switch to 'showAll'
+    if (keyLabelMode === 'onlyInKey') {
+      setKeyLabelMode('showAll');
+    }
+
+    setSelectedNotes(prev => prev.map(sn => {
+      const midi = noteToMidi(sn.note);
+      const newMidi = midi + semitones;
+      // Keep within valid MIDI range
+      if (newMidi < 0 || newMidi > 127) return sn;
+      return { ...sn, note: midiToNote(newMidi) };
+    }));
   };
 
   const handlePlayAll = () => {
@@ -193,6 +210,24 @@ export default function Home() {
                   </span>
                 );
               })}
+              <button
+                onClick={() => handleTranspose(-1)}
+                className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-zinc-300 text-zinc-400 hover:text-zinc-600 transition-colors"
+                title="Transpose down 1 semitone"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleTranspose(1)}
+                className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-zinc-300 text-zinc-400 hover:text-zinc-600 transition-colors"
+                title="Transpose up 1 semitone"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+              </button>
               <button
                 onClick={handleClearAll}
                 className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-zinc-300 text-zinc-400 hover:text-zinc-600 transition-colors"

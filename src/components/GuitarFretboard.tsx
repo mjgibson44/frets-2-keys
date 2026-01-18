@@ -62,8 +62,8 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                     >
                       {isBelowCapo ? (
                         <div className="flex-1" />
-                      ) : keyLabelMode === 'onlyInKey' && !inKey ? (
-                        /* Note not in key and mode is onlyInKey - just show the string line */
+                      ) : keyLabelMode === 'onlyInKey' && !inKey && !color ? (
+                        /* Note not in key, not selected, and mode is onlyInKey - just show the string line */
                         <div className="flex-1 h-0.5 bg-[#E1E1E1]" />
                       ) : (
                         <>
@@ -77,7 +77,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                                 ? `${color.bg} ${color.text} font-medium`
                                 : 'text-zinc-700 hover:bg-zinc-100'
                               }
-                              ${keyLabelMode === 'showAll' && !inKey ? 'opacity-30' : ''}
+                              ${keyLabelMode === 'showAll' && !inKey && !color ? 'opacity-30' : ''}
                             `}
                           >
                             {note.replace(/\d+$/, '')}
