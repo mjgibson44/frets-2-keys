@@ -177,20 +177,6 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-[16px]">
         {/* Controls bar */}
         <header className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={handlePlayAll}
-            disabled={selectedNotes.length === 0}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-              selectedNotes.length > 0
-                ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                : 'text-zinc-300 cursor-not-allowed'
-            }`}
-            title="Play all selected notes"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </button>
           {selectedNotes.length > 0 ? (
             <div className="flex items-center gap-2">
               {chordName && (
@@ -209,39 +195,50 @@ export default function Home() {
                   </span>
                 );
               })}
-              <button
-                onClick={() => handleTranspose(-1)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                title="Transpose down 1 semitone"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => handleTranspose(1)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                title="Transpose up 1 semitone"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                title="Clear all notes"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handlePlayAll}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="Play all selected notes"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => handleTranspose(-1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="Transpose down 1 semitone"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => handleTranspose(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="Transpose up 1 semitone"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleClearAll}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="Clear all notes"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           ) : (
             <span className="text-sm text-zinc-400">No notes selected</span>
           )}
           {activeChordId ? (
-            <>
+            <div className="flex items-center gap-1">
               <button
                 onClick={handleUpdateChord}
                 disabled={selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
@@ -270,7 +267,7 @@ export default function Home() {
                   <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
               </button>
-            </>
+            </div>
           ) : (
             <button
               onClick={handleSaveChordAsNew}
