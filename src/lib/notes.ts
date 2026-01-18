@@ -53,3 +53,36 @@ export function isBlackKey(note: string): boolean {
   const { name } = parseNote(note);
   return name.includes('#');
 }
+
+// Scale intervals (semitones from root)
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
+
+export type KeyType = 'major' | 'minor';
+
+export interface MusicalKey {
+  root: NoteName;
+  type: KeyType;
+}
+
+export const ALL_KEYS: MusicalKey[] = [
+  ...NOTE_NAMES.map(root => ({ root, type: 'major' as KeyType })),
+  ...NOTE_NAMES.map(root => ({ root, type: 'minor' as KeyType })),
+];
+
+export function getKeyName(key: MusicalKey): string {
+  return `${key.root} ${key.type}`;
+}
+
+export function getNotesInKey(key: MusicalKey): NoteName[] {
+  const rootIndex = NOTE_NAMES.indexOf(key.root);
+  const intervals = key.type === 'major' ? MAJOR_SCALE : MINOR_SCALE;
+  return intervals.map(interval => NOTE_NAMES[(rootIndex + interval) % 12]);
+}
+
+export function isNoteInKey(note: string, key: MusicalKey | null): boolean {
+  if (!key) return true; // No key selected, all notes are "in key"
+  const { name } = parseNote(note);
+  const notesInKey = getNotesInKey(key);
+  return notesInKey.includes(name);
+}

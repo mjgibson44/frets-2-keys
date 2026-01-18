@@ -1,12 +1,13 @@
 'use client';
 
-import { generatePianoRange, isBlackKey, noteToMidi, midiToNote } from '@/lib/notes';
+import { generatePianoRange, isBlackKey, noteToMidi, midiToNote, MusicalKey, isNoteInKey } from '@/lib/notes';
 import { SelectedNote, getColor } from '@/lib/colors';
 
 interface PianoKeyboardProps {
   tuning: string[];
   selectedNotes: SelectedNote[];
   onNoteSelect: (note: string) => void;
+  selectedKey: MusicalKey | null;
 }
 
 const END_NOTE = 'E6';
@@ -24,7 +25,7 @@ const BLACK_KEY_AFTER: Record<string, string | null> = {
   'B': null,
 };
 
-export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect }: PianoKeyboardProps) {
+export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey }: PianoKeyboardProps) {
   // Find the lowest note in the tuning
   const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
 
@@ -50,7 +51,7 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect }: P
   };
 
   return (
-    <div className="border border-zinc-300 rounded-[12px] bg-white p-4">
+    <div className="border border-[#EDE9E9] rounded-[16px] bg-white p-[24px]">
       <div className="overflow-x-auto scrollbar-hide">
         <div className="relative inline-block">
         {/* White keys */}
@@ -58,22 +59,23 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect }: P
           {whiteNotes.map((note, index) => {
             const selected = getSelectedNote(note);
             const color = selected ? getColor(selected.colorIndex) : null;
+            const inKey = isNoteInKey(note, selectedKey);
             return (
               <button
                 key={note}
                 onClick={() => onNoteSelect(note)}
                 className={`
-                  h-36 rounded-b border border-zinc-300
+                  h-36 rounded-b border border-[#EDE9E9]
                   flex flex-col items-center justify-end pb-2
-                  text-xs font-mono transition-colors
+                  text-xs transition-colors
                   ${color
-                    ? `${color.bg} ${color.text} ring-1 ring-inset ${color.ring} font-medium`
+                    ? `${color.bg} ${color.text} font-medium`
                     : 'bg-white text-zinc-600 hover:bg-zinc-100'
                   }
                 `}
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
               >
-{note.replace(/\d+$/, '')}
+                {inKey ? note.replace(/\d+$/, '') : ''}
               </button>
             );
           })}
@@ -94,6 +96,7 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect }: P
 
           const selected = getSelectedNote(blackNote);
           const color = selected ? getColor(selected.colorIndex) : null;
+          const inKey = isNoteInKey(blackNote, selectedKey);
 
           // Position: right edge of current white key minus half of black key width
           const leftPosition = (index + 1) * WHITE_KEY_WIDTH - BLACK_KEY_WIDTH / 2;
@@ -106,14 +109,14 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect }: P
               className={`
                 absolute top-0 h-20 rounded-b
                 flex flex-col items-center justify-end pb-1
-                text-[10px] font-mono transition-colors z-10
+                text-xs transition-colors z-10
                 ${color
-                  ? `${color.bg} ${color.text} ring-1 ring-inset ${color.ring} font-medium`
+                  ? `${color.bg} ${color.text} font-medium`
                   : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'
                 }
               `}
             >
-{blackNote.replace(/\d+$/, '')}
+              {inKey ? blackNote.replace(/\d+$/, '') : ''}
             </button>
           );
         })}
