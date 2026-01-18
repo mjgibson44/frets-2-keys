@@ -75,7 +75,9 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 `}
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
               >
-                {inKey ? note.replace(/\d+$/, '') : ''}
+                <span className={!inKey ? 'opacity-50' : ''}>
+                  {note.replace(/\d+$/, '')}
+                </span>
               </button>
             );
           })}
@@ -116,7 +118,9 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 }
               `}
             >
-              {inKey ? blackNote.replace(/\d+$/, '') : ''}
+              <span className={!inKey ? 'opacity-50' : ''}>
+                {blackNote.replace(/\d+$/, '')}
+              </span>
             </button>
           );
         })}
