@@ -29,6 +29,7 @@ export default function Home() {
   const [showPiano, setShowPiano] = useState(true);
   const [selectedKey, setSelectedKey] = useState<MusicalKey | null>({ root: 'C', type: 'major' });
   const [keyDropdownOpen, setKeyDropdownOpen] = useState(false);
+  const [keyLabelMode, setKeyLabelMode] = useState<'onlyInKey' | 'showAll'>('showAll');
 
   const chordName = identifyChord(selectedNotes.map(sn => sn.note));
 
@@ -353,6 +354,7 @@ export default function Home() {
                   onNoteSelect={handleNoteSelect}
                   anyCapoActive={anyCapoActive}
                   selectedKey={selectedKey}
+                  keyLabelMode={keyLabelMode}
                 />
               </div>
             ))}
@@ -365,6 +367,7 @@ export default function Home() {
             selectedNotes={selectedNotes}
             onNoteSelect={handleNoteSelect}
             selectedKey={selectedKey}
+            keyLabelMode={keyLabelMode}
           />
         )}
       </div>
@@ -375,10 +378,13 @@ export default function Home() {
         fretboardCount={fretboards.length}
         showPiano={showPiano}
         playMode={playMode}
+        keyLabelMode={keyLabelMode}
+        hasKeySelected={selectedKey !== null}
         onClose={() => setSettingsOpen(false)}
         onFretboardCountChange={handleFretboardCountChange}
         onShowPianoChange={setShowPiano}
         onPlayModeChange={setPlayMode}
+        onKeyLabelModeChange={setKeyLabelMode}
         onTuningChange={handleTuningChange}
         onCapoChange={handleCapoChange}
       />

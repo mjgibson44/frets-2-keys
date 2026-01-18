@@ -8,6 +8,7 @@ interface PianoKeyboardProps {
   selectedNotes: SelectedNote[];
   onNoteSelect: (note: string) => void;
   selectedKey: MusicalKey | null;
+  keyLabelMode: 'onlyInKey' | 'showAll';
 }
 
 const END_NOTE = 'E6';
@@ -25,7 +26,7 @@ const BLACK_KEY_AFTER: Record<string, string | null> = {
   'B': null,
 };
 
-export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey }: PianoKeyboardProps) {
+export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode }: PianoKeyboardProps) {
   // Find the lowest note in the tuning
   const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
 
@@ -75,9 +76,11 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 `}
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
               >
-                <span className={!inKey ? 'opacity-50' : ''}>
-                  {note.replace(/\d+$/, '')}
-                </span>
+                {keyLabelMode === 'onlyInKey' && !inKey ? '' : (
+                  <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}>
+                    {note.replace(/\d+$/, '')}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -118,9 +121,11 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 }
               `}
             >
-              <span className={!inKey ? 'opacity-50' : ''}>
-                {blackNote.replace(/\d+$/, '')}
-              </span>
+              {keyLabelMode === 'onlyInKey' && !inKey ? '' : (
+                <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}>
+                  {blackNote.replace(/\d+$/, '')}
+                </span>
+              )}
             </button>
           );
         })}

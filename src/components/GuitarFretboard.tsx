@@ -10,13 +10,14 @@ interface GuitarFretboardProps {
   onNoteSelect: (note: string) => void;
   anyCapoActive?: boolean;
   selectedKey: MusicalKey | null;
+  keyLabelMode: 'onlyInKey' | 'showAll';
 }
 
 const SINGLE_MARKERS = [3, 5, 7, 9, 15, 17, 19, 21];
 const DOUBLE_MARKERS = [12, 24];
 const NUM_FRETS = 24;
 
-export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey }: GuitarFretboardProps) {
+export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey, keyLabelMode }: GuitarFretboardProps) {
   const strings = [...tuning].reverse();
 
   const getSelectedNote = (note: string): SelectedNote | undefined => {
@@ -61,6 +62,9 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                     >
                       {isBelowCapo ? (
                         <div className="flex-1" />
+                      ) : keyLabelMode === 'onlyInKey' && !inKey ? (
+                        /* Note not in key and mode is onlyInKey - just show the string line */
+                        <div className="flex-1 h-0.5 bg-[#E1E1E1]" />
                       ) : (
                         <>
                           {/* Left string line */}
@@ -73,7 +77,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                                 ? `${color.bg} ${color.text} font-medium`
                                 : 'text-zinc-700 hover:bg-zinc-100'
                               }
-                              ${!inKey ? 'opacity-50' : ''}
+                              ${keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}
                             `}
                           >
                             {note.replace(/\d+$/, '')}

@@ -14,10 +14,13 @@ interface SettingsDialogProps {
   fretboardCount: number;
   showPiano: boolean;
   playMode: 'chord' | 'arpeggio';
+  keyLabelMode: 'onlyInKey' | 'showAll';
+  hasKeySelected: boolean;
   onClose: () => void;
   onFretboardCountChange: (count: number) => void;
   onShowPianoChange: (show: boolean) => void;
   onPlayModeChange: (mode: 'chord' | 'arpeggio') => void;
+  onKeyLabelModeChange: (mode: 'onlyInKey' | 'showAll') => void;
   onTuningChange: (fretboardId: string, tuning: string[]) => void;
   onCapoChange: (fretboardId: string, capo: number) => void;
 }
@@ -28,10 +31,13 @@ export default function SettingsDialog({
   fretboardCount,
   showPiano,
   playMode,
+  keyLabelMode,
+  hasKeySelected,
   onClose,
   onFretboardCountChange,
   onShowPianoChange,
   onPlayModeChange,
+  onKeyLabelModeChange,
   onTuningChange,
   onCapoChange,
 }: SettingsDialogProps) {
@@ -114,6 +120,35 @@ export default function SettingsDialog({
               }`}
             >
               Arpeggio
+            </button>
+          </div>
+        </div>
+
+        {/* Key Labels */}
+        <div className={`mb-6 ${!hasKeySelected ? 'opacity-40 pointer-events-none' : ''}`}>
+          <label className="block text-sm font-medium text-zinc-600 mb-3">
+            Key Labels
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => onKeyLabelModeChange('onlyInKey')}
+              className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                keyLabelMode === 'onlyInKey'
+                  ? 'bg-zinc-800 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              Only show notes in key
+            </button>
+            <button
+              onClick={() => onKeyLabelModeChange('showAll')}
+              className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                keyLabelMode === 'showAll'
+                  ? 'bg-zinc-800 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              Show all notes
             </button>
           </div>
         </div>
