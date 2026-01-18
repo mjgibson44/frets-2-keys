@@ -297,7 +297,7 @@ export default function Home() {
                 return (
                   <span
                     key={note}
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${color.bg} ${color.text}`}
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text}`}
                   >
                     {note.replace(/\d+$/, '')}
                   </span>
@@ -312,7 +312,7 @@ export default function Home() {
           <div className="relative">
             <button
               onClick={() => setKeyDropdownOpen(!keyDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-zinc-100 hover:bg-zinc-200 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors"
             >
               <span className="text-zinc-700">
                 {selectedKey ? getKeyName(selectedKey) : 'No key selected'}
