@@ -283,6 +283,7 @@ export default function Home() {
               </button>
             )}
           </div>
+          <div className="w-px h-6 bg-zinc-300" />
           {/* Chord/note selection in separate container */}
           {selectedNotes.length > 0 ? (
             <div className="flex items-center gap-2">
@@ -296,7 +297,7 @@ export default function Home() {
                 return (
                   <span
                     key={note}
-                    className={`px-2 py-0.5 rounded-full text-xs font-bold ${color.bg} ${color.text}`}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${color.bg} ${color.text}`}
                   >
                     {note.replace(/\d+$/, '')}
                   </span>
