@@ -286,7 +286,7 @@ export default function Home() {
           <div className="w-px h-6 bg-zinc-300" />
           {/* Chord/note selection in separate container */}
           {selectedNotes.length > 0 ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pl-2">
               {chordName && (
                 <span className="text-sm font-semibold text-zinc-600">
                   {chordName}
