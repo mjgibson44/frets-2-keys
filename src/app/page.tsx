@@ -177,6 +177,113 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-[16px]">
         {/* Controls bar */}
         <header className="flex items-center gap-3 flex-wrap">
+          {/* All icon buttons in one container */}
+          <div className="flex items-center">
+            <button
+              onClick={handlePlayAll}
+              disabled={selectedNotes.length === 0}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                selectedNotes.length > 0
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Play all selected notes"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => handleTranspose(-1)}
+              disabled={selectedNotes.length === 0}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                selectedNotes.length > 0
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Transpose down 1 semitone"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" transform="rotate(180 10 10)" />
+              </svg>
+            </button>
+            <button
+              onClick={() => handleTranspose(1)}
+              disabled={selectedNotes.length === 0}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                selectedNotes.length > 0
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Transpose up 1 semitone"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={selectedNotes.length === 0}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                selectedNotes.length > 0
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Clear all notes"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+            {activeChordId ? (
+              <>
+                <button
+                  onClick={handleUpdateChord}
+                  disabled={selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                    selectedNotes.length > 0 && chordName && hasChangesFromSaved
+                      ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                      : 'text-zinc-300 cursor-not-allowed'
+                  }`}
+                  title="Update existing chord"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleSaveChordAsNew}
+                  disabled={selectedNotes.length === 0 || !chordName}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                    selectedNotes.length > 0 && chordName
+                      ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                      : 'text-zinc-300 cursor-not-allowed'
+                  }`}
+                  title="Save as new chord"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleSaveChordAsNew}
+                disabled={selectedNotes.length === 0 || !chordName}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                  selectedNotes.length > 0 && chordName
+                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                    : 'text-zinc-300 cursor-not-allowed'
+                }`}
+                title="Save this chord"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {/* Chord/note selection in separate container */}
           {selectedNotes.length > 0 ? (
             <div className="flex items-center gap-2">
               {chordName && (
@@ -195,94 +302,9 @@ export default function Home() {
                   </span>
                 );
               })}
-              <div className="flex items-center">
-                <button
-                  onClick={handlePlayAll}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                  title="Play all selected notes"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => handleTranspose(-1)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                  title="Transpose down 1 semitone"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" transform="rotate(180 10 10)" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => handleTranspose(1)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                  title="Transpose up 1 semitone"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
-                  title="Clear all notes"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                  </svg>
-                </button>
-              </div>
             </div>
           ) : (
             <span className="text-sm text-zinc-400">No notes selected</span>
-          )}
-          {activeChordId ? (
-            <div className="flex items-center">
-              <button
-                onClick={handleUpdateChord}
-                disabled={selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                  selectedNotes.length > 0 && chordName && hasChangesFromSaved
-                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                    : 'text-zinc-300 cursor-not-allowed'
-                }`}
-                title="Update existing chord"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={handleSaveChordAsNew}
-                disabled={selectedNotes.length === 0 || !chordName}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                  selectedNotes.length > 0 && chordName
-                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                    : 'text-zinc-300 cursor-not-allowed'
-                }`}
-                title="Save as new chord"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleSaveChordAsNew}
-              disabled={selectedNotes.length === 0 || !chordName}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                selectedNotes.length > 0 && chordName
-                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                  : 'text-zinc-300 cursor-not-allowed'
-              }`}
-              title="Save this chord"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-              </svg>
-            </button>
           )}
           <div className="flex-1" />
           {/* Key selector */}
