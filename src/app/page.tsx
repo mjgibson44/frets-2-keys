@@ -182,8 +182,8 @@ export default function Home() {
             disabled={selectedNotes.length === 0}
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
               selectedNotes.length > 0
-                ? 'bg-zinc-600 hover:bg-zinc-500 text-white'
-                : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                : 'text-zinc-300 cursor-not-allowed'
             }`}
             title="Play all selected notes"
           >
@@ -194,7 +194,7 @@ export default function Home() {
           {selectedNotes.length > 0 ? (
             <div className="flex items-center gap-2">
               {chordName && (
-                <span className="text-sm font-semibold text-amber-600">
+                <span className="text-sm font-semibold text-zinc-600">
                   {chordName}
                 </span>
               )}
@@ -205,7 +205,7 @@ export default function Home() {
                     key={note}
                     className={`px-2 py-0.5 rounded-full text-xs font-bold ${color.bg} ${color.text}`}
                   >
-                    {note}
+                    {note.replace(/\d+$/, '')}
                   </span>
                 );
               })}
@@ -245,40 +245,46 @@ export default function Home() {
               <button
                 onClick={handleUpdateChord}
                 disabled={selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0 && chordName && hasChangesFromSaved
-                    ? 'bg-zinc-600 hover:bg-zinc-500 text-white'
-                    : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                    : 'text-zinc-300 cursor-not-allowed'
                 }`}
                 title="Update existing chord"
               >
-                Save
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
               </button>
               <button
                 onClick={handleSaveChordAsNew}
                 disabled={selectedNotes.length === 0 || !chordName}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0 && chordName
-                    ? 'bg-zinc-600 hover:bg-zinc-500 text-white'
-                    : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                    : 'text-zinc-300 cursor-not-allowed'
                 }`}
                 title="Save as new chord"
               >
-                Save as new
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
               </button>
             </>
           ) : (
             <button
               onClick={handleSaveChordAsNew}
               disabled={selectedNotes.length === 0 || !chordName}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
                 selectedNotes.length > 0 && chordName
-                  ? 'bg-zinc-600 hover:bg-zinc-500 text-white'
-                  : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
               }`}
               title="Save this chord"
             >
-              Save
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
             </button>
           )}
           <div className="flex-1" />
