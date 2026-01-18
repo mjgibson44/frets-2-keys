@@ -77,7 +77,7 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
               >
                 {keyLabelMode === 'onlyInKey' && !inKey ? '' : (
-                  <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}>
+                  <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-30' : ''}>
                     {note.replace(/\d+$/, '')}
                   </span>
                 )}
@@ -122,7 +122,7 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
               `}
             >
               {keyLabelMode === 'onlyInKey' && !inKey ? '' : (
-                <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}>
+                <span className={keyLabelMode === 'showAll' && !inKey ? 'opacity-30' : ''}>
                   {blackNote.replace(/\d+$/, '')}
                 </span>
               )}

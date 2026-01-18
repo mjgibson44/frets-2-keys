@@ -77,7 +77,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                                 ? `${color.bg} ${color.text} font-medium`
                                 : 'text-zinc-700 hover:bg-zinc-100'
                               }
-                              ${keyLabelMode === 'showAll' && !inKey ? 'opacity-50' : ''}
+                              ${keyLabelMode === 'showAll' && !inKey ? 'opacity-30' : ''}
                             `}
                           >
                             {note.replace(/\d+$/, '')}
