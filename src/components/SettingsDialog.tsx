@@ -115,7 +115,7 @@ export default function SettingsDialog({
       />
 
       {/* Dialog */}
-      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-8 min-[480px]:mx-4 max-h-[90vh] flex flex-col ${
+      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-8 min-[480px]:mx-4 my-8 min-[480px]:my-0 max-h-[90vh] flex flex-col ${
         darkMode ? 'bg-zinc-800 text-zinc-100' : 'bg-white text-zinc-900'
       }`}>
         {/* Sticky header */}
@@ -138,7 +138,7 @@ export default function SettingsDialog({
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto px-6 pb-6 pt-2">
+        <div className="overflow-y-auto px-6 pb-6 pt-4">
         {/* View Tutorial button */}
         <button
           onClick={() => {

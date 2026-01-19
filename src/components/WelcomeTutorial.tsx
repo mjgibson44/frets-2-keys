@@ -22,7 +22,7 @@ export default function WelcomeTutorial({
       />
 
       {/* Dialog */}
-      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-8 min-[480px]:mx-4 max-h-[90vh] flex flex-col ${
+      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-8 min-[480px]:mx-4 my-8 min-[480px]:my-0 max-h-[90vh] flex flex-col ${
         darkMode ? 'bg-zinc-800 text-zinc-100' : 'bg-white text-zinc-900'
       }`}>
         {/* Sticky header */}
@@ -50,7 +50,7 @@ export default function WelcomeTutorial({
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto px-6 pb-6 pt-2 space-y-6">
+        <div className="overflow-y-auto px-6 pb-6 pt-4 space-y-6">
           {/* Introduction */}
           <p className={`text-sm leading-relaxed ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             This app allows you to visually translate chords from piano to a stringed instrument, like guitar by interacting with either instrument. You can hear notes/chords, save them, transpose them, and also view different major/minor keys to help learn chords/notes within those keys.
