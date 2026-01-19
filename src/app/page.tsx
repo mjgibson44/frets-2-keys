@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import GuitarFretboard from '@/components/GuitarFretboard';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import SettingsDialog from '@/components/SettingsDialog';
@@ -32,6 +32,10 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [noteLabelMode, setNoteLabelMode] = useState<'sharpsAndFlats' | 'sharpsOnly'>('sharpsAndFlats');
+  const [loopMode, setLoopMode] = useState(false);
+  const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loopChordIndexRef = useRef(0);
+  const loopPlayCountRef = useRef(0);
 
   const chordName = identifyChord(selectedNotes.map(sn => sn.note));
 
@@ -85,6 +89,108 @@ export default function Home() {
       playArpeggio(notes);
     }
   };
+
+  // Calculate playback duration based on mode and number of notes
+  // Uses fixed rhythmic intervals for consistent timing
+  const getPlaybackDuration = useCallback((noteCount: number) => {
+    if (playMode === 'chord') {
+      // Trigger every 800ms for faster rhythm
+      return 800;
+    } else {
+      // Arpeggio: notes are 400ms apart, so next arpeggio starts at noteCount * 400ms
+      // This keeps the gap between last note and next first note equal to gaps within arpeggio
+      return noteCount * 400;
+    }
+  }, [playMode]);
+
+  // Play the current chord/arpeggio and schedule the next iteration
+  const playLoopIteration = useCallback(() => {
+    if (!loopMode) return;
+
+    let notesToPlay: string[];
+
+    if (savedChords.length > 1) {
+      // Multiple saved chords: play each 4 times before switching
+      const currentChord = savedChords[loopChordIndexRef.current];
+      if (currentChord) {
+        notesToPlay = currentChord.notes.map(sn => sn.note);
+        setSelectedNotes(currentChord.notes);
+        setActiveChordId(currentChord.id);
+
+        // Increment play count
+        loopPlayCountRef.current += 1;
+
+        // After 4 plays, move to next chord
+        if (loopPlayCountRef.current >= 4) {
+          loopPlayCountRef.current = 0;
+          loopChordIndexRef.current = (loopChordIndexRef.current + 1) % savedChords.length;
+        }
+      } else {
+        return;
+      }
+    } else {
+      // Single chord or no saved chords: play current selection
+      notesToPlay = selectedNotes.map(sn => sn.note);
+    }
+
+    if (notesToPlay.length === 0) {
+      setLoopMode(false);
+      return;
+    }
+
+    // Play the notes
+    if (playMode === 'chord') {
+      playChord(notesToPlay);
+    } else {
+      playArpeggio(notesToPlay);
+    }
+
+    // Schedule next iteration
+    const duration = getPlaybackDuration(notesToPlay.length);
+    loopTimeoutRef.current = setTimeout(() => {
+      playLoopIteration();
+    }, duration);
+  }, [loopMode, savedChords, selectedNotes, playMode, getPlaybackDuration]);
+
+  // Start/stop loop when loopMode changes
+  useEffect(() => {
+    if (loopMode) {
+      // Reset chord index to start from current active chord or beginning
+      if (savedChords.length > 1 && activeChordId) {
+        const currentIndex = savedChords.findIndex(c => c.id === activeChordId);
+        loopChordIndexRef.current = currentIndex >= 0 ? currentIndex : 0;
+      } else {
+        loopChordIndexRef.current = 0;
+      }
+      loopPlayCountRef.current = 0; // Reset play count
+      playLoopIteration();
+    } else {
+      // Stop loop
+      if (loopTimeoutRef.current) {
+        clearTimeout(loopTimeoutRef.current);
+        loopTimeoutRef.current = null;
+      }
+    }
+
+    return () => {
+      if (loopTimeoutRef.current) {
+        clearTimeout(loopTimeoutRef.current);
+        loopTimeoutRef.current = null;
+      }
+    };
+  }, [loopMode]); // Only depend on loopMode to avoid re-triggering
+
+  const handleLoopToggle = () => {
+    if (selectedNotes.length === 0 && savedChords.length === 0) return;
+    setLoopMode(prev => !prev);
+  };
+
+  // Stop loop if no notes are selected
+  useEffect(() => {
+    if (loopMode && selectedNotes.length === 0 && savedChords.length === 0) {
+      setLoopMode(false);
+    }
+  }, [selectedNotes.length, savedChords.length, loopMode]);
 
   const handleSaveChordAsNew = () => {
     if (selectedNotes.length === 0 || !chordName) return;
@@ -285,6 +391,26 @@ export default function Home() {
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={handleLoopToggle}
+                disabled={selectedNotes.length === 0 && savedChords.length === 0}
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
+                  loopMode
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : (selectedNotes.length > 0 || savedChords.length > 0)
+                      ? darkMode
+                        ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
+                        : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                      : darkMode
+                        ? 'text-zinc-600 cursor-not-allowed'
+                        : 'text-zinc-300 cursor-not-allowed'
+                }`}
+                title={loopMode ? 'Stop loop' : 'Loop playback'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M12 5.25c1.213 0 2.415.046 3.605.135a3.256 3.256 0 013.01 3.01c.044.583.077 1.17.1 1.759L17.03 8.47a.75.75 0 10-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06l-1.752 1.751c-.023-.65-.06-1.296-.108-1.939a4.756 4.756 0 00-4.392-4.392 49.422 49.422 0 00-7.436 0A4.756 4.756 0 003.89 8.282c-.017.224-.033.447-.046.672a.75.75 0 101.497.092c.013-.217.028-.432.044-.647a3.256 3.256 0 013.01-3.01c1.19-.09 2.392-.136 3.605-.136zm-6.97 6.22a.75.75 0 00-1.06 0l-3 3a.75.75 0 101.06 1.06l1.752-1.751c.023.65.06 1.296.108 1.939a4.756 4.756 0 004.392 4.392 49.413 49.413 0 007.436 0 4.756 4.756 0 004.392-4.392c.017-.223.032-.447.046-.672a.75.75 0 00-1.497-.092c-.013.217-.028.434-.044.647a3.256 3.256 0 01-3.01 3.01 47.953 47.953 0 01-7.21 0 3.256 3.256 0 01-3.01-3.01 47.759 47.759 0 01-.1-1.759L6.97 12.53a.75.75 0 001.06-1.06l-3-3z" clipRule="evenodd" />
                 </svg>
               </button>
               <button
@@ -594,6 +720,26 @@ export default function Home() {
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={handleLoopToggle}
+              disabled={selectedNotes.length === 0 && savedChords.length === 0}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                loopMode
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : (selectedNotes.length > 0 || savedChords.length > 0)
+                    ? darkMode
+                      ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
+                      : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                    : darkMode
+                      ? 'text-zinc-600 cursor-not-allowed'
+                      : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title={loopMode ? 'Stop loop' : 'Loop playback'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M12 5.25c1.213 0 2.415.046 3.605.135a3.256 3.256 0 013.01 3.01c.044.583.077 1.17.1 1.759L17.03 8.47a.75.75 0 10-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06l-1.752 1.751c-.023-.65-.06-1.296-.108-1.939a4.756 4.756 0 00-4.392-4.392 49.422 49.422 0 00-7.436 0A4.756 4.756 0 003.89 8.282c-.017.224-.033.447-.046.672a.75.75 0 101.497.092c.013-.217.028-.432.044-.647a3.256 3.256 0 013.01-3.01c1.19-.09 2.392-.136 3.605-.136zm-6.97 6.22a.75.75 0 00-1.06 0l-3 3a.75.75 0 101.06 1.06l1.752-1.751c.023.65.06 1.296.108 1.939a4.756 4.756 0 004.392 4.392 49.413 49.413 0 007.436 0 4.756 4.756 0 004.392-4.392c.017-.223.032-.447.046-.672a.75.75 0 00-1.497-.092c-.013.217-.028.434-.044.647a3.256 3.256 0 01-3.01 3.01 47.953 47.953 0 01-7.21 0 3.256 3.256 0 01-3.01-3.01 47.759 47.759 0 01-.1-1.759L6.97 12.53a.75.75 0 001.06-1.06l-3-3z" clipRule="evenodd" />
               </svg>
             </button>
             <button
