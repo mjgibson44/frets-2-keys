@@ -177,6 +177,109 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-[16px]">
         {/* Controls bar */}
         <header className="flex items-center gap-3 flex-wrap">
+          {/* Key selector */}
+          <div className="relative">
+            <button
+              onClick={() => setKeyDropdownOpen(!keyDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors"
+            >
+              <span className="text-zinc-700">
+                {selectedKey ? getKeyName(selectedKey) : 'No key selected'}
+              </span>
+              {selectedKey && (
+                <span className="text-xs text-zinc-500">
+                  {getNotesInKey(selectedKey).join(' ')}
+                </span>
+              )}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-zinc-500">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {keyDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setKeyDropdownOpen(false)}
+                />
+                <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-[#EDE9E9] rounded-lg shadow-lg max-h-80 overflow-y-auto w-48">
+                  <button
+                    onClick={() => {
+                      setSelectedKey(null);
+                      setKeyDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
+                      selectedKey === null ? 'bg-zinc-100 font-medium' : ''
+                    }`}
+                  >
+                    No key
+                  </button>
+                  <div className="border-t border-[#EDE9E9]" />
+                  <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Major</div>
+                  {ALL_KEYS.filter(k => k.type === 'major').map(key => (
+                    <button
+                      key={getKeyName(key)}
+                      onClick={() => {
+                        setSelectedKey(key);
+                        setKeyDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
+                        selectedKey && selectedKey.root === key.root && selectedKey.type === key.type
+                          ? 'bg-zinc-100 font-medium'
+                          : ''
+                      }`}
+                    >
+                      {getKeyName(key)}
+                    </button>
+                  ))}
+                  <div className="border-t border-[#EDE9E9]" />
+                  <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Minor</div>
+                  {ALL_KEYS.filter(k => k.type === 'minor').map(key => (
+                    <button
+                      key={getKeyName(key)}
+                      onClick={() => {
+                        setSelectedKey(key);
+                        setKeyDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
+                        selectedKey && selectedKey.root === key.root && selectedKey.type === key.type
+                          ? 'bg-zinc-100 font-medium'
+                          : ''
+                      }`}
+                    >
+                      {getKeyName(key)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex-1" />
+          {/* Chord/note selection in separate container */}
+          {selectedNotes.length > 0 ? (
+            <div className="flex items-center gap-2 pr-2">
+              {chordName && (
+                <span className="text-sm font-semibold text-zinc-600">
+                  {chordName}
+                </span>
+              )}
+              <div className="flex items-center gap-1">
+                {selectedNotes.map(({ note, colorIndex }) => {
+                  const color = getColor(colorIndex);
+                  return (
+                    <span
+                      key={note}
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text}`}
+                    >
+                      {note.replace(/\d+$/, '')}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-zinc-400 pr-2">No notes selected</span>
+          )}
+          <div className="w-px h-6 bg-zinc-300" />
           {/* All icon buttons in one container */}
           <div className="flex items-center">
             <button
@@ -235,164 +338,44 @@ export default function Home() {
                 <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
               </svg>
             </button>
-            {activeChordId ? (
-              <>
-                <button
-                  onClick={handleUpdateChord}
-                  disabled={selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                    selectedNotes.length > 0 && chordName && hasChangesFromSaved
-                      ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                      : 'text-zinc-300 cursor-not-allowed'
-                  }`}
-                  title="Update existing chord"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button
-                  onClick={handleSaveChordAsNew}
-                  disabled={selectedNotes.length === 0 || !chordName}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                    selectedNotes.length > 0 && chordName
-                      ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                      : 'text-zinc-300 cursor-not-allowed'
-                  }`}
-                  title="Save as new chord"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                  </svg>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleSaveChordAsNew}
-                disabled={selectedNotes.length === 0 || !chordName}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                  selectedNotes.length > 0 && chordName
-                    ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
-                    : 'text-zinc-300 cursor-not-allowed'
-                }`}
-                title="Save this chord"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="w-px h-6 bg-zinc-300" />
-          {/* Chord/note selection in separate container */}
-          {selectedNotes.length > 0 ? (
-            <div className="flex items-center gap-1 pl-2">
-              {chordName && (
-                <span className="text-sm font-semibold text-zinc-600">
-                  {chordName}
-                </span>
-              )}
-              {selectedNotes.map(({ note, colorIndex }) => {
-                const color = getColor(colorIndex);
-                return (
-                  <span
-                    key={note}
-                    className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text}`}
-                  >
-                    {note.replace(/\d+$/, '')}
-                  </span>
-                );
-              })}
-            </div>
-          ) : (
-            <span className="text-sm text-zinc-400">No notes selected</span>
-          )}
-          <div className="flex-1" />
-          {/* Key selector */}
-          <div className="relative">
             <button
-              onClick={() => setKeyDropdownOpen(!keyDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors"
+              onClick={handleUpdateChord}
+              disabled={!activeChordId || selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                activeChordId && selectedNotes.length > 0 && chordName && hasChangesFromSaved
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Update existing chord"
             >
-              <span className="text-zinc-700">
-                {selectedKey ? getKeyName(selectedKey) : 'No key selected'}
-              </span>
-              {selectedKey && (
-                <span className="text-xs text-zinc-500">
-                  {getNotesInKey(selectedKey).join(' ')}
-                </span>
-              )}
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-zinc-500">
-                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
               </svg>
             </button>
-            {keyDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setKeyDropdownOpen(false)}
-                />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-[#EDE9E9] rounded-lg shadow-lg max-h-80 overflow-y-auto w-48">
-                  <button
-                    onClick={() => {
-                      setSelectedKey(null);
-                      setKeyDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
-                      selectedKey === null ? 'bg-zinc-100 font-medium' : ''
-                    }`}
-                  >
-                    No key
-                  </button>
-                  <div className="border-t border-[#EDE9E9]" />
-                  <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Major</div>
-                  {ALL_KEYS.filter(k => k.type === 'major').map(key => (
-                    <button
-                      key={getKeyName(key)}
-                      onClick={() => {
-                        setSelectedKey(key);
-                        setKeyDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
-                        selectedKey && selectedKey.root === key.root && selectedKey.type === key.type
-                          ? 'bg-zinc-100 font-medium'
-                          : ''
-                      }`}
-                    >
-                      {getKeyName(key)}
-                    </button>
-                  ))}
-                  <div className="border-t border-[#EDE9E9]" />
-                  <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Minor</div>
-                  {ALL_KEYS.filter(k => k.type === 'minor').map(key => (
-                    <button
-                      key={getKeyName(key)}
-                      onClick={() => {
-                        setSelectedKey(key);
-                        setKeyDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 ${
-                        selectedKey && selectedKey.root === key.root && selectedKey.type === key.type
-                          ? 'bg-zinc-100 font-medium'
-                          : ''
-                      }`}
-                    >
-                      {getKeyName(key)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <button
+              onClick={handleSaveChordAsNew}
+              disabled={selectedNotes.length === 0 || !chordName}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                selectedNotes.length > 0 && chordName
+                  ? 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
+                  : 'text-zinc-300 cursor-not-allowed'
+              }`}
+              title="Save as new chord"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition-colors"
+              title="Settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.923-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 transition-colors"
-            title="Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.923-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" clipRule="evenodd" />
-            </svg>
-          </button>
         </header>
 
         <SavedChords
