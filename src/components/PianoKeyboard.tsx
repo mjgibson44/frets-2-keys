@@ -9,6 +9,7 @@ interface PianoKeyboardProps {
   onNoteSelect: (note: string) => void;
   selectedKey: MusicalKey | null;
   keyLabelMode: 'onlyInKey' | 'showAll';
+  darkMode?: boolean;
 }
 
 const END_NOTE = 'E6';
@@ -26,7 +27,7 @@ const BLACK_KEY_AFTER: Record<string, string | null> = {
   'B': null,
 };
 
-export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode }: PianoKeyboardProps) {
+export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode, darkMode = false }: PianoKeyboardProps) {
   // Find the lowest note in the tuning
   const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
 
@@ -52,7 +53,11 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
   };
 
   return (
-    <div className="border border-[#EDE9E9] rounded-[16px] bg-white p-[24px]">
+    <div className={`rounded-lg p-4 min-[600px]:p-[24px] ${
+      darkMode
+        ? 'bg-zinc-800 border border-zinc-700'
+        : 'bg-white border border-[#EDE9E9]'
+    }`}>
       <div className="overflow-x-auto scrollbar-hide">
         <div className="relative inline-block">
         {/* White keys */}
@@ -66,12 +71,14 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 key={note}
                 onClick={() => onNoteSelect(note)}
                 className={`
-                  h-36 rounded-b border border-[#EDE9E9]
+                  h-24 min-[600px]:h-36 rounded-b
                   flex flex-col items-center justify-end pb-2
                   text-xs transition-colors
                   ${color
                     ? `${color.bg} ${color.text} font-medium`
-                    : 'bg-white text-zinc-600 hover:bg-zinc-100'
+                    : darkMode
+                      ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-600'
+                      : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-[#EDE9E9]'
                   }
                 `}
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
@@ -112,12 +119,14 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
               onClick={() => onNoteSelect(blackNote)}
               style={{ left: `${leftPosition}px`, width: `${BLACK_KEY_WIDTH}px` }}
               className={`
-                absolute top-0 h-20 rounded-b
+                absolute top-0 h-14 min-[600px]:h-20 rounded-b
                 flex flex-col items-center justify-end pb-1
                 text-xs transition-colors z-10
                 ${color
                   ? `${color.bg} ${color.text} font-medium`
-                  : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'
+                  : darkMode
+                    ? 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
+                    : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'
                 }
               `}
             >

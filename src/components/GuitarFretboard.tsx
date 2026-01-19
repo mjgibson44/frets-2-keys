@@ -11,13 +11,14 @@ interface GuitarFretboardProps {
   anyCapoActive?: boolean;
   selectedKey: MusicalKey | null;
   keyLabelMode: 'onlyInKey' | 'showAll';
+  darkMode?: boolean;
 }
 
 const SINGLE_MARKERS = [3, 5, 7, 9, 15, 17, 19, 21];
 const DOUBLE_MARKERS = [12, 24];
 const NUM_FRETS = 24;
 
-export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey, keyLabelMode }: GuitarFretboardProps) {
+export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey, keyLabelMode, darkMode = false }: GuitarFretboardProps) {
   const strings = [...tuning].reverse();
 
   const getSelectedNote = (note: string): SelectedNote | undefined => {
@@ -25,7 +26,11 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
   };
 
   return (
-    <div className="border border-[#EDE9E9] rounded-[16px] bg-white pt-[24px] px-[24px] pb-[18px]">
+    <div className={`rounded-lg pt-4 px-4 pb-[10px] min-[600px]:pt-[24px] min-[600px]:px-[24px] min-[600px]:pb-[18px] ${
+      darkMode
+        ? 'bg-zinc-800 border border-zinc-700'
+        : 'bg-white border border-[#EDE9E9]'
+    }`}>
       <div className="overflow-x-auto scrollbar-hide">
         <div className="inline-block rounded-[12px] overflow-hidden">
           {/* Fretboard */}
@@ -48,11 +53,13 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                       onClick={() => !isBelowCapo && onNoteSelect(note)}
                       disabled={isBelowCapo}
                       className={`
-                        w-14 h-10 flex-shrink-0 flex items-center
+                        w-14 h-8 min-[600px]:h-10 flex-shrink-0 flex items-center
                         text-xs transition-colors
                         ${isCapoFret
                           ? 'border-r-4 border-r-amber-500'
-                          : 'border-r border-r-[#F2F2F2]'
+                          : darkMode
+                            ? 'border-r border-r-zinc-700'
+                            : 'border-r border-r-[#F2F2F2]'
                         }
                         ${isBelowCapo
                           ? 'cursor-not-allowed'
@@ -64,18 +71,20 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                         <div className="flex-1" />
                       ) : keyLabelMode === 'onlyInKey' && !inKey && !color ? (
                         /* Note not in key, not selected, and mode is onlyInKey - just show the string line */
-                        <div className="flex-1 h-0.5 bg-[#E1E1E1]" />
+                        <div className={`flex-1 h-0.5 ${darkMode ? 'bg-zinc-600' : 'bg-[#E1E1E1]'}`} />
                       ) : (
                         <>
                           {/* Left string line */}
-                          <div className="flex-1 h-0.5 bg-[#E1E1E1]" />
+                          <div className={`flex-1 h-0.5 ${darkMode ? 'bg-zinc-600' : 'bg-[#E1E1E1]'}`} />
                           {/* Note indicator */}
                           <div
                             className={`
                               w-7 h-7 flex items-center justify-center rounded
                               ${color
                                 ? `${color.bg} ${color.text} font-medium`
-                                : 'text-zinc-700 hover:bg-zinc-100'
+                                : darkMode
+                                  ? 'text-zinc-300 hover:bg-zinc-700'
+                                  : 'text-zinc-700 hover:bg-zinc-100'
                               }
                               ${keyLabelMode === 'showAll' && !inKey && !color ? 'opacity-30' : ''}
                             `}
@@ -83,7 +92,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                             {note.replace(/\d+$/, '')}
                           </div>
                           {/* Right string line */}
-                          <div className="flex-1 h-0.5 bg-[#E1E1E1]" />
+                          <div className={`flex-1 h-0.5 ${darkMode ? 'bg-zinc-600' : 'bg-[#E1E1E1]'}`} />
                         </>
                       )}
                     </button>
@@ -94,7 +103,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
           </div>
 
           {/* Fret numbers */}
-          <div className="flex bg-[#F6F6F6]">
+          <div className={`flex ${darkMode ? 'bg-zinc-700' : 'bg-[#F6F6F6]'}`}>
             {Array.from({ length: NUM_FRETS + 1 }, (_, fret) => {
               const isCapoFret = fret === capo;
               return (
@@ -103,11 +112,13 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                   className={`w-14 flex-shrink-0 flex items-center justify-center py-1
                     ${isCapoFret
                       ? 'border-r-4 border-r-amber-500'
-                      : 'border-r border-r-[#F2F2F2]'
+                      : darkMode
+                        ? 'border-r border-r-zinc-600'
+                        : 'border-r border-r-[#F2F2F2]'
                     }
                   `}
                 >
-                  <span className="text-xs text-zinc-500">
+                  <span className={`text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
                     {fret === 0 ? '' : fret}
                   </span>
                 </div>
@@ -116,7 +127,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
           </div>
 
           {/* Dot markers */}
-          <div className="flex bg-[#F6F6F6]">
+          <div className={`flex ${darkMode ? 'bg-zinc-700' : 'bg-[#F6F6F6]'}`}>
             {Array.from({ length: NUM_FRETS + 1 }, (_, fret) => {
               const isCapoFret = fret === capo;
               return (
@@ -125,17 +136,19 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                   className={`w-14 flex-shrink-0 flex items-center justify-center py-1
                     ${isCapoFret
                       ? 'border-r-4 border-r-amber-500'
-                      : 'border-r border-r-[#F2F2F2]'
+                      : darkMode
+                        ? 'border-r border-r-zinc-600'
+                        : 'border-r border-r-[#F2F2F2]'
                     }
                   `}
                 >
                   {SINGLE_MARKERS.includes(fret) && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                    <div className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-zinc-500' : 'bg-zinc-400'}`} />
                   )}
                   {DOUBLE_MARKERS.includes(fret) && (
                     <div className="flex gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                      <div className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-zinc-500' : 'bg-zinc-400'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-zinc-500' : 'bg-zinc-400'}`} />
                     </div>
                   )}
                 </div>
@@ -145,7 +158,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
 
           {/* Capo-relative fret numbers (second row when capo active, spacer when another fretboard has capo) */}
           {(capo > 0 || anyCapoActive) && (
-            <div className="flex bg-[#F6F6F6]">
+            <div className={`flex ${darkMode ? 'bg-zinc-700' : 'bg-[#F6F6F6]'}`}>
               {capo > 0 ? (
                 Array.from({ length: NUM_FRETS + 1 }, (_, fret) => {
                   const capoRelative = fret - capo;
@@ -156,7 +169,9 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                       className={`w-14 flex-shrink-0 flex items-center justify-center py-1
                         ${isCapoFret
                           ? 'border-r-4 border-r-amber-500'
-                          : 'border-r border-r-[#F2F2F2]'
+                          : darkMode
+                            ? 'border-r border-r-zinc-600'
+                            : 'border-r border-r-[#F2F2F2]'
                         }
                       `}
                     >
@@ -175,7 +190,9 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                       className={`w-14 flex-shrink-0 flex items-center justify-center py-1
                         ${isCapoFret
                           ? 'border-r-4 border-r-amber-500'
-                          : 'border-r border-r-[#F2F2F2]'
+                          : darkMode
+                            ? 'border-r border-r-zinc-600'
+                            : 'border-r border-r-[#F2F2F2]'
                         }
                       `}
                     >
