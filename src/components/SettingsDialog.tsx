@@ -115,7 +115,7 @@ export default function SettingsDialog({
       />
 
       {/* Dialog */}
-      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col ${
+      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-8 min-[480px]:mx-4 max-h-[90vh] flex flex-col ${
         darkMode ? 'bg-zinc-800 text-zinc-100' : 'bg-white text-zinc-900'
       }`}>
         {/* Sticky header */}
@@ -138,14 +138,14 @@ export default function SettingsDialog({
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto px-6 pb-6">
+        <div className="overflow-y-auto px-6 pb-6 pt-2">
         {/* View Tutorial button */}
         <button
           onClick={() => {
             onClose();
             onOpenTutorial();
           }}
-          className={`w-full mb-6 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full mb-9 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
             darkMode
               ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'
               : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
@@ -158,7 +158,7 @@ export default function SettingsDialog({
         </button>
 
         {/* Play mode toggle */}
-        <div className="mb-6">
+        <div className="mb-9">
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Playback Mode
           </label>
@@ -195,7 +195,7 @@ export default function SettingsDialog({
         </div>
 
         {/* Key Labels */}
-        <div className={`mb-6 ${!hasKeySelected ? 'opacity-40 pointer-events-none' : ''}`}>
+        <div className={`mb-9 ${!hasKeySelected ? 'opacity-40 pointer-events-none' : ''}`}>
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Key Labels
           </label>
@@ -232,7 +232,7 @@ export default function SettingsDialog({
         </div>
 
         {/* Note Labels */}
-        <div className="mb-6">
+        <div className="mb-9">
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Note Labels
           </label>
@@ -269,11 +269,11 @@ export default function SettingsDialog({
         </div>
 
         {/* Instruments */}
-        <div className="mb-6">
+        <div className="mb-9">
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Instruments
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
             <button
               onClick={() => onFretboardCountChange(fretboardCount >= 1 ? 0 : 1)}
               className={`flex-1 flex items-center justify-between py-2 px-3 rounded-lg text-sm font-medium transition-colors ${

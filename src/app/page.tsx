@@ -241,15 +241,6 @@ export default function Home() {
     }
   }, [selectedNotes.length, savedChords.length, loopMode]);
 
-  // Show tutorial on first visit
-  useEffect(() => {
-    const hasSeenTutorial = localStorage.getItem('frets2keys_hasSeenTutorial');
-    if (!hasSeenTutorial) {
-      setTutorialOpen(true);
-      localStorage.setItem('frets2keys_hasSeenTutorial', 'true');
-    }
-  }, []);
-
   const handleSaveChordAsNew = () => {
     if (selectedNotes.length === 0 || !chordName) return;
 
