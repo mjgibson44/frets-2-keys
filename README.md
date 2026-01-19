@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frets 2 Keys
+
+A visual tool for translating chords between piano and stringed instruments like guitar. Click notes on either instrument to see them highlighted on the other, hear how they sound, save chords, transpose them, and explore different musical keys.
+
+## Features
+
+- **Interactive Instruments** - Click notes on the guitar fretboard or piano keyboard to select them
+- **Visual Translation** - See the same notes highlighted across both instruments
+- **Audio Playback** - Hear notes as you click, play chords, or loop through saved progressions
+- **Chord Recognition** - Automatically identifies chord names from selected notes
+- **Save & Organize Chords** - Save up to 20 chords, drag to reorder, cycle through with arrow keys
+- **Key Highlighting** - Select a major/minor key to see which notes belong to it
+- **Customizable Tuning** - Configure string count (4-8), tuning, and capo position
+- **Instrument Presets** - Guitar, bass, ukulele, mandolin, banjo tunings built-in
+- **Multiple Fretboards** - Display up to 2 guitar fretboards with different tunings
+- **Transpose** - Shift selected notes up or down by semitones
+- **Dark Mode** - Toggle between light and dark themes
+- **Keyboard Shortcuts** - Quick access to common actions
+- **Persistent State** - Your settings and saved chords are preserved between sessions
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- [Node.js](https://nodejs.org/) (version 18 or higher recommended)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mjgibson44/frets-2-keys.git
+   cd frets-2-keys
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Learn More
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Keyboard Shortcuts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Action | Shortcut |
+|--------|----------|
+| Clear selection | `Delete` / `Backspace` |
+| Save as new chord | `A` |
+| Update saved chord | `S` |
+| Transpose up | `+` / `=` |
+| Transpose down | `-` / `_` |
+| Play chord | `Enter` |
+| Toggle loop | `Space` |
+| Previous chord | `Left Arrow` |
+| Next chord | `Right Arrow` |
 
-## Deploy on Vercel
+## Built With
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Next.js](https://nextjs.org/) - React framework
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) - Sound synthesis
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Author
+
+Created by Matt Gibson in 2026
