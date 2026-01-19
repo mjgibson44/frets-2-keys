@@ -5,9 +5,9 @@ import GuitarFretboard from '@/components/GuitarFretboard';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import SettingsDialog from '@/components/SettingsDialog';
 import SavedChords, { SavedChord } from '@/components/SavedChords';
-import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKey, noteToMidi, midiToNote } from '@/lib/notes';
+import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKeyDisplay, noteToMidi, midiToNote, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor } from '@/lib/notes';
 import { playNote, playChord, playArpeggio } from '@/lib/audio';
-import { SelectedNote, getColor, getNextAvailableColorIndex } from '@/lib/colors';
+import { SelectedNote, getNextAvailableColorIndex } from '@/lib/colors';
 import { identifyChord } from '@/lib/chords';
 
 interface Fretboard {
@@ -31,6 +31,7 @@ export default function Home() {
   const [keyLabelMode, setKeyLabelMode] = useState<'onlyInKey' | 'showAll'>('showAll');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [noteLabelMode, setNoteLabelMode] = useState<'sharpsAndFlats' | 'sharpsOnly'>('sharpsAndFlats');
 
   const chordName = identifyChord(selectedNotes.map(sn => sn.note));
 
@@ -181,7 +182,7 @@ export default function Home() {
               <button
                 onClick={handleClearAll}
                 disabled={selectedNotes.length === 0}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -199,7 +200,7 @@ export default function Home() {
               <button
                 onClick={handleUpdateChord}
                 disabled={!activeChordId || selectedNotes.length === 0 || !chordName || !hasChangesFromSaved}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   activeChordId && selectedNotes.length > 0 && chordName && hasChangesFromSaved
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -217,7 +218,7 @@ export default function Home() {
               <button
                 onClick={handleSaveChordAsNew}
                 disabled={selectedNotes.length === 0 || !chordName}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0 && chordName
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -235,7 +236,7 @@ export default function Home() {
               <button
                 onClick={() => handleTranspose(1)}
                 disabled={selectedNotes.length === 0}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -253,7 +254,7 @@ export default function Home() {
               <button
                 onClick={() => handleTranspose(-1)}
                 disabled={selectedNotes.length === 0}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -271,7 +272,7 @@ export default function Home() {
               <button
                 onClick={handlePlayAll}
                 disabled={selectedNotes.length === 0}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   selectedNotes.length > 0
                     ? darkMode
                       ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
@@ -288,7 +289,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   darkMode
                     ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
                     : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
@@ -307,7 +308,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setSettingsOpen(true)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                className={`w-10 h-10 min-[600px]:w-8 min-[600px]:h-8 flex items-center justify-center rounded-lg transition-colors ${
                   darkMode
                     ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
                     : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600'
@@ -331,11 +332,11 @@ export default function Home() {
               }`}
             >
               <span className={darkMode ? 'text-zinc-200' : 'text-zinc-700'}>
-                {selectedKey ? getKeyName(selectedKey) : 'No key'}
+                {selectedKey ? getKeyName(selectedKey, noteLabelMode === 'sharpsOnly') : 'No key'}
               </span>
               {selectedKey && (
-                <span className="text-xs text-zinc-500 hidden min-[860px]:inline">
-                  {getNotesInKey(selectedKey).join(' ')}
+                <span className="text-xs text-zinc-500 hidden min-[600px]:inline">
+                  {getNotesInKeyDisplay(selectedKey, noteLabelMode === 'sharpsOnly').join(' ')}
                 </span>
               )}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-zinc-500">
@@ -368,7 +369,7 @@ export default function Home() {
                   <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Major</div>
                   {ALL_KEYS.filter(k => k.type === 'major').map(key => (
                     <button
-                      key={getKeyName(key)}
+                      key={key.root + key.type}
                       onClick={() => {
                         setSelectedKey(key);
                         setKeyDropdownOpen(false);
@@ -379,14 +380,14 @@ export default function Home() {
                           : `hover:bg-zinc-100 ${selectedKey && selectedKey.root === key.root && selectedKey.type === key.type ? 'bg-zinc-100 font-medium' : ''}`
                       }`}
                     >
-                      {getKeyName(key)}
+                      {getKeyName(key, noteLabelMode === 'sharpsOnly')}
                     </button>
                   ))}
                   <div className={`border-t ${darkMode ? 'border-zinc-700' : 'border-[#EDE9E9]'}`} />
                   <div className="px-3 py-1 text-xs text-zinc-400 font-medium">Minor</div>
                   {ALL_KEYS.filter(k => k.type === 'minor').map(key => (
                     <button
-                      key={getKeyName(key)}
+                      key={key.root + key.type}
                       onClick={() => {
                         setSelectedKey(key);
                         setKeyDropdownOpen(false);
@@ -397,7 +398,7 @@ export default function Home() {
                           : `hover:bg-zinc-100 ${selectedKey && selectedKey.root === key.root && selectedKey.type === key.type ? 'bg-zinc-100 font-medium' : ''}`
                       }`}
                     >
-                      {getKeyName(key)}
+                      {getKeyName(key, noteLabelMode === 'sharpsOnly')}
                     </button>
                   ))}
                 </div>
@@ -409,18 +410,35 @@ export default function Home() {
           {selectedNotes.length > 0 ? (
             <div className="flex items-center gap-2 min-[880px]:pr-2">
               {chordName && (
-                <span className={`text-sm font-semibold ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                <span className={`text-sm font-medium ${darkMode ? 'text-zinc-200' : 'text-zinc-700'}`}>
                   {chordName}
                 </span>
               )}
               <div className="flex items-center gap-1">
                 {/* Mobile (<600px): show first 4 notes */}
-                {selectedNotes.slice(0, 4).map(({ note, colorIndex }) => {
-                  const color = getColor(colorIndex);
+                {selectedNotes.slice(0, 4).map(({ note }) => {
+                  const scaleDegree = getScaleDegree(note, selectedKey);
+                  const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
+                  const outOfKeyColor = getOutOfKeyColor(note, selectedKey);
+                  const chromaticColor = getChromaticNoteColor(note);
+                  let chipStyle = '';
+                  if (scaleDegreeColor) {
+                    chipStyle = darkMode
+                      ? `${scaleDegreeColor.darkBg500} text-white`
+                      : `${scaleDegreeColor.bg500} text-white`;
+                  } else if (outOfKeyColor) {
+                    chipStyle = darkMode
+                      ? `${outOfKeyColor.darkBg500} text-white`
+                      : `${outOfKeyColor.bg500} text-white`;
+                  } else {
+                    chipStyle = darkMode
+                      ? `${chromaticColor.darkBg500} text-white`
+                      : `${chromaticColor.bg500} text-white`;
+                  }
                   return (
                     <span
                       key={note}
-                      className={`min-[600px]:hidden px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text}`}
+                      className={`min-[600px]:hidden px-2 py-0.5 rounded text-xs font-medium ${chipStyle}`}
                     >
                       {note.replace(/\d+$/, '')}
                     </span>
@@ -432,12 +450,29 @@ export default function Home() {
                   </span>
                 )}
                 {/* Desktop (600px+): show first 6 notes */}
-                {selectedNotes.slice(0, 6).map(({ note, colorIndex }) => {
-                  const color = getColor(colorIndex);
+                {selectedNotes.slice(0, 6).map(({ note }) => {
+                  const scaleDegree = getScaleDegree(note, selectedKey);
+                  const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
+                  const outOfKeyColor = getOutOfKeyColor(note, selectedKey);
+                  const chromaticColor = getChromaticNoteColor(note);
+                  let chipStyle = '';
+                  if (scaleDegreeColor) {
+                    chipStyle = darkMode
+                      ? `${scaleDegreeColor.darkBg500} text-white`
+                      : `${scaleDegreeColor.bg500} text-white`;
+                  } else if (outOfKeyColor) {
+                    chipStyle = darkMode
+                      ? `${outOfKeyColor.darkBg500} text-white`
+                      : `${outOfKeyColor.bg500} text-white`;
+                  } else {
+                    chipStyle = darkMode
+                      ? `${chromaticColor.darkBg500} text-white`
+                      : `${chromaticColor.bg500} text-white`;
+                  }
                   return (
                     <span
                       key={note}
-                      className={`hidden min-[600px]:inline px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text}`}
+                      className={`hidden min-[600px]:inline px-2 py-0.5 rounded text-xs font-medium ${chipStyle}`}
                     >
                       {note.replace(/\d+$/, '')}
                     </span>
@@ -811,6 +846,7 @@ export default function Home() {
                   anyCapoActive={anyCapoActive}
                   selectedKey={selectedKey}
                   keyLabelMode={keyLabelMode}
+                  noteLabelMode={noteLabelMode}
                   darkMode={darkMode}
                 />
               </div>
@@ -825,6 +861,7 @@ export default function Home() {
             onNoteSelect={handleNoteSelect}
             selectedKey={selectedKey}
             keyLabelMode={keyLabelMode}
+            noteLabelMode={noteLabelMode}
             darkMode={darkMode}
           />
         )}
@@ -837,6 +874,7 @@ export default function Home() {
         showPiano={showPiano}
         playMode={playMode}
         keyLabelMode={keyLabelMode}
+        noteLabelMode={noteLabelMode}
         hasKeySelected={selectedKey !== null}
         darkMode={darkMode}
         onClose={() => setSettingsOpen(false)}
@@ -844,6 +882,7 @@ export default function Home() {
         onShowPianoChange={setShowPiano}
         onPlayModeChange={setPlayMode}
         onKeyLabelModeChange={setKeyLabelMode}
+        onNoteLabelModeChange={setNoteLabelMode}
         onTuningChange={handleTuningChange}
         onCapoChange={handleCapoChange}
       />

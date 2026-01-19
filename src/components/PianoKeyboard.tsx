@@ -1,7 +1,7 @@
 'use client';
 
-import { generatePianoRange, isBlackKey, noteToMidi, midiToNote, MusicalKey, isNoteInKey } from '@/lib/notes';
-import { SelectedNote, getColor } from '@/lib/colors';
+import { generatePianoRange, isBlackKey, noteToMidi, midiToNote, MusicalKey, isNoteInKey, getNoteDisplayName, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor, parseNoteDisplay } from '@/lib/notes';
+import { SelectedNote } from '@/lib/colors';
 
 interface PianoKeyboardProps {
   tuning: string[];
@@ -9,12 +9,13 @@ interface PianoKeyboardProps {
   onNoteSelect: (note: string) => void;
   selectedKey: MusicalKey | null;
   keyLabelMode: 'onlyInKey' | 'showAll';
+  noteLabelMode: 'sharpsAndFlats' | 'sharpsOnly';
   darkMode?: boolean;
 }
 
 const END_NOTE = 'E6';
 const WHITE_KEY_WIDTH = 40;
-const BLACK_KEY_WIDTH = 28;
+const BLACK_KEY_WIDTH = 32;
 
 // Black keys that follow each white key (null means no black key after)
 const BLACK_KEY_AFTER: Record<string, string | null> = {
@@ -27,7 +28,7 @@ const BLACK_KEY_AFTER: Record<string, string | null> = {
   'B': null,
 };
 
-export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode, darkMode = false }: PianoKeyboardProps) {
+export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode, noteLabelMode, darkMode = false }: PianoKeyboardProps) {
   // Find the lowest note in the tuning
   const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
 
@@ -64,29 +65,80 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
         <div className="flex">
           {whiteNotes.map((note, index) => {
             const selected = getSelectedNote(note);
-            const color = selected ? getColor(selected.colorIndex) : null;
             const inKey = isNoteInKey(note, selectedKey);
+            const scaleDegree = getScaleDegree(note, selectedKey);
+            const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
+            const outOfKeyColor = getOutOfKeyColor(note, selectedKey);
+            const chromaticColor = getChromaticNoteColor(note);
+            const isSelected = !!selected;
+
+            // Determine the indicator square styling
+            let indicatorStyle = '';
+            if (isSelected && scaleDegreeColor) {
+              // Selected and in key: use scale degree color at 500 level with white text
+              indicatorStyle = darkMode
+                ? `${scaleDegreeColor.darkBg500} text-white font-medium`
+                : `${scaleDegreeColor.bg500} text-white font-medium`;
+            } else if (isSelected && outOfKeyColor) {
+              // Selected but not in key: use out-of-key color at 500 level with white text
+              indicatorStyle = darkMode
+                ? `${outOfKeyColor.darkBg500} text-white font-medium`
+                : `${outOfKeyColor.bg500} text-white font-medium`;
+            } else if (isSelected) {
+              // Selected with no key: use chromatic color at 500 level with white text
+              indicatorStyle = darkMode
+                ? `${chromaticColor.darkBg500} text-white font-medium`
+                : `${chromaticColor.bg500} text-white font-medium`;
+            } else if (scaleDegreeColor && selectedKey) {
+              // Not selected but in key: use scale degree color at 100 level with border
+              indicatorStyle = darkMode
+                ? `${scaleDegreeColor.darkBg100} text-zinc-200 border ${scaleDegreeColor.darkBorder}`
+                : `${scaleDegreeColor.bg100} text-zinc-700 border ${scaleDegreeColor.border200}`;
+            } else {
+              // Not selected and not in key: transparent/no color
+              indicatorStyle = darkMode
+                ? 'text-zinc-300'
+                : 'text-zinc-600';
+            }
+
+            const showIndicator = isSelected || (scaleDegreeColor && selectedKey);
+
             return (
               <button
                 key={note}
                 onClick={() => onNoteSelect(note)}
                 className={`
-                  h-24 min-[600px]:h-36 rounded-b
+                  h-28 min-[600px]:h-36 rounded-b
                   flex flex-col items-center justify-end pb-2
                   text-xs transition-colors
-                  ${color
-                    ? `${color.bg} ${color.text} font-medium`
-                    : darkMode
-                      ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-600'
-                      : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-[#EDE9E9]'
+                  ${darkMode
+                    ? 'bg-zinc-800 hover:bg-zinc-700 border border-zinc-600'
+                    : 'bg-white hover:bg-zinc-100 border border-[#EDE9E9]'
                   }
                 `}
                 style={{ width: `${WHITE_KEY_WIDTH}px` }}
               >
-                {keyLabelMode === 'onlyInKey' && !inKey && !color ? '' : (
-                  <span className={keyLabelMode === 'showAll' && !inKey && !color ? 'opacity-30' : ''}>
-                    {note.replace(/\d+$/, '')}
-                  </span>
+                {keyLabelMode === 'onlyInKey' && !inKey && !isSelected ? null : (
+                  <div className="w-7 h-7 flex items-center justify-center">
+                    <div
+                      className={`
+                        ${isSelected ? 'w-7 h-7' : 'w-5 h-5'} flex items-center justify-center rounded
+                        ${showIndicator ? indicatorStyle : (darkMode ? 'text-zinc-300' : 'text-zinc-600')}
+                        ${keyLabelMode === 'showAll' && !inKey && !isSelected ? 'opacity-30' : ''}
+                      `}
+                    >
+                      {(() => {
+                        const displayName = noteLabelMode === 'sharpsOnly' ? note.replace(/\d+$/, '') : getNoteDisplayName(note, selectedKey);
+                        const { letter, accidental } = parseNoteDisplay(displayName);
+                        return (
+                          <span className="flex items-start leading-none">
+                            {letter}
+                            {accidental && <span className="text-[8px] leading-none">{accidental}</span>}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 )}
               </button>
             );
@@ -107,8 +159,43 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
           if (!allNotes.includes(blackNote)) return null;
 
           const selected = getSelectedNote(blackNote);
-          const color = selected ? getColor(selected.colorIndex) : null;
           const inKey = isNoteInKey(blackNote, selectedKey);
+          const scaleDegree = getScaleDegree(blackNote, selectedKey);
+          const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
+          const outOfKeyColor = getOutOfKeyColor(blackNote, selectedKey);
+          const chromaticColor = getChromaticNoteColor(blackNote);
+          const isSelected = !!selected;
+
+          // Determine the indicator square styling
+          let indicatorStyle = '';
+          if (isSelected && scaleDegreeColor) {
+            // Selected and in key: use scale degree color at 500 level with white text
+            indicatorStyle = darkMode
+              ? `${scaleDegreeColor.darkBg500} text-white font-medium`
+              : `${scaleDegreeColor.bg500} text-white font-medium`;
+          } else if (isSelected && outOfKeyColor) {
+            // Selected but not in key: use out-of-key color at 500 level with white text
+            indicatorStyle = darkMode
+              ? `${outOfKeyColor.darkBg500} text-white font-medium`
+              : `${outOfKeyColor.bg500} text-white font-medium`;
+          } else if (isSelected) {
+            // Selected with no key: use chromatic color at 500 level with white text
+            indicatorStyle = darkMode
+              ? `${chromaticColor.darkBg500} text-white font-medium`
+              : `${chromaticColor.bg500} text-white font-medium`;
+          } else if (scaleDegreeColor && selectedKey) {
+            // Not selected but in key: use scale degree color at 100 level with border
+            indicatorStyle = darkMode
+              ? `${scaleDegreeColor.darkBg100} text-zinc-200 border ${scaleDegreeColor.darkBorder}`
+              : `${scaleDegreeColor.bg100} text-zinc-700 border ${scaleDegreeColor.border200}`;
+          } else {
+            // Not selected and not in key: transparent/no color
+            indicatorStyle = darkMode
+              ? 'text-zinc-400'
+              : 'text-zinc-600';
+          }
+
+          const showIndicator = isSelected || (scaleDegreeColor && selectedKey);
 
           // Position: right edge of current white key minus half of black key width
           const leftPosition = (index + 1) * WHITE_KEY_WIDTH - BLACK_KEY_WIDTH / 2;
@@ -122,18 +209,33 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
                 absolute top-0 h-14 min-[600px]:h-20 rounded-b
                 flex flex-col items-center justify-end pb-1
                 text-xs transition-colors z-10
-                ${color
-                  ? `${color.bg} ${color.text} font-medium`
-                  : darkMode
-                    ? 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
-                    : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'
+                ${darkMode
+                  ? 'bg-zinc-700 hover:bg-zinc-600'
+                  : 'bg-zinc-200 hover:bg-zinc-300'
                 }
               `}
             >
-              {keyLabelMode === 'onlyInKey' && !inKey && !color ? '' : (
-                <span className={keyLabelMode === 'showAll' && !inKey && !color ? 'opacity-30' : ''}>
-                  {blackNote.replace(/\d+$/, '')}
-                </span>
+              {keyLabelMode === 'onlyInKey' && !inKey && !isSelected ? null : (
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <div
+                    className={`
+                      ${isSelected ? 'w-6 h-6' : 'w-4 h-4'} flex items-center justify-center rounded
+                      ${showIndicator ? indicatorStyle : (darkMode ? 'text-zinc-400' : 'text-zinc-600')}
+                      ${keyLabelMode === 'showAll' && !inKey && !isSelected ? 'opacity-30' : ''}
+                    `}
+                  >
+                    {(() => {
+                      const displayName = noteLabelMode === 'sharpsOnly' ? blackNote.replace(/\d+$/, '') : getNoteDisplayName(blackNote, selectedKey);
+                      const { letter, accidental } = parseNoteDisplay(displayName);
+                      return (
+                        <span className="flex items-start leading-none">
+                          {letter}
+                          {accidental && <span className="text-[8px] leading-none">{accidental}</span>}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
               )}
             </button>
           );

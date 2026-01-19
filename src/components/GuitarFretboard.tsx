@@ -1,7 +1,7 @@
 'use client';
 
-import { getNoteAtFret, MusicalKey, isNoteInKey } from '@/lib/notes';
-import { SelectedNote, getColor } from '@/lib/colors';
+import { getNoteAtFret, MusicalKey, isNoteInKey, getNoteDisplayName, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor, parseNoteDisplay } from '@/lib/notes';
+import { SelectedNote } from '@/lib/colors';
 
 interface GuitarFretboardProps {
   tuning: string[];
@@ -11,6 +11,7 @@ interface GuitarFretboardProps {
   anyCapoActive?: boolean;
   selectedKey: MusicalKey | null;
   keyLabelMode: 'onlyInKey' | 'showAll';
+  noteLabelMode: 'sharpsAndFlats' | 'sharpsOnly';
   darkMode?: boolean;
 }
 
@@ -18,7 +19,7 @@ const SINGLE_MARKERS = [3, 5, 7, 9, 15, 17, 19, 21];
 const DOUBLE_MARKERS = [12, 24];
 const NUM_FRETS = 24;
 
-export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey, keyLabelMode, darkMode = false }: GuitarFretboardProps) {
+export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSelect, anyCapoActive, selectedKey, keyLabelMode, noteLabelMode, darkMode = false }: GuitarFretboardProps) {
   const strings = [...tuning].reverse();
 
   const getSelectedNote = (note: string): SelectedNote | undefined => {
@@ -44,8 +45,41 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                   const selected = getSelectedNote(note);
                   const isBelowCapo = fret < capo;
                   const isCapoFret = fret === capo;
-                  const color = selected && !isBelowCapo ? getColor(selected.colorIndex) : null;
                   const inKey = isNoteInKey(note, selectedKey);
+                  const scaleDegree = getScaleDegree(note, selectedKey);
+                  const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
+                  const outOfKeyColor = getOutOfKeyColor(note, selectedKey);
+                  const chromaticColor = getChromaticNoteColor(note);
+                  const isSelected = selected && !isBelowCapo;
+
+                  // Determine the styling based on selection and in-key status
+                  let noteStyle = '';
+                  if (isSelected && scaleDegreeColor) {
+                    // Selected and in key: use scale degree color at 500 level with white text
+                    noteStyle = darkMode
+                      ? `${scaleDegreeColor.darkBg500} text-white font-medium`
+                      : `${scaleDegreeColor.bg500} text-white font-medium`;
+                  } else if (isSelected && outOfKeyColor) {
+                    // Selected but not in key: use out-of-key color at 500 level with white text
+                    noteStyle = darkMode
+                      ? `${outOfKeyColor.darkBg500} text-white font-medium`
+                      : `${outOfKeyColor.bg500} text-white font-medium`;
+                  } else if (isSelected) {
+                    // Selected with no key: use chromatic color at 500 level with white text
+                    noteStyle = darkMode
+                      ? `${chromaticColor.darkBg500} text-white font-medium`
+                      : `${chromaticColor.bg500} text-white font-medium`;
+                  } else if (scaleDegreeColor && selectedKey) {
+                    // Not selected but in key: use scale degree color at 100 level with border
+                    noteStyle = darkMode
+                      ? `${scaleDegreeColor.darkBg100} text-zinc-200 border ${scaleDegreeColor.darkBorder}`
+                      : `${scaleDegreeColor.bg100} text-zinc-700 border ${scaleDegreeColor.border200}`;
+                  } else {
+                    // Not selected and not in key: default styling
+                    noteStyle = darkMode
+                      ? 'text-zinc-300'
+                      : 'text-zinc-700';
+                  }
 
                   return (
                     <button
@@ -53,7 +87,7 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                       onClick={() => !isBelowCapo && onNoteSelect(note)}
                       disabled={isBelowCapo}
                       className={`
-                        w-14 h-8 min-[600px]:h-10 flex-shrink-0 flex items-center
+                        w-14 h-10 flex-shrink-0 flex items-center
                         text-xs transition-colors
                         ${isCapoFret
                           ? 'border-r-4 border-r-amber-500'
@@ -63,13 +97,15 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                         }
                         ${isBelowCapo
                           ? 'cursor-not-allowed'
-                          : ''
+                          : darkMode
+                            ? 'hover:bg-zinc-700'
+                            : 'hover:bg-zinc-100'
                         }
                       `}
                     >
                       {isBelowCapo ? (
                         <div className="flex-1" />
-                      ) : keyLabelMode === 'onlyInKey' && !inKey && !color ? (
+                      ) : keyLabelMode === 'onlyInKey' && !inKey && !isSelected ? (
                         /* Note not in key, not selected, and mode is onlyInKey - just show the string line */
                         <div className={`flex-1 h-0.5 ${darkMode ? 'bg-zinc-600' : 'bg-[#E1E1E1]'}`} />
                       ) : (
@@ -79,17 +115,21 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                           {/* Note indicator */}
                           <div
                             className={`
-                              w-7 h-7 flex items-center justify-center rounded
-                              ${color
-                                ? `${color.bg} ${color.text} font-medium`
-                                : darkMode
-                                  ? 'text-zinc-300 hover:bg-zinc-700'
-                                  : 'text-zinc-700 hover:bg-zinc-100'
-                              }
-                              ${keyLabelMode === 'showAll' && !inKey && !color ? 'opacity-30' : ''}
+                              ${isSelected ? 'w-7 h-7' : 'w-5 h-5'} flex items-center justify-center rounded
+                              ${noteStyle}
+                              ${keyLabelMode === 'showAll' && !inKey && !isSelected ? 'opacity-30' : ''}
                             `}
                           >
-                            {note.replace(/\d+$/, '')}
+                            {(() => {
+                              const displayName = noteLabelMode === 'sharpsOnly' ? note.replace(/\d+$/, '') : getNoteDisplayName(note, selectedKey);
+                              const { letter, accidental } = parseNoteDisplay(displayName);
+                              return (
+                                <span className="flex items-start leading-none">
+                                  {letter}
+                                  {accidental && <span className="text-[8px] leading-none">{accidental}</span>}
+                                </span>
+                              );
+                            })()}
                           </div>
                           {/* Right string line */}
                           <div className={`flex-1 h-0.5 ${darkMode ? 'bg-zinc-600' : 'bg-[#E1E1E1]'}`} />

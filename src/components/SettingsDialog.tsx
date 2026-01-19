@@ -15,6 +15,7 @@ interface SettingsDialogProps {
   showPiano: boolean;
   playMode: 'chord' | 'arpeggio';
   keyLabelMode: 'onlyInKey' | 'showAll';
+  noteLabelMode: 'sharpsAndFlats' | 'sharpsOnly';
   hasKeySelected: boolean;
   darkMode?: boolean;
   onClose: () => void;
@@ -22,6 +23,7 @@ interface SettingsDialogProps {
   onShowPianoChange: (show: boolean) => void;
   onPlayModeChange: (mode: 'chord' | 'arpeggio') => void;
   onKeyLabelModeChange: (mode: 'onlyInKey' | 'showAll') => void;
+  onNoteLabelModeChange: (mode: 'sharpsAndFlats' | 'sharpsOnly') => void;
   onTuningChange: (fretboardId: string, tuning: string[]) => void;
   onCapoChange: (fretboardId: string, capo: number) => void;
 }
@@ -33,6 +35,7 @@ export default function SettingsDialog({
   showPiano,
   playMode,
   keyLabelMode,
+  noteLabelMode,
   hasKeySelected,
   darkMode = false,
   onClose,
@@ -40,6 +43,7 @@ export default function SettingsDialog({
   onShowPianoChange,
   onPlayModeChange,
   onKeyLabelModeChange,
+  onNoteLabelModeChange,
   onTuningChange,
   onCapoChange,
 }: SettingsDialogProps) {
@@ -173,6 +177,43 @@ export default function SettingsDialog({
               }`}
             >
               Show all notes
+            </button>
+          </div>
+        </div>
+
+        {/* Note Labels */}
+        <div className="mb-6">
+          <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
+            Note Labels
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onNoteLabelModeChange('sharpsAndFlats')}
+              className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                noteLabelMode === 'sharpsAndFlats'
+                  ? darkMode
+                    ? 'bg-zinc-600 text-white'
+                    : 'bg-zinc-800 text-white'
+                  : darkMode
+                    ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              Sharps and Flats
+            </button>
+            <button
+              onClick={() => onNoteLabelModeChange('sharpsOnly')}
+              className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                noteLabelMode === 'sharpsOnly'
+                  ? darkMode
+                    ? 'bg-zinc-600 text-white'
+                    : 'bg-zinc-800 text-white'
+                  : darkMode
+                    ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              Sharps only
             </button>
           </div>
         </div>
