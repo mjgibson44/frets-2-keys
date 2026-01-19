@@ -56,19 +56,13 @@ export default function GuitarFretboard({ tuning, capo, selectedNotes, onNoteSel
                   let noteStyle = '';
                   if (isSelected && scaleDegreeColor) {
                     // Selected and in key: use scale degree color at 500 level with white text
-                    noteStyle = darkMode
-                      ? `${scaleDegreeColor.darkBg500} text-white font-medium`
-                      : `${scaleDegreeColor.bg500} text-white font-medium`;
+                    noteStyle = `${scaleDegreeColor.bg500} text-white font-medium`;
                   } else if (isSelected && outOfKeyColor) {
                     // Selected but not in key: use out-of-key color at 500 level with white text
-                    noteStyle = darkMode
-                      ? `${outOfKeyColor.darkBg500} text-white font-medium`
-                      : `${outOfKeyColor.bg500} text-white font-medium`;
+                    noteStyle = `${outOfKeyColor.bg500} text-white font-medium`;
                   } else if (isSelected) {
                     // Selected with no key: use chromatic color at 500 level with white text
-                    noteStyle = darkMode
-                      ? `${chromaticColor.darkBg500} text-white font-medium`
-                      : `${chromaticColor.bg500} text-white font-medium`;
+                    noteStyle = `${chromaticColor.bg500} text-white font-medium`;
                   } else if (scaleDegreeColor && selectedKey) {
                     // Not selected but in key: use scale degree color at 100 level with border
                     noteStyle = darkMode

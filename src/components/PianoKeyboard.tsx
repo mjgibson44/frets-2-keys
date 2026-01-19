@@ -76,19 +76,13 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
             let indicatorStyle = '';
             if (isSelected && scaleDegreeColor) {
               // Selected and in key: use scale degree color at 500 level with white text
-              indicatorStyle = darkMode
-                ? `${scaleDegreeColor.darkBg500} text-white font-medium`
-                : `${scaleDegreeColor.bg500} text-white font-medium`;
+              indicatorStyle = `${scaleDegreeColor.bg500} text-white font-medium`;
             } else if (isSelected && outOfKeyColor) {
               // Selected but not in key: use out-of-key color at 500 level with white text
-              indicatorStyle = darkMode
-                ? `${outOfKeyColor.darkBg500} text-white font-medium`
-                : `${outOfKeyColor.bg500} text-white font-medium`;
+              indicatorStyle = `${outOfKeyColor.bg500} text-white font-medium`;
             } else if (isSelected) {
               // Selected with no key: use chromatic color at 500 level with white text
-              indicatorStyle = darkMode
-                ? `${chromaticColor.darkBg500} text-white font-medium`
-                : `${chromaticColor.bg500} text-white font-medium`;
+              indicatorStyle = `${chromaticColor.bg500} text-white font-medium`;
             } else if (scaleDegreeColor && selectedKey) {
               // Not selected but in key: use scale degree color at 100 level with border
               indicatorStyle = darkMode
@@ -170,19 +164,13 @@ export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, sel
           let indicatorStyle = '';
           if (isSelected && scaleDegreeColor) {
             // Selected and in key: use scale degree color at 500 level with white text
-            indicatorStyle = darkMode
-              ? `${scaleDegreeColor.darkBg500} text-white font-medium`
-              : `${scaleDegreeColor.bg500} text-white font-medium`;
+            indicatorStyle = `${scaleDegreeColor.bg500} text-white font-medium`;
           } else if (isSelected && outOfKeyColor) {
             // Selected but not in key: use out-of-key color at 500 level with white text
-            indicatorStyle = darkMode
-              ? `${outOfKeyColor.darkBg500} text-white font-medium`
-              : `${outOfKeyColor.bg500} text-white font-medium`;
+            indicatorStyle = `${outOfKeyColor.bg500} text-white font-medium`;
           } else if (isSelected) {
             // Selected with no key: use chromatic color at 500 level with white text
-            indicatorStyle = darkMode
-              ? `${chromaticColor.darkBg500} text-white font-medium`
-              : `${chromaticColor.bg500} text-white font-medium`;
+            indicatorStyle = `${chromaticColor.bg500} text-white font-medium`;
           } else if (scaleDegreeColor && selectedKey) {
             // Not selected but in key: use scale degree color at 100 level with border
             indicatorStyle = darkMode

@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 export interface SavedChord {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ interface SavedChordsProps {
   activeChordId: string | null;
   onChordSelect: (chord: SavedChord) => void;
   onChordDelete: (id: string) => void;
+  onReorder: (chords: SavedChord[]) => void;
   darkMode?: boolean;
 }
 
@@ -19,8 +22,62 @@ export default function SavedChords({
   activeChordId,
   onChordSelect,
   onChordDelete,
+  onReorder,
   darkMode = false,
 }: SavedChordsProps) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (id !== draggedId) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = chords.findIndex(c => c.id === draggedId);
+    const targetIndex = chords.findIndex(c => c.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const newChords = [...chords];
+    const [draggedChord] = newChords.splice(draggedIndex, 1);
+    newChords.splice(targetIndex, 0, draggedChord);
+
+    onReorder(newChords);
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
   if (chords.length === 0) {
     return (
       <div className={`rounded-lg p-4 text-center text-sm ${
@@ -42,11 +99,21 @@ export default function SavedChords({
       <div className="flex gap-2 flex-wrap">
         {chords.map((chord) => {
           const isActive = chord.id === activeChordId;
+          const isDragging = chord.id === draggedId;
+          const isDragOver = chord.id === dragOverId;
           return (
             <div
               key={chord.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, chord.id)}
+              onDragOver={(e) => handleDragOver(e, chord.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, chord.id)}
+              onDragEnd={handleDragEnd}
               className={`
-                flex items-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors
+                flex items-center gap-2 px-3 py-2 rounded cursor-grab transition-all
+                ${isDragging ? 'opacity-50' : ''}
+                ${isDragOver ? 'ring-2 ring-blue-500' : ''}
                 ${isActive
                   ? darkMode
                     ? 'bg-zinc-600 ring-1 ring-inset ring-zinc-500'

@@ -5,7 +5,8 @@ import GuitarFretboard from '@/components/GuitarFretboard';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import SettingsDialog from '@/components/SettingsDialog';
 import SavedChords, { SavedChord } from '@/components/SavedChords';
-import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKeyDisplay, noteToMidi, midiToNote, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor } from '@/lib/notes';
+import WelcomeTutorial from '@/components/WelcomeTutorial';
+import { TUNINGS, MusicalKey, ALL_KEYS, getKeyName, getNotesInKeyDisplay, noteToMidi, midiToNote, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor, getDefaultTuning } from '@/lib/notes';
 import { playNote, playChord, playArpeggio } from '@/lib/audio';
 import { SelectedNote, getNextAvailableColorIndex } from '@/lib/colors';
 import { identifyChord } from '@/lib/chords';
@@ -33,10 +34,16 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [noteLabelMode, setNoteLabelMode] = useState<'sharpsAndFlats' | 'sharpsOnly'>('sharpsAndFlats');
   const [loopMode, setLoopMode] = useState(false);
+  const [chordLimitWarning, setChordLimitWarning] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const loopChordIndexRef = useRef(0);
   const loopPlayCountRef = useRef(0);
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedState = useRef(false);
 
+  const MAX_SAVED_CHORDS = 20;
+  const STORAGE_KEY = 'frets2keys_appState';
   const chordName = identifyChord(selectedNotes.map(sn => sn.note));
 
   // Check if the current selection differs from the active saved chord
@@ -45,6 +52,48 @@ export default function Home() {
     selectedNotes.length !== activeChord.notes.length ||
     selectedNotes.some((sn, i) => sn.note !== activeChord.notes[i]?.note)
   ) : false;
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (state.fretboards) setFretboards(state.fretboards);
+        if (state.savedChords) setSavedChords(state.savedChords);
+        if (state.playMode) setPlayMode(state.playMode);
+        if (state.showPiano !== undefined) setShowPiano(state.showPiano);
+        if (state.selectedKey !== undefined) setSelectedKey(state.selectedKey);
+        if (state.keyLabelMode) setKeyLabelMode(state.keyLabelMode);
+        if (state.noteLabelMode) setNoteLabelMode(state.noteLabelMode);
+        if (state.darkMode !== undefined) setDarkMode(state.darkMode);
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+    hasLoadedState.current = true;
+  }, []);
+
+  // Save state to localStorage when it changes
+  useEffect(() => {
+    if (!hasLoadedState.current) return;
+
+    try {
+      const state = {
+        fretboards,
+        savedChords,
+        playMode,
+        showPiano,
+        selectedKey,
+        keyLabelMode,
+        noteLabelMode,
+        darkMode,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // Ignore localStorage errors (e.g., quota exceeded)
+    }
+  }, [fretboards, savedChords, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, darkMode]);
 
   const handleNoteSelect = (note: string) => {
     const existingIndex = selectedNotes.findIndex(sn => sn.note === note);
@@ -192,8 +241,31 @@ export default function Home() {
     }
   }, [selectedNotes.length, savedChords.length, loopMode]);
 
+  // Show tutorial on first visit
+  useEffect(() => {
+    const hasSeenTutorial = localStorage.getItem('frets2keys_hasSeenTutorial');
+    if (!hasSeenTutorial) {
+      setTutorialOpen(true);
+      localStorage.setItem('frets2keys_hasSeenTutorial', 'true');
+    }
+  }, []);
+
   const handleSaveChordAsNew = () => {
     if (selectedNotes.length === 0 || !chordName) return;
+
+    // Check chord limit
+    if (savedChords.length >= MAX_SAVED_CHORDS) {
+      // Clear any existing timeout
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+      }
+      setChordLimitWarning(true);
+      // Auto-hide warning after 3 seconds
+      warningTimeoutRef.current = setTimeout(() => {
+        setChordLimitWarning(false);
+      }, 3000);
+      return;
+    }
 
     const newChord: SavedChord = {
       id: Date.now().toString(),
@@ -227,6 +299,85 @@ export default function Home() {
     }
   };
 
+  const handleChordReorder = (reorderedChords: SavedChord[]) => {
+    setSavedChords(reorderedChords);
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault();
+          handleClearAll();
+          break;
+        case 's':
+        case 'S':
+          e.preventDefault();
+          if (activeChordId && selectedNotes.length > 0 && chordName && hasChangesFromSaved) {
+            handleUpdateChord();
+          }
+          break;
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          if (selectedNotes.length > 0 && chordName) {
+            handleSaveChordAsNew();
+          }
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          handleTranspose(1);
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          handleTranspose(-1);
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedNotes.length > 0) {
+            handlePlayAll();
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          handleLoopToggle();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (savedChords.length > 0) {
+            const currentIndex = activeChordId ? savedChords.findIndex(c => c.id === activeChordId) : -1;
+            const prevIndex = currentIndex <= 0 ? savedChords.length - 1 : currentIndex - 1;
+            const prevChord = savedChords[prevIndex];
+            setSelectedNotes(prevChord.notes);
+            setActiveChordId(prevChord.id);
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (savedChords.length > 0) {
+            const currentIndex = activeChordId ? savedChords.findIndex(c => c.id === activeChordId) : -1;
+            const nextIndex = currentIndex >= savedChords.length - 1 ? 0 : currentIndex + 1;
+            const nextChord = savedChords[nextIndex];
+            setSelectedNotes(nextChord.notes);
+            setActiveChordId(nextChord.id);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNotes, savedChords, activeChordId, chordName, hasChangesFromSaved]);
+
   const handleTuningChange = (fretboardId: string, tuning: string[]) => {
     setFretboards(prev => prev.map(fb =>
       fb.id === fretboardId ? { ...fb, tuning } : fb
@@ -237,6 +388,22 @@ export default function Home() {
     setFretboards(prev => prev.map(fb =>
       fb.id === fretboardId ? { ...fb, capo } : fb
     ));
+  };
+
+  const handleStringCountChange = (fretboardId: string, count: number) => {
+    setFretboards(prev => prev.map(fb => {
+      if (fb.id !== fretboardId) return fb;
+      const newTuning = getDefaultTuning(count);
+      return { ...fb, tuning: newTuning };
+    }));
+  };
+
+  const handleResetTuning = (fretboardId: string) => {
+    setFretboards(prev => prev.map(fb => {
+      if (fb.id !== fretboardId) return fb;
+      const defaultTuning = getDefaultTuning(fb.tuning.length);
+      return { ...fb, tuning: defaultTuning, capo: 0 };
+    }));
   };
 
   const handleAddFretboard = () => {
@@ -297,7 +464,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Clear all notes"
+                title="Clear all notes (Delete)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                   <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -315,7 +482,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Update existing chord"
+                title="Update existing chord (S)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
@@ -333,7 +500,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Save as new chord"
+                title="Save as new chord (A)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                   <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -351,7 +518,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Transpose up 1 semitone"
+                title="Transpose up 1 semitone (+)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
@@ -369,7 +536,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Transpose down 1 semitone"
+                title="Transpose down 1 semitone (-)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" transform="rotate(180 10 10)" />
@@ -387,7 +554,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title="Play all selected notes"
+                title="Play all selected notes (Enter)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
@@ -407,7 +574,7 @@ export default function Home() {
                         ? 'text-zinc-600 cursor-not-allowed'
                         : 'text-zinc-300 cursor-not-allowed'
                 }`}
-                title={loopMode ? 'Stop loop' : 'Loop playback'}
+                title={loopMode ? 'Stop loop (Space)' : 'Loop playback (Space)'}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M12 5.25c1.213 0 2.415.046 3.605.135a3.256 3.256 0 013.01 3.01c.044.583.077 1.17.1 1.759L17.03 8.47a.75.75 0 10-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06l-1.752 1.751c-.023-.65-.06-1.296-.108-1.939a4.756 4.756 0 00-4.392-4.392 49.422 49.422 0 00-7.436 0A4.756 4.756 0 003.89 8.282c-.017.224-.033.447-.046.672a.75.75 0 101.497.092c.013-.217.028-.432.044-.647a3.256 3.256 0 013.01-3.01c1.19-.09 2.392-.136 3.605-.136zm-6.97 6.22a.75.75 0 00-1.06 0l-3 3a.75.75 0 101.06 1.06l1.752-1.751c.023.65.06 1.296.108 1.939a4.756 4.756 0 004.392 4.392 49.413 49.413 0 007.436 0 4.756 4.756 0 004.392-4.392c.017-.223.032-.447.046-.672a.75.75 0 00-1.497-.092c-.013.217-.028.434-.044.647a3.256 3.256 0 01-3.01 3.01 47.953 47.953 0 01-7.21 0 3.256 3.256 0 01-3.01-3.01 47.759 47.759 0 01-.1-1.759L6.97 12.53a.75.75 0 001.06-1.06l-3-3z" clipRule="evenodd" />
@@ -549,17 +716,11 @@ export default function Home() {
                   const chromaticColor = getChromaticNoteColor(note);
                   let chipStyle = '';
                   if (scaleDegreeColor) {
-                    chipStyle = darkMode
-                      ? `${scaleDegreeColor.darkBg500} text-white`
-                      : `${scaleDegreeColor.bg500} text-white`;
+                    chipStyle = `${scaleDegreeColor.bg500} text-white`;
                   } else if (outOfKeyColor) {
-                    chipStyle = darkMode
-                      ? `${outOfKeyColor.darkBg500} text-white`
-                      : `${outOfKeyColor.bg500} text-white`;
+                    chipStyle = `${outOfKeyColor.bg500} text-white`;
                   } else {
-                    chipStyle = darkMode
-                      ? `${chromaticColor.darkBg500} text-white`
-                      : `${chromaticColor.bg500} text-white`;
+                    chipStyle = `${chromaticColor.bg500} text-white`;
                   }
                   return (
                     <span
@@ -583,17 +744,11 @@ export default function Home() {
                   const chromaticColor = getChromaticNoteColor(note);
                   let chipStyle = '';
                   if (scaleDegreeColor) {
-                    chipStyle = darkMode
-                      ? `${scaleDegreeColor.darkBg500} text-white`
-                      : `${scaleDegreeColor.bg500} text-white`;
+                    chipStyle = `${scaleDegreeColor.bg500} text-white`;
                   } else if (outOfKeyColor) {
-                    chipStyle = darkMode
-                      ? `${outOfKeyColor.darkBg500} text-white`
-                      : `${outOfKeyColor.bg500} text-white`;
+                    chipStyle = `${outOfKeyColor.bg500} text-white`;
                   } else {
-                    chipStyle = darkMode
-                      ? `${chromaticColor.darkBg500} text-white`
-                      : `${chromaticColor.bg500} text-white`;
+                    chipStyle = `${chromaticColor.bg500} text-white`;
                   }
                   return (
                     <span
@@ -626,7 +781,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Clear all notes"
+              title="Clear all notes (Delete)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -644,7 +799,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Update existing chord"
+              title="Update existing chord (S)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
@@ -662,7 +817,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Save as new chord"
+              title="Save as new chord (A)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -680,7 +835,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Transpose up 1 semitone"
+              title="Transpose up 1 semitone (+)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
@@ -698,7 +853,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Transpose down 1 semitone"
+              title="Transpose down 1 semitone (-)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" transform="rotate(180 10 10)" />
@@ -716,7 +871,7 @@ export default function Home() {
                     ? 'text-zinc-600 cursor-not-allowed'
                     : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title="Play all selected notes"
+              title="Play all selected notes (Enter)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
@@ -736,7 +891,7 @@ export default function Home() {
                       ? 'text-zinc-600 cursor-not-allowed'
                       : 'text-zinc-300 cursor-not-allowed'
               }`}
-              title={loopMode ? 'Stop loop' : 'Loop playback'}
+              title={loopMode ? 'Stop loop (Space)' : 'Loop playback (Space)'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M12 5.25c1.213 0 2.415.046 3.605.135a3.256 3.256 0 013.01 3.01c.044.583.077 1.17.1 1.759L17.03 8.47a.75.75 0 10-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06l-1.752 1.751c-.023-.65-.06-1.296-.108-1.939a4.756 4.756 0 00-4.392-4.392 49.422 49.422 0 00-7.436 0A4.756 4.756 0 003.89 8.282c-.017.224-.033.447-.046.672a.75.75 0 101.497.092c.013-.217.028-.432.044-.647a3.256 3.256 0 013.01-3.01c1.19-.09 2.392-.136 3.605-.136zm-6.97 6.22a.75.75 0 00-1.06 0l-3 3a.75.75 0 101.06 1.06l1.752-1.751c.023.65.06 1.296.108 1.939a4.756 4.756 0 004.392 4.392 49.413 49.413 0 007.436 0 4.756 4.756 0 004.392-4.392c.017-.223.032-.447.046-.672a.75.75 0 00-1.497-.092c-.013.217-.028.434-.044.647a3.256 3.256 0 01-3.01 3.01 47.953 47.953 0 01-7.21 0 3.256 3.256 0 01-3.01-3.01 47.759 47.759 0 01-.1-1.759L6.97 12.53a.75.75 0 001.06-1.06l-3-3z" clipRule="evenodd" />
@@ -977,8 +1132,33 @@ export default function Home() {
           activeChordId={activeChordId}
           onChordSelect={handleChordSelect}
           onChordDelete={handleChordDelete}
+          onReorder={handleChordReorder}
           darkMode={darkMode}
         />
+
+        {/* Chord limit warning */}
+        {chordLimitWarning && (
+          <div className={`rounded-lg p-3 flex items-center gap-2 ${
+            darkMode
+              ? 'bg-amber-900/50 border border-amber-700 text-amber-200'
+              : 'bg-amber-50 border border-amber-200 text-amber-800'
+          }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 flex-shrink-0">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm">Maximum of {MAX_SAVED_CHORDS} chords reached. Delete some chords to save new ones.</span>
+            <button
+              onClick={() => setChordLimitWarning(false)}
+              className={`ml-auto p-1 rounded transition-colors ${
+                darkMode ? 'hover:bg-amber-800' : 'hover:bg-amber-100'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {fretboards.length > 0 && (
           <div className="flex gap-[16px]">
@@ -1031,6 +1211,15 @@ export default function Home() {
         onNoteLabelModeChange={setNoteLabelMode}
         onTuningChange={handleTuningChange}
         onCapoChange={handleCapoChange}
+        onStringCountChange={handleStringCountChange}
+        onResetTuning={handleResetTuning}
+        onOpenTutorial={() => setTutorialOpen(true)}
+      />
+
+      <WelcomeTutorial
+        isOpen={tutorialOpen}
+        onClose={() => setTutorialOpen(false)}
+        darkMode={darkMode}
       />
     </div>
   );

@@ -27,6 +27,78 @@ export const TUNINGS: Record<string, Tuning> = {
   fullStepDown: { name: 'Full Step Down (D)', notes: ['D2', 'G2', 'C3', 'F3', 'A3', 'D4'] },
 };
 
+// Default tunings for different string counts
+const DEFAULT_TUNINGS: Record<number, string[]> = {
+  4: ['E1', 'A1', 'D2', 'G2'],                           // Bass guitar
+  5: ['B0', 'E1', 'A1', 'D2', 'G2'],                     // 5-string bass
+  6: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],               // Standard guitar
+  7: ['B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'],         // 7-string guitar
+  8: ['F#1', 'B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'],  // 8-string guitar
+};
+
+export function getDefaultTuning(stringCount: number): string[] {
+  return DEFAULT_TUNINGS[stringCount] || TUNINGS.standard.notes;
+}
+
+export interface TuningPreset {
+  id: string;
+  name: string;
+  category: string;
+  tuning: string[];
+}
+
+export const TUNING_PRESETS: TuningPreset[] = [
+  // Guitar - 6 string
+  { id: 'guitar-standard', name: 'Standard', category: 'Guitar (6 string)', tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+  { id: 'guitar-drop-d', name: 'Drop D', category: 'Guitar (6 string)', tuning: ['D2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+  { id: 'guitar-drop-c', name: 'Drop C', category: 'Guitar (6 string)', tuning: ['C2', 'G2', 'C3', 'F3', 'A3', 'D4'] },
+  { id: 'guitar-open-g', name: 'Open G', category: 'Guitar (6 string)', tuning: ['D2', 'G2', 'D3', 'G3', 'B3', 'D4'] },
+  { id: 'guitar-open-d', name: 'Open D', category: 'Guitar (6 string)', tuning: ['D2', 'A2', 'D3', 'F#3', 'A3', 'D4'] },
+  { id: 'guitar-open-e', name: 'Open E', category: 'Guitar (6 string)', tuning: ['E2', 'B2', 'E3', 'G#3', 'B3', 'E4'] },
+  { id: 'guitar-dadgad', name: 'DADGAD', category: 'Guitar (6 string)', tuning: ['D2', 'A2', 'D3', 'G3', 'A3', 'D4'] },
+  { id: 'guitar-half-step-down', name: 'Half Step Down', category: 'Guitar (6 string)', tuning: ['D#2', 'G#2', 'C#3', 'F#3', 'A#3', 'D#4'] },
+  { id: 'guitar-full-step-down', name: 'Full Step Down', category: 'Guitar (6 string)', tuning: ['D2', 'G2', 'C3', 'F3', 'A3', 'D4'] },
+
+  // Guitar - 7 string
+  { id: 'guitar-7-standard', name: 'Standard', category: 'Guitar (7 string)', tuning: ['B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+  { id: 'guitar-7-drop-a', name: 'Drop A', category: 'Guitar (7 string)', tuning: ['A1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+
+  // Guitar - 8 string
+  { id: 'guitar-8-standard', name: 'Standard', category: 'Guitar (8 string)', tuning: ['F#1', 'B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+  { id: 'guitar-8-drop-e', name: 'Drop E', category: 'Guitar (8 string)', tuning: ['E1', 'B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
+
+  // Bass - 4 string
+  { id: 'bass-4-standard', name: 'Standard', category: 'Bass (4 string)', tuning: ['E1', 'A1', 'D2', 'G2'] },
+  { id: 'bass-4-drop-d', name: 'Drop D', category: 'Bass (4 string)', tuning: ['D1', 'A1', 'D2', 'G2'] },
+  { id: 'bass-4-half-step-down', name: 'Half Step Down', category: 'Bass (4 string)', tuning: ['D#1', 'G#1', 'C#2', 'F#2'] },
+
+  // Bass - 5 string
+  { id: 'bass-5-standard', name: 'Standard', category: 'Bass (5 string)', tuning: ['B0', 'E1', 'A1', 'D2', 'G2'] },
+  { id: 'bass-5-tenor', name: 'Tenor (High C)', category: 'Bass (5 string)', tuning: ['E1', 'A1', 'D2', 'G2', 'C3'] },
+
+  // Bass - 6 string
+  { id: 'bass-6-standard', name: 'Standard', category: 'Bass (6 string)', tuning: ['B0', 'E1', 'A1', 'D2', 'G2', 'C3'] },
+
+  // Ukulele
+  { id: 'ukulele-soprano', name: 'Soprano/Concert/Tenor', category: 'Ukulele', tuning: ['G4', 'C4', 'E4', 'A4'] },
+  { id: 'ukulele-baritone', name: 'Baritone', category: 'Ukulele', tuning: ['D3', 'G3', 'B3', 'E4'] },
+  { id: 'ukulele-low-g', name: 'Low G', category: 'Ukulele', tuning: ['G3', 'C4', 'E4', 'A4'] },
+
+  // Mandolin
+  { id: 'mandolin-standard', name: 'Standard', category: 'Mandolin', tuning: ['G3', 'D4', 'A4', 'E5'] },
+
+  // Banjo
+  { id: 'banjo-open-g', name: 'Open G', category: 'Banjo (5 string)', tuning: ['G4', 'D3', 'G3', 'B3', 'D4'] },
+  { id: 'banjo-standard-c', name: 'Standard C', category: 'Banjo (5 string)', tuning: ['G4', 'C3', 'G3', 'B3', 'D4'] },
+];
+
+export function findPresetByTuning(tuning: string[]): TuningPreset | null {
+  return TUNING_PRESETS.find(preset =>
+    preset.tuning.length === tuning.length &&
+    preset.tuning.every((note, i) => note === tuning[i])
+  ) || null;
+}
+
 export function parseNote(note: string): { name: NoteName; octave: number } {
   const match = note.match(/^([A-G]#?)(\d+)$/);
   if (!match) throw new Error(`Invalid note: ${note}`);
@@ -161,15 +233,15 @@ export function getScaleDegree(note: string, key: MusicalKey | null): number {
 }
 
 // 7 colors for the 7 scale degrees (each with light/dark mode variants for unselected and selected states)
-// bg100 = unselected in-key, bg500 = selected (darker with white text), border200 = border for highlighted notes
+// bg100 = unselected in-key, bg500 = selected (darker with white text), border = border for highlighted notes
 export const SCALE_DEGREE_COLORS = [
-  { name: 'red', bg100: 'bg-red-100', bg500: 'bg-red-500', border200: 'border-red-200', hover100: 'hover:bg-red-200', darkBg100: 'bg-red-900/40', darkBg500: 'bg-red-500', darkBorder: 'border-red-700', darkHover100: 'hover:bg-red-800/50' },
-  { name: 'orange', bg100: 'bg-orange-100', bg500: 'bg-orange-500', border200: 'border-orange-200', hover100: 'hover:bg-orange-200', darkBg100: 'bg-orange-900/40', darkBg500: 'bg-orange-500', darkBorder: 'border-orange-700', darkHover100: 'hover:bg-orange-800/50' },
-  { name: 'yellow', bg100: 'bg-yellow-100', bg500: 'bg-yellow-500', border200: 'border-yellow-200', hover100: 'hover:bg-yellow-200', darkBg100: 'bg-yellow-900/40', darkBg500: 'bg-yellow-500', darkBorder: 'border-yellow-700', darkHover100: 'hover:bg-yellow-800/50' },
-  { name: 'green', bg100: 'bg-green-100', bg500: 'bg-green-500', border200: 'border-green-200', hover100: 'hover:bg-green-200', darkBg100: 'bg-green-900/40', darkBg500: 'bg-green-500', darkBorder: 'border-green-700', darkHover100: 'hover:bg-green-800/50' },
-  { name: 'cyan', bg100: 'bg-cyan-100', bg500: 'bg-cyan-500', border200: 'border-cyan-200', hover100: 'hover:bg-cyan-200', darkBg100: 'bg-cyan-900/40', darkBg500: 'bg-cyan-500', darkBorder: 'border-cyan-700', darkHover100: 'hover:bg-cyan-800/50' },
-  { name: 'blue', bg100: 'bg-blue-100', bg500: 'bg-blue-500', border200: 'border-blue-200', hover100: 'hover:bg-blue-200', darkBg100: 'bg-blue-900/40', darkBg500: 'bg-blue-500', darkBorder: 'border-blue-700', darkHover100: 'hover:bg-blue-800/50' },
-  { name: 'purple', bg100: 'bg-purple-100', bg500: 'bg-purple-500', border200: 'border-purple-200', hover100: 'hover:bg-purple-200', darkBg100: 'bg-purple-900/40', darkBg500: 'bg-purple-500', darkBorder: 'border-purple-700', darkHover100: 'hover:bg-purple-800/50' },
+  { name: 'red', bg100: 'bg-red-100', bg500: 'bg-red-500', border200: 'border-red-400', hover100: 'hover:bg-red-200', darkBg100: 'bg-red-900/40', darkBg500: 'bg-red-500', darkBorder: 'border-red-700', darkHover100: 'hover:bg-red-800/50' },
+  { name: 'orange', bg100: 'bg-orange-100', bg500: 'bg-orange-600', border200: 'border-orange-400', hover100: 'hover:bg-orange-200', darkBg100: 'bg-orange-900/40', darkBg500: 'bg-orange-600', darkBorder: 'border-orange-700', darkHover100: 'hover:bg-orange-800/50' },
+  { name: 'yellow', bg100: 'bg-yellow-100', bg500: 'bg-yellow-600', border200: 'border-yellow-400', hover100: 'hover:bg-yellow-200', darkBg100: 'bg-yellow-900/40', darkBg500: 'bg-yellow-600', darkBorder: 'border-yellow-700', darkHover100: 'hover:bg-yellow-800/50' },
+  { name: 'green', bg100: 'bg-green-100', bg500: 'bg-green-600', border200: 'border-green-400', hover100: 'hover:bg-green-200', darkBg100: 'bg-green-900/40', darkBg500: 'bg-green-600', darkBorder: 'border-green-700', darkHover100: 'hover:bg-green-800/50' },
+  { name: 'cyan', bg100: 'bg-cyan-100', bg500: 'bg-cyan-600', border200: 'border-cyan-400', hover100: 'hover:bg-cyan-200', darkBg100: 'bg-cyan-900/40', darkBg500: 'bg-cyan-600', darkBorder: 'border-cyan-700', darkHover100: 'hover:bg-cyan-800/50' },
+  { name: 'blue', bg100: 'bg-blue-100', bg500: 'bg-blue-500', border200: 'border-blue-400', hover100: 'hover:bg-blue-200', darkBg100: 'bg-blue-900/40', darkBg500: 'bg-blue-500', darkBorder: 'border-blue-700', darkHover100: 'hover:bg-blue-800/50' },
+  { name: 'purple', bg100: 'bg-purple-100', bg500: 'bg-purple-500', border200: 'border-purple-400', hover100: 'hover:bg-purple-200', darkBg100: 'bg-purple-900/40', darkBg500: 'bg-purple-500', darkBorder: 'border-purple-700', darkHover100: 'hover:bg-purple-800/50' },
 ] as const;
 
 export function getScaleDegreeColor(scaleDegree: number) {
@@ -181,8 +253,8 @@ export function getScaleDegreeColor(scaleDegree: number) {
 // bg500 = selected (darker with white text)
 export const CHROMATIC_OUT_OF_KEY_COLORS = [
   { name: 'pink', bg500: 'bg-pink-500', darkBg500: 'bg-pink-500' },
-  { name: 'lime', bg500: 'bg-lime-500', darkBg500: 'bg-lime-500' },
-  { name: 'teal', bg500: 'bg-teal-500', darkBg500: 'bg-teal-500' },
+  { name: 'lime', bg500: 'bg-lime-600', darkBg500: 'bg-lime-600' },
+  { name: 'teal', bg500: 'bg-teal-600', darkBg500: 'bg-teal-600' },
   { name: 'indigo', bg500: 'bg-indigo-500', darkBg500: 'bg-indigo-500' },
   { name: 'rose', bg500: 'bg-rose-500', darkBg500: 'bg-rose-500' },
 ] as const;
@@ -192,12 +264,12 @@ export const CHROMATIC_OUT_OF_KEY_COLORS = [
 export const CHROMATIC_NOTE_COLORS = [
   { name: 'red', bg500: 'bg-red-500', darkBg500: 'bg-red-500' },       // C (0)
   { name: 'pink', bg500: 'bg-pink-500', darkBg500: 'bg-pink-500' },    // C# (1)
-  { name: 'orange', bg500: 'bg-orange-500', darkBg500: 'bg-orange-500' }, // D (2)
-  { name: 'lime', bg500: 'bg-lime-500', darkBg500: 'bg-lime-500' },    // D# (3)
-  { name: 'yellow', bg500: 'bg-yellow-500', darkBg500: 'bg-yellow-500' }, // E (4)
-  { name: 'green', bg500: 'bg-green-500', darkBg500: 'bg-green-500' }, // F (5)
-  { name: 'teal', bg500: 'bg-teal-500', darkBg500: 'bg-teal-500' },    // F# (6)
-  { name: 'cyan', bg500: 'bg-cyan-500', darkBg500: 'bg-cyan-500' },    // G (7)
+  { name: 'orange', bg500: 'bg-orange-600', darkBg500: 'bg-orange-600' }, // D (2)
+  { name: 'lime', bg500: 'bg-lime-600', darkBg500: 'bg-lime-600' },    // D# (3)
+  { name: 'yellow', bg500: 'bg-yellow-600', darkBg500: 'bg-yellow-600' }, // E (4)
+  { name: 'green', bg500: 'bg-green-600', darkBg500: 'bg-green-600' }, // F (5)
+  { name: 'teal', bg500: 'bg-teal-600', darkBg500: 'bg-teal-600' },    // F# (6)
+  { name: 'cyan', bg500: 'bg-cyan-600', darkBg500: 'bg-cyan-600' },    // G (7)
   { name: 'indigo', bg500: 'bg-indigo-500', darkBg500: 'bg-indigo-500' }, // G# (8)
   { name: 'blue', bg500: 'bg-blue-500', darkBg500: 'bg-blue-500' },    // A (9)
   { name: 'rose', bg500: 'bg-rose-500', darkBg500: 'bg-rose-500' },    // A# (10)

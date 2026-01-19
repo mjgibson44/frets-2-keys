@@ -1,6 +1,6 @@
 'use client';
 
-import { noteToMidi, midiToNote, TUNINGS } from '@/lib/notes';
+import { noteToMidi, midiToNote, TUNINGS, getDefaultTuning, TUNING_PRESETS, findPresetByTuning } from '@/lib/notes';
 
 interface Fretboard {
   id: string;
@@ -26,6 +26,9 @@ interface SettingsDialogProps {
   onNoteLabelModeChange: (mode: 'sharpsAndFlats' | 'sharpsOnly') => void;
   onTuningChange: (fretboardId: string, tuning: string[]) => void;
   onCapoChange: (fretboardId: string, capo: number) => void;
+  onStringCountChange: (fretboardId: string, count: number) => void;
+  onResetTuning: (fretboardId: string) => void;
+  onOpenTutorial: () => void;
 }
 
 export default function SettingsDialog({
@@ -46,6 +49,9 @@ export default function SettingsDialog({
   onNoteLabelModeChange,
   onTuningChange,
   onCapoChange,
+  onStringCountChange,
+  onResetTuning,
+  onOpenTutorial,
 }: SettingsDialogProps) {
   if (!isOpen) return null;
 
@@ -77,7 +83,28 @@ export default function SettingsDialog({
     }
   };
 
-  const stringLabels = ['1 (High E)', '2 (B)', '3 (G)', '4 (D)', '5 (A)', '6 (Low E)'];
+  const handleStringCountChange = (fretboardId: string, value: string) => {
+    const num = parseInt(value, 10);
+    if (num >= 4 && num <= 8) {
+      onStringCountChange(fretboardId, num);
+    }
+  };
+
+  const getStringLabel = (stringNum: number, totalStrings: number): string => {
+    // Standard 6-string labels
+    const standard6Labels: Record<number, string> = {
+      1: '1 (High E)',
+      2: '2 (B)',
+      3: '3 (G)',
+      4: '4 (D)',
+      5: '5 (A)',
+      6: '6 (Low E)',
+    };
+    if (totalStrings === 6) {
+      return standard6Labels[stringNum] || `String ${stringNum}`;
+    }
+    return `String ${stringNum}`;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -88,10 +115,13 @@ export default function SettingsDialog({
       />
 
       {/* Dialog */}
-      <div className={`relative rounded-[16px] shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto ${
+      <div className={`relative rounded-[16px] shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col ${
         darkMode ? 'bg-zinc-800 text-zinc-100' : 'bg-white text-zinc-900'
       }`}>
-        <div className="flex items-center justify-between mb-6">
+        {/* Sticky header */}
+        <div className={`sticky top-0 z-10 flex items-center justify-between p-6 pb-4 rounded-t-[16px] ${
+          darkMode ? 'bg-zinc-800' : 'bg-white'
+        }`}>
           <h2 className="text-xl font-bold">Settings</h2>
           <button
             onClick={onClose}
@@ -107,12 +137,32 @@ export default function SettingsDialog({
           </button>
         </div>
 
+        {/* Scrollable content */}
+        <div className="overflow-y-auto px-6 pb-6">
+        {/* View Tutorial button */}
+        <button
+          onClick={() => {
+            onClose();
+            onOpenTutorial();
+          }}
+          className={`w-full mb-6 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            darkMode
+              ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'
+              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+          </svg>
+          View Tutorial
+        </button>
+
         {/* Play mode toggle */}
         <div className="mb-6">
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Playback Mode
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-2">
             <button
               onClick={() => onPlayModeChange('chord')}
               className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
@@ -149,7 +199,7 @@ export default function SettingsDialog({
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Key Labels
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-2">
             <button
               onClick={() => onKeyLabelModeChange('onlyInKey')}
               className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
@@ -186,7 +236,7 @@ export default function SettingsDialog({
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
             Note Labels
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-2">
             <button
               onClick={() => onNoteLabelModeChange('sharpsAndFlats')}
               className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
@@ -270,18 +320,105 @@ export default function SettingsDialog({
 
           return (
             <div key={index} className={isEnabled ? '' : 'opacity-40 pointer-events-none'}>
-              <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                Guitar {index + 1} Tuning
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className={`text-sm font-medium ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                  Guitar {index + 1} Tuning
+                </label>
+                <button
+                  onClick={() => fretboard && onResetTuning(fretboard.id)}
+                  disabled={!isEnabled}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    darkMode
+                      ? 'bg-zinc-600 hover:bg-zinc-500 text-zinc-300'
+                      : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-600'
+                  }`}
+                >
+                  Reset
+                </button>
+              </div>
+
+              {/* Preset selector */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`w-20 text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  Preset
+                </span>
+                <select
+                  value={fretboard ? (findPresetByTuning(fretboard.tuning)?.id || '') : ''}
+                  onChange={(e) => {
+                    if (!fretboard) return;
+                    const preset = TUNING_PRESETS.find(p => p.id === e.target.value);
+                    if (preset) {
+                      onTuningChange(fretboard.id, preset.tuning);
+                    }
+                  }}
+                  disabled={!isEnabled}
+                  className={`flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed ${
+                    darkMode ? 'bg-zinc-700 border border-zinc-600 text-zinc-100' : 'bg-white border border-[#EDE9E9] text-zinc-900'
+                  }`}
+                >
+                  <option value="">Custom</option>
+                  {(() => {
+                    const categories = [...new Set(TUNING_PRESETS.map(p => p.category))];
+                    return categories.map(category => (
+                      <optgroup key={category} label={category}>
+                        {TUNING_PRESETS.filter(p => p.category === category).map(preset => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ));
+                  })()}
+                </select>
+              </div>
+
+              {/* # of strings selector */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`w-20 text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  # of strings
+                </span>
+                <button
+                  onClick={() => fretboard && tuning.length > 4 && onStringCountChange(fretboard.id, tuning.length - 1)}
+                  disabled={!isEnabled || tuning.length <= 4}
+                  className={`w-7 h-7 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${
+                    darkMode ? 'bg-zinc-600 hover:bg-zinc-500' : 'bg-zinc-200 hover:bg-zinc-300'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                    <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <input
+                  type="text"
+                  value={tuning.length}
+                  onChange={(e) => fretboard && handleStringCountChange(fretboard.id, e.target.value)}
+                  disabled={!isEnabled}
+                  className={`w-14 px-2 py-1 text-center text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed ${
+                    darkMode ? 'bg-zinc-700 border border-zinc-600 text-zinc-100' : 'bg-white border border-[#EDE9E9] text-zinc-900'
+                  }`}
+                />
+                <button
+                  onClick={() => fretboard && tuning.length < 8 && onStringCountChange(fretboard.id, tuning.length + 1)}
+                  disabled={!isEnabled || tuning.length >= 8}
+                  className={`w-7 h-7 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${
+                    darkMode ? 'bg-zinc-600 hover:bg-zinc-500' : 'bg-zinc-200 hover:bg-zinc-300'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                </button>
+              </div>
 
               {/* String editors */}
               <div className="space-y-2 mb-4">
                 {tuning.slice().reverse().map((note, displayIndex) => {
                   const stringIndex = tuning.length - 1 - displayIndex;
+                  const stringNum = displayIndex + 1;
                   return (
                     <div key={stringIndex} className="flex items-center gap-2">
                       <span className={`w-20 text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                        {stringLabels[displayIndex] || `String ${displayIndex + 1}`}
+                        {getStringLabel(stringNum, tuning.length)}
                       </span>
                       <button
                         onClick={() => fretboard && handlePitchChange(fretboard.id, fretboard.tuning, stringIndex, -1)}
@@ -370,6 +507,7 @@ export default function SettingsDialog({
             </div>
           );
         })}
+        </div>
         </div>
       </div>
     </div>
