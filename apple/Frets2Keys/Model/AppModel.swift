@@ -14,13 +14,21 @@ final class AppModel {
     private static let storageKey = "frets2keys_appState"
 
     var state: AppState {
-        didSet { persistIfChanged() }
+        didSet {
+            // Selection changes (note taps, loop beats) aren't persisted, so skip the encode.
+            var comparable = oldValue
+            comparable.selectedNotes = state.selectedNotes
+            comparable.activeChordID = state.activeChordID
+            if comparable != state { persistIfChanged() }
+        }
     }
 
     private(set) var isLooping = false
     var showChordLimitWarning = false
     var isSettingsPresented = false
     var isTutorialPresented = false
+    /// Set by Settings' "View Tutorial" so the tutorial opens once the settings sheet is gone.
+    var showTutorialAfterSettings = false
 
     var isSheetPresented: Bool { isSettingsPresented || isTutorialPresented }
 

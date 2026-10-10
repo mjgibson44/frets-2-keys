@@ -14,7 +14,7 @@ final class SynthEngine: @unchecked Sendable {
         NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in
-            self?.startIfNeeded()
+            self?.handleConfigurationChange()
         }
     }
 
@@ -29,6 +29,17 @@ final class SynthEngine: @unchecked Sendable {
     private func withMixer(_ change: @Sendable (inout SynthMixer) -> Void) {
         startIfNeeded()
         mixer?.withLock { change(&$0) }
+    }
+
+    /// The output device changed (e.g. headphones unplugged): rebuild the source node so the mixer
+    /// renders at the new sample rate, then restart.
+    private func handleConfigurationChange() {
+        if let sourceNode {
+            engine.detach(sourceNode)
+            self.sourceNode = nil
+            mixer = nil
+        }
+        startIfNeeded()
     }
 
     private func startIfNeeded() {
@@ -67,7 +78,11 @@ final class SynthEngine: @unchecked Sendable {
         }
         if !engine.isRunning {
             engine.prepare()
-            try? engine.start()
+            do {
+                try engine.start()
+            } catch {
+                print("Frets 2 Keys: couldn't start audio: \(error)")
+            }
         }
     }
 }

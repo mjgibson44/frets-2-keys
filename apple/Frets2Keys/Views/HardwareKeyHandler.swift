@@ -18,7 +18,7 @@ struct HardwareKeyHandler: UIViewRepresentable {
     func updateUIView(_ view: KeyCatcherView, context: Context) {
         view.onPress = onPress
         view.isActive = isActive
-        if isActive {
+        if isActive && !view.isFirstResponder {
             DispatchQueue.main.async { view.becomeFirstResponder() }
         }
     }
@@ -34,15 +34,38 @@ struct HardwareKeyHandler: UIViewRepresentable {
             if window != nil { becomeFirstResponder() }
         }
 
+        /// Presses this view handled, so their later phases aren't forwarded either.
+        private var handledPresses = Set<UIPress>()
+
         override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
             var unhandled = Set<UIPress>()
             for press in presses {
-                guard let key = press.key, onPress?(key) == true else {
+                if let key = press.key, onPress?(key) == true {
+                    handledPresses.insert(press)
+                } else {
                     unhandled.insert(press)
-                    continue
                 }
             }
             if !unhandled.isEmpty { super.pressesBegan(unhandled, with: event) }
+        }
+
+        override func pressesChanged(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            let unhandled = presses.subtracting(handledPresses)
+            if !unhandled.isEmpty { super.pressesChanged(unhandled, with: event) }
+        }
+
+        override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            finish(presses, with: event) { super.pressesEnded($0, with: $1) }
+        }
+
+        override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            finish(presses, with: event) { super.pressesCancelled($0, with: $1) }
+        }
+
+        private func finish(_ presses: Set<UIPress>, with event: UIPressesEvent?, forward: (Set<UIPress>, UIPressesEvent?) -> Void) {
+            let unhandled = presses.subtracting(handledPresses)
+            handledPresses.subtract(presses)
+            if !unhandled.isEmpty { forward(unhandled, event) }
         }
     }
 }

@@ -11,12 +11,9 @@ struct SettingsView: View {
             Form {
                 Section {
                     Button {
+                        // Shown once this sheet has finished dismissing (see ContentView).
+                        model.showTutorialAfterSettings = true
                         dismiss()
-                        // Let the settings sheet finish dismissing before presenting the tutorial.
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(350))
-                            model.isTutorialPresented = true
-                        }
                     } label: {
                         Label("View Tutorial", systemImage: "info.circle.fill")
                     }

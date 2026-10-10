@@ -54,7 +54,12 @@ struct ContentView: View {
             .accessibilityHidden(true)
         }
         #endif
-        .sheet(isPresented: $model.isSettingsPresented) {
+        .sheet(isPresented: $model.isSettingsPresented, onDismiss: {
+            if model.showTutorialAfterSettings {
+                model.showTutorialAfterSettings = false
+                model.isTutorialPresented = true
+            }
+        }) {
             SettingsView()
                 .environment(\.theme, theme)
                 .preferredColorScheme(model.state.darkMode ? .dark : .light)
