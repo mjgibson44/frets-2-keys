@@ -1,0 +1,465 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		080B3D8C86D5090D83DB2633 /* Frets2KeysCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5D57A024DDE93C045AB87192 /* Frets2KeysCore */; };
+		1DD2AE9F8E7E01D1C6C6381E /* SynthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D63EFD17750090040D5597 /* SynthEngine.swift */; };
+		39B7A1D6BAD93FCB8FE7D87F /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E137C640951B037603265D /* HeaderView.swift */; };
+		3D0571A881D4DC1D14862EA5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C957D380454D694521317558 /* Theme.swift */; };
+		3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10560538D765892911349D8F /* HardwareKeyHandler.swift */; };
+		421ECD358F34E7F686EAE887 /* SavedChordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */; };
+		4AA662B6096EFCE71F872BB8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 62BD8F5050045D9731DCA9A1 /* Assets.xcassets */; };
+		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
+		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
+		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
+		9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922B9441959B18FFFD9581C3 /* PianoView.swift */; };
+		D830982FB02776ED749B8347 /* NoteBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF95577DF9F97F4678870AA0 /* NoteBadge.swift */; };
+		E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4205C64622525D72C49AE6F /* AppModel.swift */; };
+		ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43E94CD27A2FEECE27B77AE /* SettingsView.swift */; };
+		EE1FB52D1E657A06E02A3F96 /* FretboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		10560538D765892911349D8F /* HardwareKeyHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyHandler.swift; sourceTree = "<group>"; };
+		2116C88214FB3EC290861C99 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		62BD8F5050045D9731DCA9A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6EED0E2BF15661D10AF16550 /* Frets2KeysCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Frets2KeysCore; path = Frets2KeysCore; sourceTree = SOURCE_ROOT; };
+		87E137C640951B037603265D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
+		8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
+		922B9441959B18FFFD9581C3 /* PianoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianoView.swift; sourceTree = "<group>"; };
+		BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Frets2Keys.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4205C64622525D72C49AE6F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C957D380454D694521317558 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FretboardView.swift; sourceTree = "<group>"; };
+		CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedChordsView.swift; sourceTree = "<group>"; };
+		D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Frets2KeysApp.swift; sourceTree = "<group>"; };
+		E2D63EFD17750090040D5597 /* SynthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthEngine.swift; sourceTree = "<group>"; };
+		E43E94CD27A2FEECE27B77AE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F957A29D63BB49386EA11B27 /* Frets2Keys.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Frets2Keys.entitlements; sourceTree = "<group>"; };
+		FF95577DF9F97F4678870AA0 /* NoteBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteBadge.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9F7C8786CC51E7A83A910408 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				080B3D8C86D5090D83DB2633 /* Frets2KeysCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1E8221AAF8FFE0A9621438D5 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				6EED0E2BF15661D10AF16550 /* Frets2KeysCore */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		332F935ACD9A4356CF610B75 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		53151ED80747AB4848C4A291 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		59B0D10E5501EC992F6B36CB /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2116C88214FB3EC290861C99 /* ContentView.swift */,
+				CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */,
+				10560538D765892911349D8F /* HardwareKeyHandler.swift */,
+				87E137C640951B037603265D /* HeaderView.swift */,
+				FF95577DF9F97F4678870AA0 /* NoteBadge.swift */,
+				922B9441959B18FFFD9581C3 /* PianoView.swift */,
+				CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */,
+				E43E94CD27A2FEECE27B77AE /* SettingsView.swift */,
+				C957D380454D694521317558 /* Theme.swift */,
+				8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		724D8F37F3093E1FB32B9C68 = {
+			isa = PBXGroup;
+			children = (
+				831C8C4179CEE3426F024066 /* Frets2Keys */,
+				1E8221AAF8FFE0A9621438D5 /* Packages */,
+				332F935ACD9A4356CF610B75 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		831C8C4179CEE3426F024066 /* Frets2Keys */ = {
+			isa = PBXGroup;
+			children = (
+				62BD8F5050045D9731DCA9A1 /* Assets.xcassets */,
+				F957A29D63BB49386EA11B27 /* Frets2Keys.entitlements */,
+				53151ED80747AB4848C4A291 /* App */,
+				A31CD29E8E655C2DC9CF53A9 /* Audio */,
+				E4CF1EADE0B274DAAE6CC796 /* Model */,
+				59B0D10E5501EC992F6B36CB /* Views */,
+			);
+			path = Frets2Keys;
+			sourceTree = "<group>";
+		};
+		A31CD29E8E655C2DC9CF53A9 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				E2D63EFD17750090040D5597 /* SynthEngine.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		E4CF1EADE0B274DAAE6CC796 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				C4205C64622525D72C49AE6F /* AppModel.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		607D463FB38F6E39096872F7 /* Frets2Keys */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 652BC0F2799FC478BB1FB404 /* Build configuration list for PBXNativeTarget "Frets2Keys" */;
+			buildPhases = (
+				C0444B555E7CDACE6D04F7AF /* Sources */,
+				ADFB04C222DD493A27E8F9A2 /* Resources */,
+				9F7C8786CC51E7A83A910408 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Frets2Keys;
+			packageProductDependencies = (
+				5D57A024DDE93C045AB87192 /* Frets2KeysCore */,
+			);
+			productName = Frets2Keys;
+			productReference = BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		00DC7CDE9B7F221B50CFF656 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					607D463FB38F6E39096872F7 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A08B43379991D6F4D07CD645 /* Build configuration list for PBXProject "Frets2Keys" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 724D8F37F3093E1FB32B9C68;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				32C7CB37DACB738DF466F037 /* XCLocalSwiftPackageReference "Frets2KeysCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				607D463FB38F6E39096872F7 /* Frets2Keys */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ADFB04C222DD493A27E8F9A2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4AA662B6096EFCE71F872BB8 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C0444B555E7CDACE6D04F7AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */,
+				50539B669DF78250A9922960 /* ContentView.swift in Sources */,
+				EE1FB52D1E657A06E02A3F96 /* FretboardView.swift in Sources */,
+				4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */,
+				3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */,
+				39B7A1D6BAD93FCB8FE7D87F /* HeaderView.swift in Sources */,
+				D830982FB02776ED749B8347 /* NoteBadge.swift in Sources */,
+				9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */,
+				421ECD358F34E7F686EAE887 /* SavedChordsView.swift in Sources */,
+				ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */,
+				1DD2AE9F8E7E01D1C6C6381E /* SynthEngine.swift in Sources */,
+				3D0571A881D4DC1D14862EA5 /* Theme.swift in Sources */,
+				5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4D82D5DF82BED917278E298E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Frets2Keys/Frets2Keys.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Frets 2 Keys";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Matt Gibson in 2026";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mjgibson44.frets2keys;
+				PRODUCT_MODULE_NAME = Frets2Keys;
+				PRODUCT_NAME = "Frets 2 Keys";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6F1EE2D0DAA736F5E52B204F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C47F5011A3263E2DCD6AC171 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Frets2Keys/Frets2Keys.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Frets 2 Keys";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Matt Gibson in 2026";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mjgibson44.frets2keys;
+				PRODUCT_MODULE_NAME = Frets2Keys;
+				PRODUCT_NAME = "Frets 2 Keys";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EBC7B54A01E094AA60F0E231 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		652BC0F2799FC478BB1FB404 /* Build configuration list for PBXNativeTarget "Frets2Keys" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C47F5011A3263E2DCD6AC171 /* Debug */,
+				4D82D5DF82BED917278E298E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A08B43379991D6F4D07CD645 /* Build configuration list for PBXProject "Frets2Keys" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EBC7B54A01E094AA60F0E231 /* Debug */,
+				6F1EE2D0DAA736F5E52B204F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		32C7CB37DACB738DF466F037 /* XCLocalSwiftPackageReference "Frets2KeysCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Frets2KeysCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5D57A024DDE93C045AB87192 /* Frets2KeysCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Frets2KeysCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 00DC7CDE9B7F221B50CFF656 /* Project object */;
+}

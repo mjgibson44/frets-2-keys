@@ -1,0 +1,162 @@
+import SwiftUI
+import Frets2KeysCore
+
+struct ContentView: View {
+    @Environment(AppModel.self) private var model
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        @Bindable var model = model
+        let theme = Theme(isDark: model.state.darkMode)
+
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            ScrollView(.vertical) {
+                VStack(spacing: 16) {
+                    HeaderView()
+                    SavedChordsView()
+                    if model.showChordLimitWarning {
+                        ChordLimitWarning()
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                    fretboards(width: width)
+                    if model.state.showPiano {
+                        PianoView()
+                    }
+                }
+                .padding(width >= 600 ? 32 : 24)
+                .frame(maxWidth: 1280)
+                .frame(maxWidth: .infinity)
+                .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
+            }
+            .environment(\.layoutWidth, width)
+        }
+        .background(theme.pageBackground.ignoresSafeArea())
+        .foregroundStyle(theme.primaryText)
+        .environment(\.theme, theme)
+        .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        #if os(macOS)
+        // On iOS the menu commands handle hardware keyboards; a focusable root view there would
+        // summon the software keyboard.
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+        .onKeyPress(phases: .down, action: handleKeyPress)
+        #else
+        .background {
+            HardwareKeyHandler(isActive: !model.isSheetPresented) { key in
+                guard !model.isSheetPresented, let shortcut = Shortcut(key) else { return false }
+                shortcut.perform(on: model)
+                return true
+            }
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+        }
+        #endif
+        .sheet(isPresented: $model.isSettingsPresented) {
+            SettingsView()
+                .environment(\.theme, theme)
+                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        }
+        .sheet(isPresented: $model.isTutorialPresented) {
+            TutorialView()
+                .environment(\.theme, theme)
+                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        }
+        .onChange(of: model.isSheetPresented) { _, presented in
+            if !presented { isFocused = true }
+        }
+    }
+
+    @ViewBuilder
+    private func fretboards(width: CGFloat) -> some View {
+        let boards = model.state.fretboards
+        if !boards.isEmpty {
+            // Side by side when there's room, like the web app; stacked on narrow screens.
+            let layout = width >= 900 ? AnyLayout(HStackLayout(spacing: 16)) : AnyLayout(VStackLayout(spacing: 16))
+            layout {
+                ForEach(Array(boards.enumerated()), id: \.element.id) { index, board in
+                    FretboardView(fretboard: board, title: "Guitar \(index + 1)")
+                }
+            }
+        }
+    }
+
+    /// macOS keyboard shortcuts. Most are also menu commands (see `AppCommands`), which take priority;
+    /// this also covers the alternate keys (+, _, forward delete).
+    private func handleKeyPress(_ press: KeyPress) -> KeyPress.Result {
+        guard press.modifiers.isDisjoint(with: [.command, .control, .option]), !model.isSheetPresented else {
+            return .ignored
+        }
+        guard let shortcut = Shortcut(press) else { return .ignored }
+        shortcut.perform(on: model)
+        return .handled
+    }
+}
+
+/// The web app's keyboard shortcuts.
+enum Shortcut: CaseIterable {
+    case clear, saveNew, update, transposeUp, transposeDown, play, loop, previous, next
+
+    init?(_ press: KeyPress) {
+        switch press.key {
+        case .delete, .deleteForward: self = .clear
+        case .return: self = .play
+        case .space: self = .loop
+        case .leftArrow: self = .previous
+        case .rightArrow: self = .next
+        default:
+            switch press.characters.lowercased() {
+            case "a": self = .saveNew
+            case "s": self = .update
+            case "+", "=": self = .transposeUp
+            case "-", "_": self = .transposeDown
+            default: return nil
+            }
+        }
+    }
+
+    @MainActor
+    func perform(on model: AppModel) {
+        switch self {
+        case .clear: model.clearSelection()
+        case .saveNew: model.saveAsNewChord()
+        case .update: model.updateActiveChord()
+        case .transposeUp: model.transpose(by: 1)
+        case .transposeDown: model.transpose(by: -1)
+        case .play: model.play()
+        case .loop: model.toggleLoop()
+        case .previous: model.selectPreviousChord()
+        case .next: model.selectNextChord()
+        }
+    }
+}
+
+struct ChordLimitWarning: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text("Maximum of \(AppState.maxSavedChords) chords reached. Delete some chords to save new ones.")
+                .font(.system(size: 14))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                model.dismissChordLimitWarning()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(HighlightButtonStyle(highlighted: theme.warningBorder.opacity(0.4), cornerRadius: 4))
+            .accessibilityLabel("Dismiss")
+        }
+        .foregroundStyle(theme.warningText)
+        .padding(12)
+        .background(theme.warningBackground, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.warningBorder, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+}

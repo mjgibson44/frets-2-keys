@@ -44,6 +44,27 @@ A visual tool for translating chords between piano and stringed instruments like
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+## iPhone, iPad and Mac App
+
+A native SwiftUI version of Frets 2 Keys lives in [`apple/`](apple). One multiplatform target runs on iOS 17+, iPadOS 17+ and macOS 14+, with the same features as the web app: both instruments, chord recognition, saved chords (drag to reorder, or use the context menu), transpose, chord/arpeggio playback and looping, keys, tuning presets, capo, dark mode, keyboard shortcuts (hardware keyboards on iPad, and the **Chord** menu on Mac), and saved state.
+
+### Building
+
+Requires Xcode 16 or later.
+
+```bash
+open apple/Frets2Keys.xcodeproj
+```
+
+Pick the **Frets2Keys** scheme and choose an iPhone/iPad simulator or **My Mac**, then Run. To install on a physical iPhone or iPad, select your team under *Signing & Capabilities* first.
+
+### Layout
+
+- `apple/Frets2KeysCore/`: a Swift package with the music logic (notes, keys, tunings, chord recognition, app state, loop sequencing, and the synth's sound generation), plus its unit tests. Run them with `cd apple/Frets2KeysCore && swift test`.
+- `apple/Frets2Keys/`: the SwiftUI app (views, audio engine, persistence, menus and keyboard handling).
+- `apple/project.yml`: the [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec the Xcode project is generated from. After adding or removing source files, run `xcodegen generate` in `apple/` (install with `brew install xcodegen`).
+- `apple/tools/make-icon.swift`: redraws the app icon.
+
 ## Keyboard Shortcuts
 
 | Action | Shortcut |
