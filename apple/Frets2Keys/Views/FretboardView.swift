@@ -5,19 +5,34 @@ struct FretboardView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
+    @Environment(\.instrumentFillHeight) private var fillHeight
 
     let fretboard: Fretboard
     let title: String
 
     private static let cellWidth: CGFloat = 56
-    private static let cellHeight: CGFloat = 40
+    private static let standardCellHeight: CGFloat = 40
+    private static let footerRowHeight: CGFloat = 24
+
+    private var padding: EdgeInsets {
+        if fillHeight != nil { return EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16) }
+        let wide = layoutWidth >= 600
+        return EdgeInsets(top: wide ? 24 : 16, leading: wide ? 24 : 16, bottom: wide ? 18 : 10, trailing: wide ? 24 : 16)
+    }
+
+    /// String spacing: fixed normally; when filling a height, as tall as fits (within reason).
+    private var cellHeight: CGFloat {
+        guard let fillHeight, !fretboard.tuning.isEmpty else { return Self.standardCellHeight }
+        let footerRows: CGFloat = model.state.anyCapoActive ? 3 : 2
+        let available = fillHeight - padding.top - padding.bottom - footerRows * Self.footerRowHeight
+        return min(max(available / CGFloat(fretboard.tuning.count), 30), 72)
+    }
     private static let singleMarkers: Set<Int> = [3, 5, 7, 9, 15, 17, 19, 21]
     private static let doubleMarkers: Set<Int> = [12, 24]
     private var frets: Range<Int> { 0..<(Tunings.fretCount + 1) }
 
     var body: some View {
-        let wide = layoutWidth >= 600
-        Card(padding: EdgeInsets(top: wide ? 24 : 16, leading: wide ? 24 : 16, bottom: wide ? 18 : 10, trailing: wide ? 24 : 16)) {
+        Card(padding: padding) {
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(spacing: 0) {
                     // Highest-pitched string on top, like looking down at the neck.
@@ -55,6 +70,7 @@ struct FretboardView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
+        .accessibilityIdentifier("instrument.\(title)")
     }
 
     @ViewBuilder
@@ -82,7 +98,7 @@ struct FretboardView: View {
                     }
                 }
             }
-            .frame(width: Self.cellWidth, height: Self.cellHeight)
+            .frame(width: Self.cellWidth, height: cellHeight)
         }
         .buttonStyle(HighlightButtonStyle(highlighted: theme.subtleHover))
         .disabled(isBelowCapo)

@@ -142,10 +142,20 @@ private struct LayoutWidthKey: EnvironmentKey {
     static let defaultValue: CGFloat = 1000
 }
 
+private struct InstrumentFillHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
 extension EnvironmentValues {
     var theme: Theme {
         get { self[ThemeKey.self] }
         set { self[ThemeKey.self] = newValue }
+    }
+
+    /// When set, instruments stretch to fill this height (iPhone landscape).
+    var instrumentFillHeight: CGFloat? {
+        get { self[InstrumentFillHeightKey.self] }
+        set { self[InstrumentFillHeightKey.self] = newValue }
     }
 
     /// Width of the main window content, for the web app's responsive breakpoints.

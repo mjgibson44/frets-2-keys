@@ -15,11 +15,19 @@ enum ActionIcon {
     static let lightMode = "sun.max.fill"
 }
 
+/// Which instrument fills the screen on an iPhone held sideways.
+enum LandscapeInstrument: String {
+    case guitar
+    case piano
+}
+
 /// Top bar: key picker on the left, playback and app controls on the right.
 /// Selection controls live in the chord panel.
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.layoutWidth) private var layoutWidth
+    /// Shown on iPhone in landscape, where one instrument fills the screen.
+    var instrumentChoice: Binding<LandscapeInstrument>?
 
     var body: some View {
         let state = model.state
@@ -27,6 +35,15 @@ struct HeaderView: View {
         HStack(spacing: 12) {
             KeyPickerMenu()
             Spacer(minLength: 0)
+            if let instrumentChoice {
+                Picker("Instrument", selection: instrumentChoice) {
+                    Label("Guitar", systemImage: "guitars").tag(LandscapeInstrument.guitar)
+                    Label("Piano", systemImage: "pianokeys").tag(LandscapeInstrument.piano)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                Spacer(minLength: 0)
+            }
             HStack(spacing: 0) {
                 IconButton(symbol: ActionIcon.play, help: "Play all selected notes (Enter)", size: size, isEnabled: state.hasSelection) {
                     model.play()

@@ -26,19 +26,22 @@ struct ContentView: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             ScrollView(.vertical) {
-                VStack(spacing: 16) {
-                    HeaderView()
-                    ChordPanel()
-                    if model.showChordLimitWarning {
-                        ChordLimitWarning()
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                    fretboards(width: width)
-                    if model.state.showPiano {
-                        PianoView()
+                Group {
+                    if isPhoneLandscape {
+                        landscapeLayout(height: proxy.size.height)
+                    } else {
+                        VStack(spacing: 16) {
+                            HeaderView()
+                            ChordPanel()
+                            chordLimitWarning
+                            fretboards(width: width)
+                            if model.state.showPiano {
+                                PianoView()
+                            }
+                        }
+                        .padding(width >= 600 ? 32 : 24)
                     }
                 }
-                .padding(width >= 600 ? 32 : 24)
                 .frame(maxWidth: 1280)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
@@ -107,6 +110,68 @@ struct ContentView: View {
             if !presented { isFocused = true }
         }
     }
+
+    @ViewBuilder
+    private var chordLimitWarning: some View {
+        if model.showChordLimitWarning {
+            ChordLimitWarning()
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    // MARK: - iPhone landscape
+
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @AppStorage("landscapeInstrument") private var landscapeInstrument = LandscapeInstrument.guitar
+
+    /// An iPhone held sideways: show one instrument at a time, filling the screen.
+    private var isPhoneLandscape: Bool {
+        #if os(iOS)
+        return verticalSizeClass == .compact
+        #else
+        return false
+        #endif
+    }
+
+    private func landscapeLayout(height: CGFloat) -> some View {
+        let hasGuitar = !model.state.fretboards.isEmpty
+        let hasPiano = model.state.showPiano
+        let instrument: LandscapeInstrument? = switch (hasGuitar, hasPiano) {
+        case (true, true): landscapeInstrument
+        case (true, false): .guitar
+        case (false, true): .piano
+        case (false, false): nil
+        }
+        let padding: CGFloat = 12
+        let headerHeight: CGFloat = 40
+        // The instrument fills what's left of the screen below the top bar; the chord panel is
+        // a scroll away.
+        let fillHeight = max(height - 2 * padding - headerHeight - padding, 160)
+
+        return VStack(spacing: padding) {
+            HeaderView(instrumentChoice: hasGuitar && hasPiano ? $landscapeInstrument : nil)
+                .frame(height: headerHeight)
+            switch instrument {
+            case .guitar:
+                VStack(spacing: padding) {
+                    ForEach(Array(model.state.fretboards.enumerated()), id: \.element.id) { index, board in
+                        FretboardView(fretboard: board, title: "Guitar \(index + 1)")
+                    }
+                }
+                .environment(\.instrumentFillHeight, fillHeight)
+            case .piano:
+                PianoView()
+                    .environment(\.instrumentFillHeight, fillHeight)
+            case nil:
+                EmptyView()
+            }
+            chordLimitWarning
+            ChordPanel()
+        }
+        .padding(padding)
+    }
+
+    // MARK: - Instruments
 
     @ViewBuilder
     private func fretboards(width: CGFloat) -> some View {

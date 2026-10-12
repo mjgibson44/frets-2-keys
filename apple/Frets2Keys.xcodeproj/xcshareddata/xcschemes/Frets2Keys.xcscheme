@@ -37,6 +37,16 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CC6870A3BA201D75291E87E6"
+               BuildableName = "Frets2KeysUITests.xctest"
+               BlueprintName = "Frets2KeysUITests"
+               ReferencedContainer = "container:Frets2Keys.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

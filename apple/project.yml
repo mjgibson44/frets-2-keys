@@ -50,4 +50,19 @@ targets:
         "ENABLE_HARDENED_RUNTIME[sdk=macosx*]": YES
         "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
     scheme:
-      testTargets: []
+      testTargets: [Frets2KeysUITests]
+
+  Frets2KeysUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Frets2KeysUITests
+    dependencies:
+      - target: Frets2Keys
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjgibson44.frets2keys.uitests
+        TEST_TARGET_NAME: Frets2Keys
+        DEVELOPMENT_TEAM: YP8F3MJ2Y3
+        CODE_SIGN_STYLE: Automatic

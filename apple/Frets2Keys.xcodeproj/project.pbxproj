@@ -17,6 +17,7 @@
 		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
 		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
 		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
+		8463EAAB6C009259A23048B1 /* LandscapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */; };
 		8842A8F981D4FF992913501C /* ChordBankPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */; };
 		9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922B9441959B18FFFD9581C3 /* PianoView.swift */; };
 		9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649E0531C661CF6D575B0EFF /* ChordPanel.swift */; };
@@ -25,6 +26,16 @@
 		ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43E94CD27A2FEECE27B77AE /* SettingsView.swift */; };
 		EE1FB52D1E657A06E02A3F96 /* FretboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B11369D1213EF2E9555C475A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00DC7CDE9B7F221B50CFF656 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 607D463FB38F6E39096872F7;
+			remoteInfo = Frets2Keys;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		10560538D765892911349D8F /* HardwareKeyHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyHandler.swift; sourceTree = "<group>"; };
@@ -36,6 +47,7 @@
 		87E137C640951B037603265D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
 		922B9441959B18FFFD9581C3 /* PianoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianoView.swift; sourceTree = "<group>"; };
+		B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapeTests.swift; sourceTree = "<group>"; };
 		BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Frets2Keys.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4205C64622525D72C49AE6F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		C957D380454D694521317558 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -45,6 +57,7 @@
 		E43E94CD27A2FEECE27B77AE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		F957A29D63BB49386EA11B27 /* Frets2Keys.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Frets2Keys.entitlements; sourceTree = "<group>"; };
+		F9B9C1450215FA8CA91DC608 /* Frets2KeysUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = Frets2KeysUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF95577DF9F97F4678870AA0 /* NoteBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteBadge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -72,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */,
+				F9B9C1450215FA8CA91DC608 /* Frets2KeysUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -107,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				831C8C4179CEE3426F024066 /* Frets2Keys */,
+				A55FD99756B3D3272C34574A /* Frets2KeysUITests */,
 				1E8221AAF8FFE0A9621438D5 /* Packages */,
 				332F935ACD9A4356CF610B75 /* Products */,
 			);
@@ -131,6 +146,14 @@
 				E2D63EFD17750090040D5597 /* SynthEngine.swift */,
 			);
 			path = Audio;
+			sourceTree = "<group>";
+		};
+		A55FD99756B3D3272C34574A /* Frets2KeysUITests */ = {
+			isa = PBXGroup;
+			children = (
+				B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */,
+			);
+			path = Frets2KeysUITests;
 			sourceTree = "<group>";
 		};
 		E4CF1EADE0B274DAAE6CC796 /* Model */ = {
@@ -164,6 +187,24 @@
 			productReference = BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */;
 			productType = "com.apple.product-type.application";
 		};
+		CC6870A3BA201D75291E87E6 /* Frets2KeysUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CFE3E3F0A916318A5449CCC8 /* Build configuration list for PBXNativeTarget "Frets2KeysUITests" */;
+			buildPhases = (
+				220B7A4E23B80751FB1A3CCF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				69A8519C23EA904394669A22 /* PBXTargetDependency */,
+			);
+			name = Frets2KeysUITests;
+			packageProductDependencies = (
+			);
+			productName = Frets2KeysUITests;
+			productReference = F9B9C1450215FA8CA91DC608 /* Frets2KeysUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -176,6 +217,11 @@
 					607D463FB38F6E39096872F7 = {
 						DevelopmentTeam = YP8F3MJ2Y3;
 						ProvisioningStyle = Automatic;
+					};
+					CC6870A3BA201D75291E87E6 = {
+						DevelopmentTeam = YP8F3MJ2Y3;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 607D463FB38F6E39096872F7;
 					};
 				};
 			};
@@ -197,6 +243,7 @@
 			projectRoot = "";
 			targets = (
 				607D463FB38F6E39096872F7 /* Frets2Keys */,
+				CC6870A3BA201D75291E87E6 /* Frets2KeysUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +260,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		220B7A4E23B80751FB1A3CCF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8463EAAB6C009259A23048B1 /* LandscapeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C0444B555E7CDACE6D04F7AF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -236,6 +291,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		69A8519C23EA904394669A22 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 607D463FB38F6E39096872F7 /* Frets2Keys */;
+			targetProxy = B11369D1213EF2E9555C475A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4D82D5DF82BED917278E298E /* Release */ = {
@@ -326,10 +389,47 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		9C5F387C7017FEE2B475F971 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = YP8F3MJ2Y3;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mjgibson44.frets2keys.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Frets2Keys;
+			};
+			name = Debug;
+		};
+		B8617108E1FC254D016A8A0F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = YP8F3MJ2Y3;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mjgibson44.frets2keys.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Frets2Keys;
 			};
 			name = Release;
 		};
@@ -428,7 +528,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -452,6 +551,15 @@
 			buildConfigurations = (
 				EBC7B54A01E094AA60F0E231 /* Debug */,
 				6F1EE2D0DAA736F5E52B204F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CFE3E3F0A916318A5449CCC8 /* Build configuration list for PBXNativeTarget "Frets2KeysUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9C5F387C7017FEE2B475F971 /* Debug */,
+				B8617108E1FC254D016A8A0F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

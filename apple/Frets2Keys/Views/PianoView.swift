@@ -5,6 +5,7 @@ struct PianoView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
+    @Environment(\.instrumentFillHeight) private var fillHeight
 
     private static let whiteKeyWidth: CGFloat = 40
     private static let blackKeyWidth: CGFloat = 32
@@ -13,10 +14,12 @@ struct PianoView: View {
         let wide = layoutWidth >= 600
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
-        let whiteHeight: CGFloat = wide ? 144 : 112
-        let blackHeight: CGFloat = wide ? 80 : 56
+        let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
+        // Filling a height (iPhone landscape) makes the keys as tall as the space allows.
+        let whiteHeight: CGFloat = fillHeight.map { max($0 - 2 * inset, 112) } ?? (wide ? 144 : 112)
+        let blackHeight: CGFloat = fillHeight == nil ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
 
-        Card(padding: EdgeInsets(top: wide ? 24 : 16, leading: wide ? 24 : 16, bottom: wide ? 24 : 16, trailing: wide ? 24 : 16)) {
+        Card(padding: EdgeInsets(top: inset, leading: inset, bottom: inset, trailing: inset)) {
             ScrollView(.horizontal, showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
@@ -36,6 +39,7 @@ struct PianoView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Piano")
+        .accessibilityIdentifier("instrument.Piano")
     }
 
     private func appearance(for note: Note) -> NoteAppearance {
