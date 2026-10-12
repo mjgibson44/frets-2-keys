@@ -33,6 +33,7 @@ final class AppModel {
     /// Set by Settings' "View Tutorial" so the tutorial opens once the settings sheet is gone.
     var showTutorialAfterSettings = false
 
+    /// The chord bank side panel. It has no text fields, so keyboard shortcuts keep working while it's open.
     var isChordBankPresented = false
     /// The set whose rename prompt is showing.
     var setBeingRenamed: UUID?
@@ -41,8 +42,7 @@ final class AppModel {
 
     /// True while a sheet or prompt is up, so plain-key shortcuts stay out of the way of typing.
     var isSheetPresented: Bool {
-        isSettingsPresented || isTutorialPresented || isChordBankPresented
-            || setBeingRenamed != nil || setPendingDeletion != nil
+        isSettingsPresented || isTutorialPresented || setBeingRenamed != nil || setPendingDeletion != nil
     }
 
     @ObservationIgnored private let synth = SynthEngine.shared

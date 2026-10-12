@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		080B3D8C86D5090D83DB2633 /* Frets2KeysCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5D57A024DDE93C045AB87192 /* Frets2KeysCore */; };
 		1DD2AE9F8E7E01D1C6C6381E /* SynthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D63EFD17750090040D5597 /* SynthEngine.swift */; };
+		37CEF6C6C0FB886D2CC27FA4 /* ChordBankTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CFCB4B5B6C7A84383E6357 /* ChordBankTests.swift */; };
 		39B7A1D6BAD93FCB8FE7D87F /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E137C640951B037603265D /* HeaderView.swift */; };
 		3D0571A881D4DC1D14862EA5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C957D380454D694521317558 /* Theme.swift */; };
 		3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10560538D765892911349D8F /* HardwareKeyHandler.swift */; };
@@ -42,6 +43,7 @@
 		10560538D765892911349D8F /* HardwareKeyHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyHandler.swift; sourceTree = "<group>"; };
 		2116C88214FB3EC290861C99 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2D93F6A12F829E1005F0DAA0 /* ChordLibrarySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordLibrarySync.swift; sourceTree = "<group>"; };
+		36CFCB4B5B6C7A84383E6357 /* ChordBankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordBankTests.swift; sourceTree = "<group>"; };
 		62BD8F5050045D9731DCA9A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		649E0531C661CF6D575B0EFF /* ChordPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPanel.swift; sourceTree = "<group>"; };
 		6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordBankPicker.swift; sourceTree = "<group>"; };
@@ -155,6 +157,7 @@
 		A55FD99756B3D3272C34574A /* Frets2KeysUITests */ = {
 			isa = PBXGroup;
 			children = (
+				36CFCB4B5B6C7A84383E6357 /* ChordBankTests.swift */,
 				B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */,
 			);
 			path = Frets2KeysUITests;
@@ -269,6 +272,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37CEF6C6C0FB886D2CC27FA4 /* ChordBankTests.swift in Sources */,
 				8463EAAB6C009259A23048B1 /* LandscapeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

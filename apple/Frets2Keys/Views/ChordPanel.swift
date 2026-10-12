@@ -35,15 +35,14 @@ struct ChordPanel: View {
 
 // MARK: - Add chord
 
-/// Opens the chord bank.
+/// Opens (or closes) the chord bank side panel.
 private struct AddChordButton: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
 
     var body: some View {
-        @Bindable var model = model
         Button {
-            model.isChordBankPresented = true
+            withAnimation { model.isChordBankPresented.toggle() }
         } label: {
             Label("Add Chord", systemImage: "plus")
                 .font(.system(size: 13, weight: .medium))
@@ -51,14 +50,13 @@ private struct AddChordButton: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
         }
-        .buttonStyle(HighlightButtonStyle(normal: theme.chip, highlighted: theme.chipHover, cornerRadius: 6))
+        .buttonStyle(HighlightButtonStyle(
+            normal: model.isChordBankPresented ? theme.chipActive : theme.chip,
+            highlighted: theme.chipHover,
+            cornerRadius: 6
+        ))
         .help("Choose a chord from the chord bank")
-        .popover(isPresented: $model.isChordBankPresented, arrowEdge: .top) {
-            ChordBankPicker()
-                .environment(model)
-                .environment(\.theme, Theme(isDark: model.state.darkMode))
-                .preferredColorScheme(model.state.darkMode ? .dark : .light)
-        }
+        .accessibilityAddTraits(model.isChordBankPresented ? .isSelected : [])
     }
 }
 

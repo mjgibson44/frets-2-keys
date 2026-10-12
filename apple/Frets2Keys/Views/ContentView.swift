@@ -71,6 +71,12 @@ struct ContentView: View {
             .accessibilityHidden(true)
         }
         #endif
+        .inspector(isPresented: $model.isChordBankPresented) {
+            ChordBankPicker()
+                .environment(\.theme, theme)
+                .environment(\.layoutWidth, 400)
+                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        }
         .sheet(isPresented: $model.isSettingsPresented, onDismiss: {
             if model.showTutorialAfterSettings {
                 model.showTutorialAfterSettings = false

@@ -64,6 +64,12 @@ struct AppCommands: Commands {
                 .plainKeyShortcut("-")
                 .disabled(!enabled || !state.hasSelection)
             Divider()
+            Button(model.isChordBankPresented ? "Hide Chord Bank" : "Show Chord Bank") {
+                model.isChordBankPresented.toggle()
+            }
+            .keyboardShortcut("b", modifiers: .command)
+            .disabled(!enabled)
+            Divider()
             Button("Previous Saved Chord") { model.selectPreviousChord() }
                 .plainKeyShortcut(.leftArrow)
                 .disabled(!enabled || state.savedChords.isEmpty)

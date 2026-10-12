@@ -2,10 +2,13 @@ import SwiftUI
 import Frets2KeysCore
 
 /// Pick a root and chord type, hear it, then add it to the active set or just select it.
+/// Shown in the side panel (an inspector), which iPhone presents as a sheet.
 struct ChordBankPicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
-    @Environment(\.dismiss) private var dismiss
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @AppStorage("chordBankRoot") private var root = 0
     @AppStorage("chordBankQuality") private var qualityID = ChordBank.qualities[0].id
     /// The bank's own key, starting from the app's key. Changing it doesn't change the app's key.
@@ -19,14 +22,11 @@ struct ChordBankPicker: View {
     private var notes: [Note] { ChordBank.notes(root: root, quality: quality) }
 
     var body: some View {
-        // Scrolls only when the screen is too short to show everything (e.g. iPhone SE).
-        ViewThatFits(in: .vertical) {
+        ScrollView {
             content
-            ScrollView { content }
         }
-        .frame(idealWidth: 420, maxWidth: 480)
+        .inspectorColumnWidth(min: 320, ideal: 380, max: 480)
         #if os(iOS)
-        .frame(maxHeight: .infinity, alignment: .top)
         .presentationDetents([.large])
         #endif
         .onAppear {
@@ -36,6 +36,18 @@ struct ChordBankPicker: View {
         }
     }
 
+    private func close() {
+        model.isChordBankPresented = false
+    }
+
+    /// Beside the instruments (iPad, Mac) the panel stays open so several chords can be added in a
+    /// row; as a sheet over everything (iPhone) it closes so the result is visible.
+    private func closeIfCoveringContent() {
+        #if os(iOS)
+        if horizontalSizeClass == .compact { close() }
+        #endif
+    }
+
     private var content: some View {
         let isFull = model.state.savedChords.count >= AppState.maxSavedChords
         return VStack(alignment: .leading, spacing: 16) {
@@ -43,8 +55,17 @@ struct ChordBankPicker: View {
                 Text("Chord Bank")
                     .font(.headline)
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.borderless)
+                Button {
+                    close()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Close the chord bank")
+                .accessibilityLabel("Close")
             }
 
             HStack(spacing: 8) {
@@ -120,7 +141,7 @@ struct ChordBankPicker: View {
             HStack(spacing: 8) {
                 Button {
                     model.selectBankChord(notes)
-                    dismiss()
+                    closeIfCoveringContent()
                 } label: {
                     Text("Select").frame(maxWidth: .infinity)
                 }
@@ -129,7 +150,7 @@ struct ChordBankPicker: View {
 
                 Button {
                     model.addBankChord(notes)
-                    dismiss()
+                    closeIfCoveringContent()
                 } label: {
                     Text("Add to Set")
                         .frame(maxWidth: .infinity)
