@@ -11,8 +11,6 @@ enum ActionIcon {
     static let play = "play.fill"
     static let loop = "repeat"
     static let settings = "gearshape.fill"
-    static let darkMode = "moon.fill"
-    static let lightMode = "sun.max.fill"
 }
 
 /// Which instrument fills the screen on an iPhone held sideways.
@@ -21,7 +19,7 @@ enum LandscapeInstrument: String {
     case piano
 }
 
-/// Top bar: key picker on the left, playback and app controls on the right.
+/// Top bar: key picker on the left, playback and settings on the right.
 /// Selection controls live in the chord panel.
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
@@ -59,13 +57,6 @@ struct HeaderView: View {
                     isActive: model.isLooping
                 ) {
                     model.toggleLoop()
-                }
-                IconButton(
-                    symbol: state.darkMode ? ActionIcon.lightMode : ActionIcon.darkMode,
-                    help: state.darkMode ? "Switch to light mode" : "Switch to dark mode",
-                    size: size
-                ) {
-                    model.toggleDarkMode()
                 }
                 IconButton(symbol: ActionIcon.settings, help: "Settings", size: size) {
                     model.isSettingsPresented = true

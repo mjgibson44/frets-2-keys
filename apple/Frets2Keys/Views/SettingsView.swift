@@ -25,6 +25,15 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Appearance") {
+                    Picker("Appearance", selection: $model.state.darkMode) {
+                        Label("Light", systemImage: "sun.max.fill").tag(false)
+                        Label("Dark", systemImage: "moon.fill").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
                 Section("Playback Mode") {
                     Picker("Playback Mode", selection: $model.state.playMode) {
                         Text("Chord").tag(PlayMode.chord)

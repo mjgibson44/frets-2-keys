@@ -86,9 +86,6 @@ struct SetMenu: View {
             SetActions(model: model)
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "rectangle.stack")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Tailwind.zinc500)
                 Text(state.activeSet.name)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(theme.secondaryText)

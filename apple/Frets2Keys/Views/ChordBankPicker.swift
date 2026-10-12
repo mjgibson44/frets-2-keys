@@ -25,6 +25,10 @@ struct ChordBankPicker: View {
         ScrollView {
             content
         }
+        // The chosen chord and its actions stay pinned to the bottom while the choices scroll.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            footer
+        }
         .inspectorColumnWidth(min: 320, ideal: 380, max: 480)
         #if os(iOS)
         .presentationDetents([.large])
@@ -49,8 +53,7 @@ struct ChordBankPicker: View {
     }
 
     private var content: some View {
-        let isFull = model.state.savedChords.count >= AppState.maxSavedChords
-        return VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Chord Bank")
                     .font(.headline)
@@ -110,6 +113,14 @@ struct ChordBankPicker: View {
                 }
             }
 
+        }
+        .padding(20)
+    }
+
+    /// The chosen chord's name and notes, with Select / Add to Set.
+    private var footer: some View {
+        let isFull = model.state.savedChords.count >= AppState.maxSavedChords
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text(ChordBank.name(root: root, quality: quality))
                     .font(.system(size: 15, weight: .semibold))
@@ -156,6 +167,8 @@ struct ChordBankPicker: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                // Sheets and side panels don't reliably pass the accent color down, so set it here.
+                .tint(Tailwind.blue500)
                 .disabled(isFull)
                 .help("Save this chord in \(model.state.activeSet.name)")
             }
@@ -167,7 +180,11 @@ struct ChordBankPicker: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 
     /// Root names spelled for the bank's key (flats in flat keys) unless "Sharps only" is on.
