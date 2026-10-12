@@ -17,6 +17,7 @@
 		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
 		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
 		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
+		8842A8F981D4FF992913501C /* ChordBankPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */; };
 		9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922B9441959B18FFFD9581C3 /* PianoView.swift */; };
 		9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649E0531C661CF6D575B0EFF /* ChordPanel.swift */; };
 		D830982FB02776ED749B8347 /* NoteBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF95577DF9F97F4678870AA0 /* NoteBadge.swift */; };
@@ -30,6 +31,7 @@
 		2116C88214FB3EC290861C99 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		62BD8F5050045D9731DCA9A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		649E0531C661CF6D575B0EFF /* ChordPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPanel.swift; sourceTree = "<group>"; };
+		6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordBankPicker.swift; sourceTree = "<group>"; };
 		6EED0E2BF15661D10AF16550 /* Frets2KeysCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Frets2KeysCore; path = Frets2KeysCore; sourceTree = SOURCE_ROOT; };
 		87E137C640951B037603265D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
@@ -85,6 +87,7 @@
 		59B0D10E5501EC992F6B36CB /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */,
 				649E0531C661CF6D575B0EFF /* ChordPanel.swift */,
 				2116C88214FB3EC290861C99 /* ContentView.swift */,
 				E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */,
@@ -215,6 +218,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */,
+				8842A8F981D4FF992913501C /* ChordBankPicker.swift in Sources */,
 				9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */,
 				50539B669DF78250A9922960 /* ContentView.swift in Sources */,
 				4AA607D8A26FA44A08517D3C /* FlowLayout.swift in Sources */,

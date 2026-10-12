@@ -12,6 +12,7 @@ struct ChordPanel: View {
                 HStack {
                     SetMenu()
                     Spacer(minLength: 0)
+                    AddChordButton()
                 }
                 SavedChordChips()
             }
@@ -29,6 +30,35 @@ struct ChordPanel: View {
         .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.cardBorder, lineWidth: 1))
+    }
+}
+
+// MARK: - Add chord
+
+/// Opens the chord bank.
+private struct AddChordButton: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        @Bindable var model = model
+        Button {
+            model.isChordBankPresented = true
+        } label: {
+            Label("Add Chord", systemImage: "plus")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(theme.secondaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+        }
+        .buttonStyle(HighlightButtonStyle(normal: theme.chip, highlighted: theme.chipHover, cornerRadius: 6))
+        .help("Choose a chord from the chord bank")
+        .popover(isPresented: $model.isChordBankPresented, arrowEdge: .top) {
+            ChordBankPicker()
+                .environment(model)
+                .environment(\.theme, Theme(isDark: model.state.darkMode))
+                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        }
     }
 }
 

@@ -30,6 +30,7 @@ final class AppModel {
     /// Set by Settings' "View Tutorial" so the tutorial opens once the settings sheet is gone.
     var showTutorialAfterSettings = false
 
+    var isChordBankPresented = false
     /// The set whose rename prompt is showing.
     var setBeingRenamed: UUID?
     /// The set whose delete confirmation is showing.
@@ -37,7 +38,8 @@ final class AppModel {
 
     /// True while a sheet or prompt is up, so plain-key shortcuts stay out of the way of typing.
     var isSheetPresented: Bool {
-        isSettingsPresented || isTutorialPresented || setBeingRenamed != nil || setPendingDeletion != nil
+        isSettingsPresented || isTutorialPresented || isChordBankPresented
+            || setBeingRenamed != nil || setPendingDeletion != nil
     }
 
     @ObservationIgnored private let synth = SynthEngine.shared
@@ -100,7 +102,27 @@ final class AppModel {
     // MARK: - Saved chords
 
     func saveAsNewChord() {
-        if state.saveAsNewChord() == .limitReached {
+        handle(state.saveAsNewChord())
+    }
+
+    // MARK: - Chord bank
+
+    /// Plays a chord without changing the selection.
+    func preview(_ notes: [Note]) {
+        synth.play(notes, mode: .chord)
+    }
+
+    func selectBankChord(_ notes: [Note]) {
+        state.select(notes: notes)
+        synth.play(notes, mode: state.playMode)
+    }
+
+    func addBankChord(_ notes: [Note]) {
+        handle(state.addChord(notes: notes))
+    }
+
+    private func handle(_ result: AppState.SaveResult) {
+        if result == .limitReached {
             showChordLimitWarning = true
             warningTask?.cancel()
             warningTask = Task { [weak self] in

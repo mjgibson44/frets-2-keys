@@ -544,3 +544,50 @@ final class ChordSetTests: XCTestCase {
         XCTAssertEqual(loop.nextBeat(&state), ["D4"])
     }
 }
+
+final class ChordBankTests: XCTestCase {
+    func testEveryBankChordIsRecognizedAsItself() {
+        for root in 0..<12 {
+            for quality in ChordBank.qualities {
+                let notes = ChordBank.notes(root: root, quality: quality)
+                XCTAssertEqual(
+                    ChordIdentifier.identify(notes), ChordBank.name(root: root, quality: quality),
+                    "\(quality.id) on root \(root)"
+                )
+            }
+        }
+    }
+
+    func testVoicingsSitAroundMiddleC() {
+        XCTAssertEqual(ChordBank.notes(root: 0, quality: ChordBank.qualities[0]), ["C3", "E3", "G3"])
+        let bm9 = ChordBank.notes(root: 11, quality: ChordBank.qualities.first { $0.id == "m9" }!)
+        XCTAssertEqual(bm9.first, "B3")
+        XCTAssertEqual(bm9.last, "C#5")
+    }
+
+    func testIdsAreUnique() {
+        XCTAssertEqual(Set(ChordBank.qualities.map(\.id)).count, ChordBank.qualities.count)
+    }
+
+    func testAddChord() {
+        var state = AppState()
+        XCTAssertEqual(state.addChord(notes: ChordBank.notes(root: 9, quality: ChordBank.qualities[1])), .saved)
+        XCTAssertEqual(state.savedChords.map(\.name), ["Am"])
+        XCTAssertEqual(state.activeChord?.name, "Am")
+        XCTAssertEqual(state.selectedNotes, ["A3", "C4", "E4"])
+        XCTAssertEqual(state.addChord(notes: []), .nothingToSave)
+
+        for _ in 1..<AppState.maxSavedChords { state.addChord(notes: ["C4", "G4"]) }
+        let selectionBefore = state.selectedNotes
+        XCTAssertEqual(state.addChord(notes: ["D4", "F#4", "A4"]), .limitReached)
+        XCTAssertEqual(state.selectedNotes, selectionBefore)
+    }
+
+    func testSelectNotesClearsActiveChord() {
+        var state = AppState()
+        state.addChord(notes: ["C4", "E4", "G4"])
+        state.select(notes: ["D4", "F4", "A4"])
+        XCTAssertNil(state.activeChordID)
+        XCTAssertEqual(state.chordName, "Dm")
+    }
+}
