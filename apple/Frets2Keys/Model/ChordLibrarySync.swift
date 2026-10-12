@@ -70,11 +70,13 @@ final class ChordLibrarySync {
     private func mergeWithCloud() {
         let local = readLocal()
         let remote = readCloud()
-        let merged = remote.map { ChordLibrary.merge(local, $0) } ?? local
+        let merged = remote.map { ChordLibrary.mergeIncoming(local: local, remote: $0) } ?? local
         if merged != local {
             applyMerged(merged)
         }
-        if merged != remote {
+        // A brand-new install's empty starter set isn't worth syncing; waiting also avoids racing
+        // the first download of the user's real sets.
+        if merged != remote && !merged.isUntouchedStarter {
             write(merged)
         }
     }

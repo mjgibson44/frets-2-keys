@@ -65,9 +65,30 @@ struct TutorialView: View {
                                 }
                             }
                         }
-                        Text("Saved chords can be reordered by dragging them, or from their context menu.")
+                        Text("These controls sit under your saved chords, next to the chord you've selected. Saved chords can be reordered by dragging them, or from their context menu.")
                             .bodyStyle()
                     }
+
+                    section("Chord Sets") {
+                        Text("Saved chords belong to a chord set, such as a song or a practice routine. Use the set menu at the top of the chord panel to switch sets, or to create, rename, duplicate and delete them. Looping plays through the current set.")
+                            .bodyStyle()
+                        Text("Your chord sets sync through iCloud to your other devices signed in to the same Apple Account.")
+                            .bodyStyle()
+                    }
+
+                    section("Chord Bank") {
+                        Text("Tap Add Chord to pick from common chords by root and type. You'll hear each one as you choose; then add it to the current set, or just select it to see it on the instruments.")
+                            .bodyStyle()
+                    }
+
+                    #if os(iOS)
+                    if UIDevice.current.userInterfaceIdiom == .phone {
+                        section("Landscape") {
+                            Text("Turn your iPhone sideways to see one instrument at a time, as large as the screen allows. Switch between guitar and piano with the toggle at the top.")
+                                .bodyStyle()
+                        }
+                    }
+                    #endif
 
                     section("Keyboard Shortcuts") {
                         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {

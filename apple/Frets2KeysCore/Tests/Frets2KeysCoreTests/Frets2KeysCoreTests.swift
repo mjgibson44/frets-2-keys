@@ -668,3 +668,47 @@ final class ChordLibraryTests: XCTestCase {
         XCTAssertEqual(state.chordSets.count, 1)
     }
 }
+
+final class StarterSetSyncTests: XCTestCase {
+    func testNewInstallAdoptsICloudSetsWithoutAnExtraEmptySet() {
+        var phone = AppState()
+        phone.addChord(notes: ["C4", "E4", "G4"])
+        let fresh = AppState()
+        XCTAssertTrue(fresh.chordLibrary.isUntouchedStarter)
+
+        var mac = fresh
+        mac.apply(ChordLibrary.mergeIncoming(local: mac.chordLibrary, remote: phone.chordLibrary))
+        XCTAssertEqual(mac.chordSets.count, 1)
+        XCTAssertEqual(mac.savedChords.map(\.name), ["Cmaj"])
+    }
+
+    func testEditedOrEmptyRemoteKeepsLocalSets() {
+        var edited = AppState()
+        edited.renameSet(id: edited.activeSetID, to: "Mine")
+        XCTAssertFalse(edited.chordLibrary.isUntouchedStarter)
+        var remote = AppState()
+        remote.renameSet(id: remote.activeSetID, to: "Theirs")
+        let merged = ChordLibrary.mergeIncoming(local: edited.chordLibrary, remote: remote.chordLibrary)
+        XCTAssertEqual(merged.sets.map(\.name).sorted(), ["Mine", "Theirs"])
+
+        // A fresh install with nothing in iCloud keeps its starter set.
+        let fresh = AppState()
+        XCTAssertEqual(ChordLibrary.mergeIncoming(local: fresh.chordLibrary, remote: ChordLibrary(sets: [])).sets.count, 1)
+    }
+
+    func testUpgradedChordsAreNotAStarter() throws {
+        let legacy = #"{"savedChords":[{"id":"\#(UUID().uuidString)","name":"Cmaj","notes":[{"midi":60}]}]}"#
+        let state = try JSONDecoder().decode(AppState.self, from: Data(legacy.utf8))
+        XCTAssertFalse(state.chordLibrary.isUntouchedStarter)
+    }
+}
+
+extension StarterSetSyncTests {
+    func testStarterSetFromICloudIsIgnored() {
+        var phone = AppState()
+        phone.addChord(notes: ["C4", "E4", "G4"])
+        let macStarter = AppState().chordLibrary
+        let merged = ChordLibrary.mergeIncoming(local: phone.chordLibrary, remote: macStarter)
+        XCTAssertEqual(merged.sets.map(\.id), phone.chordSets.map(\.id))
+    }
+}
