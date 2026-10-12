@@ -62,6 +62,8 @@ public struct AppState: Codable, Equatable, Sendable {
     /// Never empty: there's always at least one set, and `activeSetID` names one of them.
     public private(set) var chordSets: [ChordSet]
     public private(set) var activeSetID: UUID
+    /// When each deleted set was deleted, so sync doesn't bring it back.
+    public internal(set) var deletedSetIDs: [UUID: Date] = [:]
     public var playMode: PlayMode = .chord
     public var showPiano = true
     public var selectedKey: MusicalKey? = .cMajor
@@ -127,7 +129,7 @@ public struct AppState: Codable, Equatable, Sendable {
         chordSets[index].modifiedAt = Date()
     }
 
-    /// Copies a set (with fresh chord IDs) right after the original and switches to the copy.
+    /// Copies a set (with fresh chord IDs) to the end of the list and switches to the copy.
     @discardableResult
     public mutating func duplicateSet(id: UUID) -> UUID? {
         guard let index = chordSets.firstIndex(where: { $0.id == id }) else { return nil }
@@ -136,7 +138,7 @@ public struct AppState: Codable, Equatable, Sendable {
             name: "\(original.name) copy",
             chords: original.chords.map { SavedChord(name: $0.name, notes: $0.notes) }
         )
-        chordSets.insert(copy, at: index + 1)
+        chordSets.append(copy)
         selectSet(id: copy.id)
         return copy.id
     }
@@ -146,6 +148,7 @@ public struct AppState: Codable, Equatable, Sendable {
     public mutating func deleteSet(id: UUID) {
         guard let index = chordSets.firstIndex(where: { $0.id == id }) else { return }
         chordSets.remove(at: index)
+        deletedSetIDs[id] = Date()
         if chordSets.isEmpty {
             let set = ChordSet(name: Self.defaultSetName(number: 1))
             chordSets = [set]
@@ -350,7 +353,7 @@ public struct AppState: Codable, Equatable, Sendable {
     // MARK: - Persistence
 
     private enum CodingKeys: String, CodingKey {
-        case fretboards, chordSets, activeSetID, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, darkMode
+        case fretboards, chordSets, activeSetID, deletedSetIDs, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, darkMode
         /// Before chord sets existed, saved chords were stored directly.
         case savedChords
     }
@@ -362,6 +365,7 @@ public struct AppState: Codable, Equatable, Sendable {
             chordSets = sets
             let active = try container.decodeIfPresent(UUID.self, forKey: .activeSetID)
             activeSetID = sets.contains { $0.id == active } ? active! : sets[0].id
+            deletedSetIDs = try container.decodeIfPresent([UUID: Date].self, forKey: .deletedSetIDs) ?? [:]
         } else {
             // Upgrade: the old single list of saved chords becomes "Set 1".
             let legacy = try container.decodeIfPresent([SavedChord].self, forKey: .savedChords) ?? []
@@ -383,6 +387,7 @@ public struct AppState: Codable, Equatable, Sendable {
         try container.encode(fretboards, forKey: .fretboards)
         try container.encode(chordSets, forKey: .chordSets)
         try container.encode(activeSetID, forKey: .activeSetID)
+        try container.encode(deletedSetIDs, forKey: .deletedSetIDs)
         try container.encode(playMode, forKey: .playMode)
         try container.encode(showPiano, forKey: .showPiano)
         try container.encode(selectedKey, forKey: .selectedKey)

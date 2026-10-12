@@ -591,3 +591,80 @@ final class ChordBankTests: XCTestCase {
         XCTAssertEqual(state.chordName, "Dm")
     }
 }
+
+final class ChordLibraryTests: XCTestCase {
+    private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    private func at(_ seconds: TimeInterval) -> Date { t0.addingTimeInterval(seconds) }
+
+    private func set(_ name: String, id: UUID = UUID(), created: TimeInterval = 0, modified: TimeInterval = 0, chords: [String] = []) -> ChordSet {
+        ChordSet(id: id, name: name, chords: chords.map { SavedChord(name: $0, notes: ["C4"]) }, createdAt: at(created), modifiedAt: at(modified))
+    }
+
+    func testNewerEditWinsPerSet() {
+        let a = UUID(), b = UUID()
+        let local = ChordLibrary(sets: [set("Verse", id: a, modified: 10), set("Chorus", id: b, created: 1, modified: 1)])
+        let remote = ChordLibrary(sets: [set("Verse (old)", id: a, modified: 5), set("Chorus 2", id: b, created: 1, modified: 20)])
+        let merged = ChordLibrary.merge(local, remote, now: at(30))
+        XCTAssertEqual(merged.sets.map(\.name), ["Verse", "Chorus 2"])
+        XCTAssertEqual(ChordLibrary.merge(remote, local, now: at(30)), merged)
+    }
+
+    func testSetsFromBothSidesAreKeptInCreationOrder() {
+        let local = ChordLibrary(sets: [set("Phone set", created: 5)])
+        let remote = ChordLibrary(sets: [set("Mac set", created: 2), set("Mac later", created: 9)])
+        XCTAssertEqual(ChordLibrary.merge(local, remote, now: at(10)).sets.map(\.name), ["Mac set", "Phone set", "Mac later"])
+    }
+
+    func testDeletionBeatsOlderEdits() {
+        let a = UUID()
+        let local = ChordLibrary(sets: [], deletedSetIDs: [a: at(20)])
+        let remote = ChordLibrary(sets: [set("Old", id: a, modified: 10)])
+        let merged = ChordLibrary.merge(local, remote, now: at(30))
+        XCTAssertTrue(merged.sets.isEmpty)
+        XCTAssertEqual(merged.deletedSetIDs[a], at(20))
+    }
+
+    func testEditAfterDeletionKeepsTheSet() {
+        let a = UUID()
+        let local = ChordLibrary(sets: [], deletedSetIDs: [a: at(20)])
+        let remote = ChordLibrary(sets: [set("Edited later", id: a, modified: 25)])
+        XCTAssertEqual(ChordLibrary.merge(local, remote, now: at(30)).sets.map(\.name), ["Edited later"])
+    }
+
+    func testOldDeletionsAreForgotten() {
+        let a = UUID()
+        let local = ChordLibrary(sets: [], deletedSetIDs: [a: at(0)])
+        let merged = ChordLibrary.merge(local, ChordLibrary(sets: []), now: at(ChordLibrary.deletionMemory + 1))
+        XCTAssertTrue(merged.deletedSetIDs.isEmpty)
+    }
+
+    func testStateRecordsDeletionsAndAppliesMerges() throws {
+        var phone = AppState()
+        phone.addChord(notes: ["C4", "E4", "G4"])
+        let doomed = phone.createSet()
+        phone.deleteSet(id: doomed)
+        XCTAssertNotNil(phone.deletedSetIDs[doomed])
+
+        // A Mac that still has the deleted set, plus a set of its own.
+        var mac = AppState()
+        mac.apply(ChordLibrary.merge(mac.chordLibrary, phone.chordLibrary))
+        XCTAssertFalse(mac.chordSets.contains { $0.id == doomed })
+        let macSet = mac.createSet()
+        mac.renameSet(id: macSet, to: "From Mac")
+
+        phone.apply(ChordLibrary.merge(phone.chordLibrary, mac.chordLibrary))
+        XCTAssertTrue(phone.chordSets.contains { $0.name == "From Mac" })
+        XCTAssertFalse(phone.chordSets.contains { $0.id == doomed })
+        XCTAssertEqual(phone.chordSets.filter { $0.chords.map(\.name) == ["Cmaj"] }.count, 1)
+
+        // Deletion history survives a save and reload.
+        let reloaded = try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(phone))
+        XCTAssertEqual(reloaded.deletedSetIDs, phone.deletedSetIDs)
+    }
+
+    func testApplyingAnEmptyLibraryLeavesOneSet() {
+        var state = AppState()
+        state.apply(ChordLibrary(sets: []))
+        XCTAssertEqual(state.chordSets.count, 1)
+    }
+}

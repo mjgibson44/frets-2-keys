@@ -19,6 +19,12 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    Label("Chord sets sync through iCloud to your other devices signed in to the same Apple Account.", systemImage: "icloud")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Playback Mode") {
                     Picker("Playback Mode", selection: $model.state.playMode) {
                         Text("Chord").tag(PlayMode.chord)

@@ -46,9 +46,11 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: YP8F3MJ2Y3
         ENABLE_PREVIEWS: YES
-        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Frets2Keys/Frets2Keys.entitlements
+        # iCloud key-value storage is shared by the iOS and macOS apps (same identifier).
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": Frets2Keys/Frets2Keys-iOS.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": Frets2Keys/Frets2Keys-iOS.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Frets2Keys/Frets2Keys-macOS.entitlements
         "ENABLE_HARDENED_RUNTIME[sdk=macosx*]": YES
-        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
     scheme:
       testTargets: [Frets2KeysUITests]
 

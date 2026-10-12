@@ -20,6 +20,9 @@ final class AppModel {
             comparable.selectedNotes = state.selectedNotes
             comparable.activeChordID = state.activeChordID
             if comparable != state { persistIfChanged() }
+
+            let setsChanged = oldValue.chordSets != state.chordSets || oldValue.deletedSetIDs != state.deletedSetIDs
+            if setsChanged && !isApplyingSync { sync?.localLibraryChanged() }
         }
     }
 
@@ -47,8 +50,11 @@ final class AppModel {
     @ObservationIgnored private var lastSavedData: Data?
     @ObservationIgnored private var loopTask: Task<Void, Never>?
     @ObservationIgnored private var warningTask: Task<Void, Never>?
+    @ObservationIgnored private var sync: ChordLibrarySync?
+    /// True while adopting chord sets merged from iCloud, so they aren't pushed straight back.
+    @ObservationIgnored private var isApplyingSync = false
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, syncWithICloud: Bool = true) {
         self.defaults = defaults
         if let data = defaults.data(forKey: Self.storageKey),
            let saved = try? JSONDecoder().decode(AppState.self, from: data) {
@@ -58,6 +64,20 @@ final class AppModel {
             var initial = AppState()
             initial.darkMode = Self.systemPrefersDark
             state = initial
+        }
+
+        if syncWithICloud {
+            let sync = ChordLibrarySync(
+                readLocal: { [unowned self] in state.chordLibrary },
+                applyMerged: { [unowned self] library in
+                    isApplyingSync = true
+                    state.apply(library)
+                    isApplyingSync = false
+                    if !state.canLoop { stopLoop() }
+                }
+            )
+            self.sync = sync
+            sync.start()
         }
     }
 
