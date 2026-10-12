@@ -92,7 +92,7 @@ struct ChordBankPicker: View {
             section("Root") {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(0..<12, id: \.self) { pitchClass in
-                        tile(rootName(pitchClass), isSelected: root == pitchClass) {
+                        tile(rootName(pitchClass), isSelected: root == pitchClass, color: rootColor(pitchClass)) {
                             root = pitchClass
                             model.preview(ChordBank.notes(root: pitchClass, quality: quality))
                         }
@@ -105,7 +105,7 @@ struct ChordBankPicker: View {
             section("Type") {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 6)], spacing: 6) {
                     ForEach(ChordBank.qualities) { option in
-                        tile(option.label, isSelected: qualityID == option.id) {
+                        tile(option.label, isSelected: qualityID == option.id, selectedColor: rootColor(root)) {
                             qualityID = option.id
                             model.preview(ChordBank.notes(root: root, quality: option))
                         }
@@ -132,7 +132,7 @@ struct ChordBankPicker: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: model.state.selectedKey)),
+                                NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: key)),
                                 in: RoundedRectangle(cornerRadius: 4)
                             )
                     }
@@ -210,9 +210,7 @@ struct ChordBankPicker: View {
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                    .foregroundStyle(isSelected ? .white : theme.secondaryText)
-                    .frame(maxWidth: .infinity, minHeight: 38)
-                    .background(isSelected ? Color.accentColor : theme.chip, in: RoundedRectangle(cornerRadius: 6))
+                    .modifier(NoteTileStyle(color: rootColor(chord.root), isSelected: isSelected, minHeight: 38))
                     .contentShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
@@ -241,18 +239,59 @@ struct ChordBankPicker: View {
         }
     }
 
-    private func tile(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    /// The instruments' color for a root note under the bank's key: scale-degree colors in a key,
+    /// one color per pitch class with no key.
+    private func rootColor(_ pitchClass: Int) -> Color {
+        NotePalette.solid(for: NoteAppearance.colorRole(for: Note(midi: 60 + pitchClass), key: key))
+    }
+
+    /// A choice tile. With `color`, it's tinted in that color and filled when selected (like a
+    /// selected note); otherwise it's neutral and fills with `selectedColor` when selected.
+    private func tile(
+        _ title: String,
+        isSelected: Bool,
+        color: Color? = nil,
+        selectedColor: Color = .accentColor,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .foregroundStyle(isSelected ? .white : theme.secondaryText)
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .background(isSelected ? Color.accentColor : theme.chip, in: RoundedRectangle(cornerRadius: 6))
-                .contentShape(RoundedRectangle(cornerRadius: 6))
+                .modifier(NoteTileStyle(color: color, isSelected: isSelected, selectedColor: selectedColor, minHeight: 34))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Colors a chord bank tile the way the instruments color notes: a light tint with a matching
+/// border when unselected, solid with white text when selected.
+private struct NoteTileStyle: ViewModifier {
+    @Environment(\.theme) private var theme
+    let color: Color?
+    let isSelected: Bool
+    var selectedColor: Color = .accentColor
+    let minHeight: CGFloat
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 6)
+        content
+            .foregroundStyle(isSelected ? .white : theme.secondaryText)
+            .frame(maxWidth: .infinity, minHeight: minHeight)
+            .background(fill, in: shape)
+            .overlay {
+                if let color, !isSelected {
+                    shape.strokeBorder(color.opacity(theme.isDark ? 0.7 : 0.55), lineWidth: 1)
+                }
+            }
+            .contentShape(shape)
+    }
+
+    private var fill: Color {
+        if isSelected { return color ?? selectedColor }
+        if let color { return color.opacity(theme.isDark ? 0.22 : 0.12) }
+        return theme.chip
     }
 }
