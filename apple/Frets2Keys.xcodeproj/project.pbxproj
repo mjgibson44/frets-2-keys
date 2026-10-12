@@ -12,12 +12,13 @@
 		39B7A1D6BAD93FCB8FE7D87F /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E137C640951B037603265D /* HeaderView.swift */; };
 		3D0571A881D4DC1D14862EA5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C957D380454D694521317558 /* Theme.swift */; };
 		3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10560538D765892911349D8F /* HardwareKeyHandler.swift */; };
-		421ECD358F34E7F686EAE887 /* SavedChordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */; };
+		4AA607D8A26FA44A08517D3C /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */; };
 		4AA662B6096EFCE71F872BB8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 62BD8F5050045D9731DCA9A1 /* Assets.xcassets */; };
 		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
 		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
 		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
 		9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922B9441959B18FFFD9581C3 /* PianoView.swift */; };
+		9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649E0531C661CF6D575B0EFF /* ChordPanel.swift */; };
 		D830982FB02776ED749B8347 /* NoteBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF95577DF9F97F4678870AA0 /* NoteBadge.swift */; };
 		E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4205C64622525D72C49AE6F /* AppModel.swift */; };
 		ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43E94CD27A2FEECE27B77AE /* SettingsView.swift */; };
@@ -28,6 +29,7 @@
 		10560538D765892911349D8F /* HardwareKeyHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyHandler.swift; sourceTree = "<group>"; };
 		2116C88214FB3EC290861C99 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		62BD8F5050045D9731DCA9A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		649E0531C661CF6D575B0EFF /* ChordPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPanel.swift; sourceTree = "<group>"; };
 		6EED0E2BF15661D10AF16550 /* Frets2KeysCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Frets2KeysCore; path = Frets2KeysCore; sourceTree = SOURCE_ROOT; };
 		87E137C640951B037603265D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
@@ -36,10 +38,10 @@
 		C4205C64622525D72C49AE6F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		C957D380454D694521317558 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FretboardView.swift; sourceTree = "<group>"; };
-		CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedChordsView.swift; sourceTree = "<group>"; };
 		D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Frets2KeysApp.swift; sourceTree = "<group>"; };
 		E2D63EFD17750090040D5597 /* SynthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthEngine.swift; sourceTree = "<group>"; };
 		E43E94CD27A2FEECE27B77AE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		F957A29D63BB49386EA11B27 /* Frets2Keys.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Frets2Keys.entitlements; sourceTree = "<group>"; };
 		FF95577DF9F97F4678870AA0 /* NoteBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteBadge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -83,13 +85,14 @@
 		59B0D10E5501EC992F6B36CB /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				649E0531C661CF6D575B0EFF /* ChordPanel.swift */,
 				2116C88214FB3EC290861C99 /* ContentView.swift */,
+				E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */,
 				CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */,
 				10560538D765892911349D8F /* HardwareKeyHandler.swift */,
 				87E137C640951B037603265D /* HeaderView.swift */,
 				FF95577DF9F97F4678870AA0 /* NoteBadge.swift */,
 				922B9441959B18FFFD9581C3 /* PianoView.swift */,
-				CFEBEB898B1D1510EED1A5C6 /* SavedChordsView.swift */,
 				E43E94CD27A2FEECE27B77AE /* SettingsView.swift */,
 				C957D380454D694521317558 /* Theme.swift */,
 				8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */,
@@ -212,14 +215,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */,
+				9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */,
 				50539B669DF78250A9922960 /* ContentView.swift in Sources */,
+				4AA607D8A26FA44A08517D3C /* FlowLayout.swift in Sources */,
 				EE1FB52D1E657A06E02A3F96 /* FretboardView.swift in Sources */,
 				4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */,
 				3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */,
 				39B7A1D6BAD93FCB8FE7D87F /* HeaderView.swift in Sources */,
 				D830982FB02776ED749B8347 /* NoteBadge.swift in Sources */,
 				9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */,
-				421ECD358F34E7F686EAE887 /* SavedChordsView.swift in Sources */,
 				ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */,
 				1DD2AE9F8E7E01D1C6C6381E /* SynthEngine.swift in Sources */,
 				3D0571A881D4DC1D14862EA5 /* Theme.swift in Sources */,

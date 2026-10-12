@@ -30,7 +30,15 @@ final class AppModel {
     /// Set by Settings' "View Tutorial" so the tutorial opens once the settings sheet is gone.
     var showTutorialAfterSettings = false
 
-    var isSheetPresented: Bool { isSettingsPresented || isTutorialPresented }
+    /// The set whose rename prompt is showing.
+    var setBeingRenamed: UUID?
+    /// The set whose delete confirmation is showing.
+    var setPendingDeletion: UUID?
+
+    /// True while a sheet or prompt is up, so plain-key shortcuts stay out of the way of typing.
+    var isSheetPresented: Bool {
+        isSettingsPresented || isTutorialPresented || setBeingRenamed != nil || setPendingDeletion != nil
+    }
 
     @ObservationIgnored private let synth = SynthEngine.shared
     @ObservationIgnored private let defaults: UserDefaults
@@ -117,6 +125,18 @@ final class AppModel {
 
     func deleteChord(_ id: UUID) {
         state.deleteChord(id: id)
+        if !state.canLoop { stopLoop() }
+    }
+
+    // MARK: - Chord sets
+
+    func createSet() { state.createSet() }
+    func selectSet(_ id: UUID) { state.selectSet(id: id) }
+    func duplicateSet(_ id: UUID) { state.duplicateSet(id: id) }
+    func renameSet(_ id: UUID, to name: String) { state.renameSet(id: id, to: name) }
+
+    func deleteSet(_ id: UUID) {
+        state.deleteSet(id: id)
         if !state.canLoop { stopLoop() }
     }
 

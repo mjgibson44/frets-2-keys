@@ -4,6 +4,20 @@ import Frets2KeysCore
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var isFocused: Bool
+    @State private var renameText = ""
+
+    private var renameBinding: Binding<Bool> {
+        Binding(get: { model.setBeingRenamed != nil }, set: { if !$0 { model.setBeingRenamed = nil } })
+    }
+
+    private var deleteBinding: Binding<Bool> {
+        Binding(get: { model.setPendingDeletion != nil }, set: { if !$0 { model.setPendingDeletion = nil } })
+    }
+
+    private var deleteTitle: String {
+        let name = model.state.chordSets.first { $0.id == model.setPendingDeletion }?.name ?? "Set"
+        return "Delete \u{201C}\(name)\u{201D}?"
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -14,7 +28,7 @@ struct ContentView: View {
             ScrollView(.vertical) {
                 VStack(spacing: 16) {
                     HeaderView()
-                    SavedChordsView()
+                    ChordPanel()
                     if model.showChordLimitWarning {
                         ChordLimitWarning()
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -68,6 +82,26 @@ struct ContentView: View {
             TutorialView()
                 .environment(\.theme, theme)
                 .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        }
+        .alert("Rename Set", isPresented: renameBinding) {
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Rename") {
+                if let id = model.setBeingRenamed { model.renameSet(id, to: renameText) }
+            }
+        }
+        .alert(deleteTitle, isPresented: deleteBinding) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let id = model.setPendingDeletion { model.deleteSet(id) }
+            }
+        } message: {
+            Text("Its saved chords will be removed. This can't be undone.")
+        }
+        .onChange(of: model.setBeingRenamed) { _, id in
+            if let id, let set = model.state.chordSets.first(where: { $0.id == id }) {
+                renameText = set.name
+            }
         }
         .onChange(of: model.isSheetPresented) { _, presented in
             if !presented { isFocused = true }

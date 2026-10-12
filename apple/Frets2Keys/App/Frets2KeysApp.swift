@@ -71,6 +71,19 @@ struct AppCommands: Commands {
                 .plainKeyShortcut(.rightArrow)
                 .disabled(!enabled || state.savedChords.isEmpty)
         }
+        CommandMenu("Sets") {
+            let state = model.state
+            let enabled = !model.isSheetPresented
+            ForEach(state.chordSets) { set in
+                Toggle(set.name, isOn: Binding(
+                    get: { set.id == model.state.activeSetID },
+                    set: { if $0 { model.selectSet(set.id) } }
+                ))
+            }
+            Divider()
+            SetActions(model: model)
+                .disabled(!enabled)
+        }
         CommandGroup(after: .toolbar) {
             Button(model.state.darkMode ? "Light Mode" : "Dark Mode") { model.toggleDarkMode() }
                 .keyboardShortcut("d", modifiers: [.command, .shift])

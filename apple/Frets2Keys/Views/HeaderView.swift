@@ -15,120 +15,41 @@ enum ActionIcon {
     static let lightMode = "sun.max.fill"
 }
 
+/// Top bar: key picker on the left, playback and app controls on the right.
+/// Selection controls live in the chord panel.
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
 
     var body: some View {
-        if layoutWidth >= 880 {
-            HStack(spacing: 12) {
-                KeyPickerMenu()
-                Spacer(minLength: 0)
-                selectionSummary
-                    .padding(.trailing, 8)
-                actionButtons(size: 32)
-            }
-        } else {
-            VStack(spacing: 8) {
-                HStack {
-                    Spacer(minLength: 0)
-                    actionButtons(size: layoutWidth >= 600 ? 32 : 40)
-                }
-                HStack(spacing: 12) {
-                    KeyPickerMenu()
-                    Spacer(minLength: 0)
-                    selectionSummary
-                }
-            }
-        }
-    }
-
-    // MARK: - Chord name and note chips
-
-    @ViewBuilder
-    private var selectionSummary: some View {
         let state = model.state
-        if state.hasSelection {
-            let limit = layoutWidth >= 600 ? 6 : 4
-            HStack(spacing: 8) {
-                if let chordName = state.chordName {
-                    Text(chordName)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.secondaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .accessibilityLabel("Chord: \(chordName)")
+        let size: CGFloat = layoutWidth >= 600 ? 32 : 40
+        HStack(spacing: 12) {
+            KeyPickerMenu()
+            Spacer(minLength: 0)
+            HStack(spacing: 0) {
+                IconButton(symbol: ActionIcon.play, help: "Play all selected notes (Enter)", size: size, isEnabled: state.hasSelection) {
+                    model.play()
                 }
-                HStack(spacing: 4) {
-                    ForEach(state.selectedNotes.prefix(limit), id: \.self) { note in
-                        // The web app shows sharp names here regardless of key.
-                        Text(note.name)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(
-                                NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: state.selectedKey)),
-                                in: RoundedRectangle(cornerRadius: 4)
-                            )
-                    }
-                    if state.selectedNotes.count > limit {
-                        Text("+\(state.selectedNotes.count - limit)")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(theme.overflowChipText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(theme.overflowChip, in: RoundedRectangle(cornerRadius: 4))
-                    }
+                IconButton(
+                    symbol: ActionIcon.loop,
+                    help: model.isLooping ? "Stop loop (Space)" : "Loop playback (Space)",
+                    size: size,
+                    isEnabled: state.canLoop || model.isLooping,
+                    isActive: model.isLooping
+                ) {
+                    model.toggleLoop()
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Selected notes: " + state.selectedNotes.map(\.description).joined(separator: ", "))
-            }
-        }
-    }
-
-    // MARK: - Toolbar buttons
-
-    private func actionButtons(size: CGFloat) -> some View {
-        let state = model.state
-        return HStack(spacing: 0) {
-            IconButton(symbol: ActionIcon.clear, help: "Clear all notes (Delete)", size: size, isEnabled: state.hasSelection) {
-                model.clearSelection()
-            }
-            IconButton(symbol: ActionIcon.update, help: "Update existing chord (S)", size: size, isEnabled: state.canUpdateActiveChord) {
-                model.updateActiveChord()
-            }
-            IconButton(symbol: ActionIcon.saveNew, help: "Save as new chord (A)", size: size, isEnabled: state.canSaveAsNew) {
-                model.saveAsNewChord()
-            }
-            IconButton(symbol: ActionIcon.transposeUp, help: "Transpose up 1 semitone (+)", size: size, isEnabled: state.hasSelection) {
-                model.transpose(by: 1)
-            }
-            IconButton(symbol: ActionIcon.transposeDown, help: "Transpose down 1 semitone (-)", size: size, isEnabled: state.hasSelection) {
-                model.transpose(by: -1)
-            }
-            IconButton(symbol: ActionIcon.play, help: "Play all selected notes (Enter)", size: size, isEnabled: state.hasSelection) {
-                model.play()
-            }
-            IconButton(
-                symbol: ActionIcon.loop,
-                help: model.isLooping ? "Stop loop (Space)" : "Loop playback (Space)",
-                size: size,
-                isEnabled: state.canLoop || model.isLooping,
-                isActive: model.isLooping
-            ) {
-                model.toggleLoop()
-            }
-            IconButton(
-                symbol: state.darkMode ? ActionIcon.lightMode : ActionIcon.darkMode,
-                help: state.darkMode ? "Switch to light mode" : "Switch to dark mode",
-                size: size
-            ) {
-                model.toggleDarkMode()
-            }
-            IconButton(symbol: ActionIcon.settings, help: "Settings", size: size) {
-                model.isSettingsPresented = true
+                IconButton(
+                    symbol: state.darkMode ? ActionIcon.lightMode : ActionIcon.darkMode,
+                    help: state.darkMode ? "Switch to light mode" : "Switch to dark mode",
+                    size: size
+                ) {
+                    model.toggleDarkMode()
+                }
+                IconButton(symbol: ActionIcon.settings, help: "Settings", size: size) {
+                    model.isSettingsPresented = true
+                }
             }
         }
     }

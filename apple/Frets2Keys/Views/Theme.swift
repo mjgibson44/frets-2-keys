@@ -117,6 +117,9 @@ struct Theme {
     var pianoPlainText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
     var blackKeyPlainText: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc600 }
 
+    // Chord panel
+    var selectionBarBackground: Color { isDark ? Color(hex: 0x2E2E33) : Color(hex: 0xFBF9F9) }
+
     // Chips and controls
     var chip: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
     var chipHover: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc200 }
