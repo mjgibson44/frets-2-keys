@@ -712,3 +712,30 @@ extension StarterSetSyncTests {
         XCTAssertEqual(merged.sets.map(\.id), phone.chordSets.map(\.id))
     }
 }
+
+final class DiatonicChordTests: XCTestCase {
+    private func names(_ key: MusicalKey, sevenths: Bool = false) -> [String] {
+        key.diatonicChords(sevenths: sevenths).map { ChordBank.name(root: $0.root, quality: $0.quality) }
+    }
+
+    func testMajorKeyTriadsAndSevenths() {
+        XCTAssertEqual(names(.cMajor), ["Cmaj", "Dm", "Em", "Fmaj", "Gmaj", "Am", "Bdim"])
+        XCTAssertEqual(MusicalKey.cMajor.diatonicChords().map(\.numeral), ["I", "ii", "iii", "IV", "V", "vi", "vii°"])
+        XCTAssertEqual(names(.cMajor, sevenths: true), ["Cmaj7", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7b5"])
+        XCTAssertEqual(MusicalKey.cMajor.diatonicChords(sevenths: true).map(\.numeral),
+                       ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø7"])
+    }
+
+    func testMinorKey() {
+        let aMinor = MusicalKey(root: 9, type: .minor)
+        XCTAssertEqual(names(aMinor), ["Am", "Bdim", "Cmaj", "Dm", "Em", "Fmaj", "Gmaj"])
+        XCTAssertEqual(aMinor.diatonicChords().map(\.numeral), ["i", "ii°", "III", "iv", "v", "VI", "VII"])
+    }
+
+    func testEveryKeyHasSevenOfEach() {
+        for key in MusicalKey.all {
+            XCTAssertEqual(key.diatonicChords().count, 7, key.name())
+            XCTAssertEqual(key.diatonicChords(sevenths: true).count, 7, key.name())
+        }
+    }
+}

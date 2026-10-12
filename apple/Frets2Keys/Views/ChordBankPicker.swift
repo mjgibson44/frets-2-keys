@@ -8,6 +8,9 @@ struct ChordBankPicker: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("chordBankRoot") private var root = 0
     @AppStorage("chordBankQuality") private var qualityID = ChordBank.qualities[0].id
+    /// The bank's own key, starting from the app's key. Changing it doesn't change the app's key.
+    @State private var key: MusicalKey?
+    @State private var hasLoadedKey = false
 
     private var quality: ChordQuality {
         ChordBank.qualities.first { $0.id == qualityID } ?? ChordBank.qualities[0]
@@ -16,8 +19,26 @@ struct ChordBankPicker: View {
     private var notes: [Note] { ChordBank.notes(root: root, quality: quality) }
 
     var body: some View {
+        // Scrolls only when the screen is too short to show everything (e.g. iPhone SE).
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
+        }
+        .frame(idealWidth: 420, maxWidth: 480)
+        #if os(iOS)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.large])
+        #endif
+        .onAppear {
+            guard !hasLoadedKey else { return }
+            key = model.state.selectedKey
+            hasLoadedKey = true
+        }
+    }
+
+    private var content: some View {
         let isFull = model.state.savedChords.count >= AppState.maxSavedChords
-        VStack(alignment: .leading, spacing: 16) {
+        return VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Chord Bank")
                     .font(.headline)
@@ -26,13 +47,33 @@ struct ChordBankPicker: View {
                     .buttonStyle(.borderless)
             }
 
+            HStack(spacing: 8) {
+                Text("Key")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                KeyPickerMenu(selection: $key, showsScale: true)
+                    .padding(.leading, -8)
+                Spacer(minLength: 0)
+            }
+
+            if let key {
+                section("Chords in \(key.name(sharpsOnly: model.state.sharpsOnly))") {
+                    VStack(spacing: 6) {
+                        diatonicRow(key.diatonicChords())
+                        diatonicRow(key.diatonicChords(sevenths: true))
+                    }
+                }
+            }
+
             section("Root") {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(0..<12, id: \.self) { pitchClass in
-                        tile(noteNamesSharp[pitchClass], isSelected: root == pitchClass) {
+                        tile(rootName(pitchClass), isSelected: root == pitchClass) {
                             root = pitchClass
                             model.preview(ChordBank.notes(root: pitchClass, quality: quality))
                         }
+                        // Roots outside the chosen key are dimmed.
+                        .opacity(key.map { $0.pitchClasses.contains(pitchClass) } ?? true ? 1 : 0.45)
                     }
                 }
             }
@@ -106,11 +147,51 @@ struct ChordBankPicker: View {
             }
         }
         .padding(20)
-        .frame(idealWidth: 400, maxWidth: 460)
-        #if os(iOS)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .presentationDetents([.large])
-        #endif
+    }
+
+    /// Root names spelled for the bank's key (flats in flat keys) unless "Sharps only" is on.
+    private func rootName(_ pitchClass: Int) -> String {
+        displayName(for: Note(midi: 60 + pitchClass), key: key, sharpsOnly: model.state.sharpsOnly)
+    }
+
+    /// One tile per scale degree: the Roman numeral over the chord name.
+    private func diatonicRow(_ chords: [DiatonicChord]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+            ForEach(chords, id: \.numeral) { chord in
+                let isSelected = root == chord.root && qualityID == chord.quality.id
+                Button {
+                    root = chord.root
+                    qualityID = chord.quality.id
+                    model.preview(ChordBank.notes(root: chord.root, quality: chord.quality))
+                } label: {
+                    VStack(spacing: 1) {
+                        Text(chord.numeral)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(rootName(chord.root) + chordSuffix(chord.quality))
+                            .font(.system(size: 11))
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .foregroundStyle(isSelected ? .white : theme.secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                    .background(isSelected ? Color.accentColor : theme.chip, in: RoundedRectangle(cornerRadius: 6))
+                    .contentShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(chord.numeral): \(rootName(chord.root)) \(chord.quality.label)")
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+    }
+
+    /// Compact chord suffix for the diatonic tiles ("" for major, "m", "°", "maj7", ...).
+    private func chordSuffix(_ quality: ChordQuality) -> String {
+        switch quality.id {
+        case "maj": return ""
+        case "dim": return "°"
+        case "m7b5": return "ø7"
+        default: return quality.id
+        }
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

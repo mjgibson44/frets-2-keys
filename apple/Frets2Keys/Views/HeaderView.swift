@@ -33,7 +33,10 @@ struct HeaderView: View {
         let state = model.state
         let size: CGFloat = layoutWidth >= 600 ? 32 : 40
         HStack(spacing: 12) {
-            KeyPickerMenu()
+            KeyPickerMenu(selection: Binding(
+                get: { model.state.selectedKey },
+                set: { model.state.selectedKey = $0 }
+            ))
             Spacer(minLength: 0)
             if let instrumentChoice {
                 Picker("Instrument", selection: instrumentChoice) {
@@ -100,10 +103,13 @@ struct IconButton: View {
     }
 }
 
+/// A key menu (No key, 12 major, 12 minor) showing the chosen key and, on wider screens, its notes.
 struct KeyPickerMenu: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
+    @Binding var selection: MusicalKey?
+    var showsScale = true
     @State private var isHovered = false
 
     var body: some View {
@@ -122,10 +128,10 @@ struct KeyPickerMenu: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Text(model.state.selectedKey?.name(sharpsOnly: sharpsOnly) ?? "No key")
+                Text(selection?.name(sharpsOnly: sharpsOnly) ?? "No key")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(theme.secondaryText)
-                if let key = model.state.selectedKey, layoutWidth >= 600 {
+                if showsScale, let key = selection, layoutWidth >= 600 {
                     Text(key.noteNames(sharpsOnly: sharpsOnly).joined(separator: " "))
                         .font(.system(size: 12))
                         .foregroundStyle(Tailwind.zinc500)
@@ -148,14 +154,14 @@ struct KeyPickerMenu: View {
         #else
         .hoverEffect(.highlight)
         #endif
-        .accessibilityLabel("Key: \(model.state.selectedKey?.name(sharpsOnly: sharpsOnly) ?? "No key")")
+        .accessibilityLabel("Key: \(selection?.name(sharpsOnly: sharpsOnly) ?? "No key")")
     }
 
     /// A menu item with a checkmark when it's the current key.
     private func keyToggle(_ key: MusicalKey?, title: String) -> some View {
         Toggle(title, isOn: Binding(
-            get: { model.state.selectedKey == key },
-            set: { if $0 { model.state.selectedKey = key } }
+            get: { selection == key },
+            set: { if $0 { selection = key } }
         ))
     }
 }

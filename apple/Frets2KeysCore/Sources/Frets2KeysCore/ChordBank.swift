@@ -66,3 +66,36 @@ extension AppState {
         activeChordID = nil
     }
 }
+
+/// A chord built on one degree of a key, e.g. "ii" = Dm in C major.
+public struct DiatonicChord: Hashable, Sendable {
+    public let numeral: String
+    /// Root pitch class, 0 = C.
+    public let root: Int
+    public let quality: ChordQuality
+}
+
+extension MusicalKey {
+    /// The chords built by stacking thirds on each scale degree: triads, or seventh chords.
+    public func diatonicChords(sevenths: Bool = false) -> [DiatonicChord] {
+        let scale = pitchClasses
+        let numerals = ["I", "II", "III", "IV", "V", "VI", "VII"]
+        return scale.indices.compactMap { degree in
+            let stack = sevenths ? [0, 2, 4, 6] : [0, 2, 4]
+            let root = scale[degree]
+            // Semitones above the root for each stacked scale tone (a seventh stays within the octave).
+            let intervals = stack.map { step in (scale[(degree + step) % 7] - root + 12) % 12 }
+            guard let quality = ChordBank.qualities.first(where: { $0.intervals == intervals }) else { return nil }
+            let isMinorish = intervals[1] == 3
+            var numeral = isMinorish ? numerals[degree].lowercased() : numerals[degree]
+            switch quality.id {
+            case "dim": numeral += "°"
+            case "m7b5": numeral += "ø7"
+            case "maj7": numeral += "maj7"
+            case "7", "m7": numeral += "7"
+            default: break
+            }
+            return DiatonicChord(numeral: numeral, root: root, quality: quality)
+        }
+    }
+}
