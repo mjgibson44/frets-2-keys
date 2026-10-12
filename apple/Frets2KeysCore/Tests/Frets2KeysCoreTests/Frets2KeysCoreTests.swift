@@ -414,3 +414,133 @@ final class SynthMixerTests: XCTestCase {
         XCTAssertLessThan(SynthMixer.envelope(at: 0.9, duration: 1, volume: 1), 0.7)
     }
 }
+
+final class ChordSetTests: XCTestCase {
+    private func saveChord(_ notes: [Note], in state: inout AppState) {
+        state.selectedNotes = notes
+        state.saveAsNewChord()
+    }
+
+    func testStartsWithOneEmptySet() {
+        let state = AppState()
+        XCTAssertEqual(state.chordSets.count, 1)
+        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertTrue(state.savedChords.isEmpty)
+    }
+
+    func testChordsBelongToTheActiveSet() {
+        var state = AppState()
+        saveChord(["C4", "E4", "G4"], in: &state)
+        let first = state.activeSetID
+        state.createSet()
+        XCTAssertEqual(state.activeSet.name, "Set 2")
+        XCTAssertTrue(state.savedChords.isEmpty)
+        XCTAssertNil(state.activeChordID)
+        saveChord(["A3", "C4", "E4"], in: &state)
+        XCTAssertEqual(state.savedChords.map(\.name), ["Am"])
+
+        state.selectSet(id: first)
+        XCTAssertEqual(state.savedChords.map(\.name), ["Cmaj"])
+    }
+
+    func testEditingChordsBumpsModifiedDate() {
+        var state = AppState()
+        let before = state.activeSet.modifiedAt
+        Thread.sleep(forTimeInterval: 0.01)
+        saveChord(["C4", "E4", "G4"], in: &state)
+        XCTAssertGreaterThan(state.activeSet.modifiedAt, before)
+
+        // Selecting a chord doesn't change the set.
+        let afterSave = state.activeSet.modifiedAt
+        state.selectChord(id: state.savedChords[0].id)
+        XCTAssertEqual(state.activeSet.modifiedAt, afterSave)
+    }
+
+    func testDefaultNamesKeepCounting() {
+        var state = AppState()
+        state.createSet()
+        state.createSet()
+        XCTAssertEqual(state.chordSets.map(\.name), ["Set 1", "Set 2", "Set 3"])
+        state.deleteSet(id: state.chordSets[1].id)
+        state.createSet()
+        XCTAssertEqual(state.chordSets.map(\.name), ["Set 1", "Set 3", "Set 4"])
+        state.renameSet(id: state.chordSets[0].id, to: "Verse")
+        state.renameSet(id: state.chordSets[1].id, to: "   ")
+        XCTAssertEqual(state.chordSets.map(\.name), ["Verse", "Set 3", "Set 4"])
+    }
+
+    func testDuplicate() {
+        var state = AppState()
+        saveChord(["C4", "E4", "G4"], in: &state)
+        state.renameSet(id: state.activeSetID, to: "Chorus")
+        let original = state.activeSet
+        let copyID = state.duplicateSet(id: original.id)
+        XCTAssertEqual(state.activeSetID, copyID)
+        XCTAssertEqual(state.activeSet.name, "Chorus copy")
+        XCTAssertEqual(state.savedChords.map(\.notes), original.chords.map(\.notes))
+        XCTAssertNotEqual(state.savedChords[0].id, original.chords[0].id)
+        XCTAssertEqual(state.chordSets.map(\.name), ["Chorus", "Chorus copy"])
+    }
+
+    func testDeleteSwitchesToNeighbor() {
+        var state = AppState()
+        let one = state.activeSetID
+        let two = state.createSet()
+        let three = state.createSet()
+        state.selectSet(id: two)
+        state.deleteSet(id: two)
+        XCTAssertEqual(state.activeSetID, three)
+        state.deleteSet(id: three)
+        XCTAssertEqual(state.activeSetID, one)
+        state.deleteSet(id: one)
+        XCTAssertEqual(state.chordSets.count, 1)
+        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertNotEqual(state.activeSetID, one)
+    }
+
+    func testUpgradeFromSavedChords() throws {
+        let legacy = """
+        {"savedChords":[{"id":"\(UUID().uuidString)","name":"Cmaj","notes":[{"midi":60},{"midi":64},{"midi":67}]}],
+         "darkMode":true,"fretboards":[]}
+        """
+        let state = try JSONDecoder().decode(AppState.self, from: Data(legacy.utf8))
+        XCTAssertEqual(state.chordSets.count, 1)
+        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertEqual(state.savedChords.map(\.name), ["Cmaj"])
+        XCTAssertTrue(state.darkMode)
+    }
+
+    func testSetsRoundTrip() throws {
+        var state = AppState()
+        saveChord(["C4", "E4", "G4"], in: &state)
+        state.createSet()
+        saveChord(["G3", "B3", "D4"], in: &state)
+        let decoded = try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(decoded.chordSets, state.chordSets)
+        XCTAssertEqual(decoded.activeSetID, state.activeSetID)
+    }
+
+    func testReplaceChordSetsKeepsOrResetsActive() {
+        var state = AppState()
+        saveChord(["C4", "E4", "G4"], in: &state)
+        let active = state.activeSet
+        let other = ChordSet(name: "Other")
+        state.replaceChordSets([other, active])
+        XCTAssertEqual(state.activeSetID, active.id)
+        XCTAssertNotNil(state.activeChordID)
+
+        state.replaceChordSets([other])
+        XCTAssertEqual(state.activeSetID, other.id)
+        XCTAssertNil(state.activeChordID)
+    }
+
+    func testLoopUsesActiveSet() {
+        var state = AppState()
+        saveChord(["C4", "E4", "G4"], in: &state)
+        saveChord(["F4", "A4", "C5"], in: &state)
+        state.createSet()
+        state.selectedNotes = ["D4"]
+        var loop = LoopSequencer(startingFrom: state)
+        XCTAssertEqual(loop.nextBeat(&state), ["D4"])
+    }
+}

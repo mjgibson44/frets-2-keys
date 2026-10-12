@@ -30,6 +30,24 @@ public struct SavedChord: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+/// A named group of saved chords, like a song section or practice set.
+public struct ChordSet: Codable, Hashable, Identifiable, Sendable {
+    public var id: UUID
+    public var name: String
+    public var chords: [SavedChord]
+    public var createdAt: Date
+    /// Bumped on every edit; sync uses it to keep the newest version of each set.
+    public var modifiedAt: Date
+
+    public init(id: UUID = UUID(), name: String, chords: [SavedChord] = [], createdAt: Date = Date(), modifiedAt: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.chords = chords
+        self.createdAt = createdAt
+        self.modifiedAt = modifiedAt ?? createdAt
+    }
+}
+
 /// Everything the app displays, plus the operations the UI and keyboard shortcuts perform.
 /// The selection itself isn't persisted (matching the web app); everything else is.
 public struct AppState: Codable, Equatable, Sendable {
@@ -41,7 +59,9 @@ public struct AppState: Codable, Equatable, Sendable {
     public var selectedNotes: [Note] = []
     public var activeChordID: UUID?
     public var fretboards: [Fretboard] = [Fretboard()]
-    public var savedChords: [SavedChord] = []
+    /// Never empty: there's always at least one set, and `activeSetID` names one of them.
+    public private(set) var chordSets: [ChordSet]
+    public private(set) var activeSetID: UUID
     public var playMode: PlayMode = .chord
     public var showPiano = true
     public var selectedKey: MusicalKey? = .cMajor
@@ -49,7 +69,105 @@ public struct AppState: Codable, Equatable, Sendable {
     public var noteLabelMode: NoteLabelMode = .sharpsAndFlats
     public var darkMode = false
 
-    public init() {}
+    public init() {
+        let set = ChordSet(name: Self.defaultSetName(number: 1))
+        chordSets = [set]
+        activeSetID = set.id
+    }
+
+    // MARK: - Chord sets
+
+    public var activeSet: ChordSet {
+        chordSets.first { $0.id == activeSetID } ?? chordSets[0]
+    }
+
+    /// The active set's chords. Editing them marks the set as modified.
+    public var savedChords: [SavedChord] {
+        get { activeSet.chords }
+        set {
+            guard let index = chordSets.firstIndex(where: { $0.id == activeSetID }),
+                  chordSets[index].chords != newValue else { return }
+            chordSets[index].chords = newValue
+            chordSets[index].modifiedAt = Date()
+        }
+    }
+
+    static func defaultSetName(number: Int) -> String { "Set \(number)" }
+
+    /// "Set N" with N one higher than any existing default-named set.
+    public var nextDefaultSetName: String {
+        let numbers = chordSets.compactMap { set -> Int? in
+            guard set.name.hasPrefix("Set ") else { return nil }
+            return Int(set.name.dropFirst(4))
+        }
+        return Self.defaultSetName(number: (numbers.max() ?? 0) + 1)
+    }
+
+    /// Creates an empty set with a default name and switches to it.
+    @discardableResult
+    public mutating func createSet() -> UUID {
+        let set = ChordSet(name: nextDefaultSetName)
+        chordSets.append(set)
+        selectSet(id: set.id)
+        return set.id
+    }
+
+    public mutating func selectSet(id: UUID) {
+        guard chordSets.contains(where: { $0.id == id }), id != activeSetID else { return }
+        activeSetID = id
+        activeChordID = nil
+    }
+
+    /// Renames a set. Blank names are ignored.
+    public mutating func renameSet(id: UUID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let index = chordSets.firstIndex(where: { $0.id == id }),
+              chordSets[index].name != trimmed else { return }
+        chordSets[index].name = trimmed
+        chordSets[index].modifiedAt = Date()
+    }
+
+    /// Copies a set (with fresh chord IDs) right after the original and switches to the copy.
+    @discardableResult
+    public mutating func duplicateSet(id: UUID) -> UUID? {
+        guard let index = chordSets.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = chordSets[index]
+        let copy = ChordSet(
+            name: "\(original.name) copy",
+            chords: original.chords.map { SavedChord(name: $0.name, notes: $0.notes) }
+        )
+        chordSets.insert(copy, at: index + 1)
+        selectSet(id: copy.id)
+        return copy.id
+    }
+
+    /// Deletes a set. If it was active, the next set (or the previous one) becomes active;
+    /// deleting the last remaining set leaves a fresh empty one.
+    public mutating func deleteSet(id: UUID) {
+        guard let index = chordSets.firstIndex(where: { $0.id == id }) else { return }
+        chordSets.remove(at: index)
+        if chordSets.isEmpty {
+            let set = ChordSet(name: Self.defaultSetName(number: 1))
+            chordSets = [set]
+        }
+        if id == activeSetID {
+            activeSetID = chordSets[min(index, chordSets.count - 1)].id
+            activeChordID = nil
+        }
+    }
+
+    /// Replaces all sets, e.g. with the result of merging in another device's changes.
+    /// Keeps the active set if it still exists.
+    public mutating func replaceChordSets(_ sets: [ChordSet]) {
+        guard !sets.isEmpty else { return }
+        chordSets = sets
+        if !sets.contains(where: { $0.id == activeSetID }) {
+            activeSetID = sets[0].id
+            activeChordID = nil
+        } else if let activeChordID, !activeSet.chords.contains(where: { $0.id == activeChordID }) {
+            self.activeChordID = nil
+        }
+    }
 
     // MARK: - Derived values
 
@@ -232,13 +350,25 @@ public struct AppState: Codable, Equatable, Sendable {
     // MARK: - Persistence
 
     private enum CodingKeys: String, CodingKey {
-        case fretboards, savedChords, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, darkMode
+        case fretboards, chordSets, activeSetID, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, darkMode
+        /// Before chord sets existed, saved chords were stored directly.
+        case savedChords
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         fretboards = try container.decodeIfPresent([Fretboard].self, forKey: .fretboards) ?? [Fretboard()]
-        savedChords = try container.decodeIfPresent([SavedChord].self, forKey: .savedChords) ?? []
+        if let sets = try container.decodeIfPresent([ChordSet].self, forKey: .chordSets), !sets.isEmpty {
+            chordSets = sets
+            let active = try container.decodeIfPresent(UUID.self, forKey: .activeSetID)
+            activeSetID = sets.contains { $0.id == active } ? active! : sets[0].id
+        } else {
+            // Upgrade: the old single list of saved chords becomes "Set 1".
+            let legacy = try container.decodeIfPresent([SavedChord].self, forKey: .savedChords) ?? []
+            let set = ChordSet(name: Self.defaultSetName(number: 1), chords: legacy)
+            chordSets = [set]
+            activeSetID = set.id
+        }
         playMode = try container.decodeIfPresent(PlayMode.self, forKey: .playMode) ?? .chord
         showPiano = try container.decodeIfPresent(Bool.self, forKey: .showPiano) ?? true
         // Always encoded (as null when "No key" is chosen), so absence also means no key.
@@ -251,7 +381,8 @@ public struct AppState: Codable, Equatable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(fretboards, forKey: .fretboards)
-        try container.encode(savedChords, forKey: .savedChords)
+        try container.encode(chordSets, forKey: .chordSets)
+        try container.encode(activeSetID, forKey: .activeSetID)
         try container.encode(playMode, forKey: .playMode)
         try container.encode(showPiano, forKey: .showPiano)
         try container.encode(selectedKey, forKey: .selectedKey)
