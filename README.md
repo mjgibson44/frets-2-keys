@@ -71,7 +71,6 @@ Pick the **Frets2Keys** scheme and choose an iPhone/iPad simulator or **My Mac**
 - `apple/Frets2Keys/`: the SwiftUI app (views, audio engine, persistence, iCloud sync, menus and keyboard handling).
 - `apple/Frets2KeysUITests/`: UI tests (iPhone landscape mode).
 - `apple/project.yml`: the [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec the Xcode project is generated from. After adding or removing source files, run `xcodegen generate` in `apple/` (install with `brew install xcodegen`).
-- `apple/tools/make-icon.swift`: redraws the app icon.
 
 ## Keyboard Shortcuts
 
