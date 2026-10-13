@@ -51,20 +51,15 @@ struct ContentView: View {
                     }
                 }
 
-                // Full width, separated from the instruments by a line along its top.
-                VStack(spacing: 0) {
+                // Floating glass cards: the selected chord (when there is one) above the chord set.
+                VStack(spacing: 8) {
                     chordLimitWarning
-                        .padding(.horizontal, padding)
-                        .padding(.top, 8)
-                    ChordPanel(inset: padding)
+                    ChordPanel()
                 }
-                .padding(.bottom, Device.isPhone ? 0 : 8)
+                .padding(.horizontal, Device.isPhone ? 10 : padding)
+                .padding(.top, 8)
+                .padding(.bottom, Device.isPhone ? 2 : 12)
                 .centered()
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(theme.cardBorder)
-                        .frame(height: 1)
-                }
                 .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
             }
             .environment(\.layoutWidth, width)

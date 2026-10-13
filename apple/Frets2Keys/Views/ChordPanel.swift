@@ -1,13 +1,12 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The chord set's saved chords, with the current selection and its controls underneath. It sits
-/// full width at the bottom of the window; `inset` lines its content up with the instruments.
+/// The bottom of the window: two glass cards. The selected chord and its controls (only while
+/// notes are selected) sit above the chord set's saved chords.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    var inset: CGFloat = 16
 
     /// A sideways iPhone has little height, so the saved chords share one scrolling row.
     private var usesSingleRow: Bool {
@@ -17,53 +16,92 @@ struct ChordPanel: View {
     /// Upright on iPhone, saved chords wrap up to about three rows, then scroll within them.
     private static let phoneChipsMaxHeight: CGFloat = 3 * 37 + 2 * 8
 
+    private var padding: CGFloat { Device.isPhone ? 14 : 16 }
+
     var body: some View {
-        VStack(spacing: 0) {
-            if usesSingleRow {
-                // One row: set menu, saved chords scrolling sideways, then Add.
-                HStack(spacing: 8) {
-                    SetMenu()
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        SavedChordChips(layout: .row)
-                            .padding(.vertical, 2)
-                    }
-                    AddChordButton(compact: true)
+        GlassCardGroup(spacing: 8) {
+            VStack(spacing: 8) {
+                if model.state.hasSelection {
+                    SelectionBar()
+                        .padding(.horizontal, padding)
+                        .padding(.vertical, Device.isPhone ? 8 : 10)
+                        .glassCard()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, inset)
-                .padding(.vertical, 10)
-            } else {
-                VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
-                    HStack {
-                        SetMenu()
-                        Spacer(minLength: 0)
-                        AddChordButton()
-                    }
-                    if Device.isPhone {
-                        // Grows with the set until it hits the cap, then scrolls.
-                        ViewThatFits(in: .vertical) {
-                            SavedChordChips(layout: .wrapping)
-                            ScrollView(.vertical) {
-                                SavedChordChips(layout: .wrapping)
-                            }
-                            .scrollIndicators(.visible)
-                        }
-                        .frame(maxHeight: Self.phoneChipsMaxHeight)
-                    } else {
-                        SavedChordChips(layout: .wrapping)
-                    }
-                }
-                .padding(.horizontal, inset)
-                .padding(.vertical, Device.isPhone ? 12 : 16)
+                setsCard
+                    .glassCard()
             }
+        }
+        .animation(.snappy(duration: 0.25), value: model.state.hasSelection)
+    }
 
-            Rectangle()
-                .fill(theme.cardBorder)
-                .frame(height: 1)
-                .padding(.horizontal, inset)
+    /// The set menu, Add Chord and the set's chords, sized to its content.
+    @ViewBuilder
+    private var setsCard: some View {
+        if usesSingleRow {
+            // One row: set menu, saved chords scrolling sideways, then Add.
+            HStack(spacing: 8) {
+                SetMenu()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    SavedChordChips(layout: .row)
+                        .padding(.vertical, 2)
+                }
+                AddChordButton(compact: true)
+            }
+            .padding(.horizontal, padding)
+            .padding(.vertical, 8)
+        } else {
+            VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
+                HStack {
+                    SetMenu()
+                    Spacer(minLength: 0)
+                    AddChordButton()
+                }
+                if Device.isPhone {
+                    // Grows with the set until it hits the cap, then scrolls.
+                    ViewThatFits(in: .vertical) {
+                        SavedChordChips(layout: .wrapping)
+                        ScrollView(.vertical) {
+                            SavedChordChips(layout: .wrapping)
+                        }
+                        .scrollIndicators(.visible)
+                    }
+                    .frame(maxHeight: Self.phoneChipsMaxHeight)
+                } else {
+                    SavedChordChips(layout: .wrapping)
+                }
+            }
+            .padding(padding)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
 
-            SelectionBar()
-                .padding(.horizontal, inset)
-                .padding(.vertical, Device.isPhone ? 6 : 10)
+/// Groups glass cards so they blend together and morph as cards appear (iOS 26 and macOS 26).
+struct GlassCardGroup<Content: View>: View {
+    var spacing: CGFloat
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if #available(iOS 26, macOS 26, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// A floating Liquid Glass card, or a frosted material card before iOS 26 / macOS 26.
+    @ViewBuilder
+    func glassCard(cornerRadius: CGFloat = 22) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(iOS 26, macOS 26, *) {
+            frame(maxWidth: .infinity, alignment: .leading)
+                .glassEffect(.regular, in: shape)
+        } else {
+            frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: shape)
         }
     }
 }
