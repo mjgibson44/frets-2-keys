@@ -64,16 +64,15 @@ struct PianoView: View {
             VStack {
                 Spacer(minLength: 0)
                 if appearance.showsLabel {
-                    NoteBadge(appearance: appearance, selectedSize: 28, unselectedSize: 20, plainTextColor: theme.pianoPlainText)
-                        .frame(width: 28, height: 28)
+                    keyLabel(appearance, plainTextColor: theme.pianoPlainText)
                 }
             }
             .padding(.bottom, 8)
             .frame(width: whiteKeyWidth, height: height)
         }
-        .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover, cornerRadius: 4))
+        .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         .clipShape(shape)
-        .overlay(shape.strokeBorder(theme.whiteKeyBorder, lineWidth: 1))
+        .overlay(shape.strokeBorder(appearance.isSelected ? .clear : theme.whiteKeyBorder, lineWidth: 1))
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
@@ -87,19 +86,36 @@ struct PianoView: View {
             VStack {
                 Spacer(minLength: 0)
                 if appearance.showsLabel {
-                    // Same size as the white keys' badges (selected capped to fit the narrower key).
-                    let selectedSize = min(28, blackKeyWidth - 2)
-                    NoteBadge(appearance: appearance, selectedSize: selectedSize, unselectedSize: 20, plainTextColor: theme.blackKeyPlainText)
-                        .frame(width: selectedSize, height: selectedSize)
+                    keyLabel(appearance, plainTextColor: theme.blackKeyPlainText)
                 }
             }
             .padding(.bottom, 4)
             .frame(width: blackKeyWidth, height: height)
         }
-        .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover, cornerRadius: 4))
+        .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
+    }
+
+    /// A selected key is filled with its note's color, so its label needs no square of its own.
+    @ViewBuilder
+    private func keyLabel(_ appearance: NoteAppearance, plainTextColor: Color) -> some View {
+        if appearance.isSelected {
+            NoteLabel(name: appearance.label, weight: .medium)
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+        } else {
+            NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
+        }
+    }
+
+    private func keyButtonStyle(_ appearance: NoteAppearance, normal: Color, highlighted: Color) -> HighlightButtonStyle {
+        guard case .selected(let role) = appearance.style else {
+            return HighlightButtonStyle(normal: normal, highlighted: highlighted, cornerRadius: 4)
+        }
+        let solid = NotePalette.solid(for: role)
+        return HighlightButtonStyle(normal: solid, highlighted: solid.opacity(0.85), cornerRadius: 4)
     }
 }

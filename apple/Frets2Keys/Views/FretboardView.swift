@@ -110,23 +110,30 @@ struct FretboardView: View {
                 if !isBelowCapo {
                     stringLine
                     if appearance.showsLabel {
-                        NoteBadge(
-                            appearance: appearance,
-                            selectedSize: min(28, cellHeight + 2),
-                            unselectedSize: min(20, cellHeight - 2)
-                        )
+                        NoteBadge(appearance: appearance, size: min(20, cellHeight - 2))
                         stringLine
                     }
                 }
             }
             .frame(width: cellWidth, height: cellHeight)
         }
-        .buttonStyle(HighlightButtonStyle(highlighted: theme.subtleHover))
+        .buttonStyle(cellButtonStyle(for: appearance))
         .disabled(isBelowCapo)
         .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretDivider) }
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave), string \(stringNumber), fret \(fret)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// A selected fret gets a faint wash of its note's color across the whole cell.
+    private func cellButtonStyle(for appearance: NoteAppearance) -> HighlightButtonStyle {
+        guard case .selected(let role) = appearance.style else {
+            return HighlightButtonStyle(highlighted: theme.subtleHover)
+        }
+        return HighlightButtonStyle(
+            normal: NotePalette.tint(for: role, dark: theme.isDark),
+            highlighted: NotePalette.solid(for: role).opacity(theme.isDark ? 0.32 : 0.2)
+        )
     }
 
     private var stringLine: some View {
