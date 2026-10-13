@@ -72,7 +72,8 @@ struct PianoView: View {
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         .clipShape(shape)
-        .overlay(shape.strokeBorder(appearance.isSelected ? .clear : theme.whiteKeyBorder, lineWidth: 1))
+        // A filled key gets an edge in the card's color, separating it from a filled neighbor.
+        .overlay(shape.strokeBorder(appearance.isSelected ? theme.cardBackground : theme.whiteKeyBorder, lineWidth: 1))
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
@@ -94,6 +95,13 @@ struct PianoView: View {
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
+        // Sets the key apart from the white keys around it, which matters when both are filled.
+        // Its top edge sits just above the keyboard, where the scroll view clips it off.
+        .overlay {
+            UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
+                .strokeBorder(theme.cardBackground, lineWidth: 1.5)
+                .padding(.top, -2)
+        }
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
