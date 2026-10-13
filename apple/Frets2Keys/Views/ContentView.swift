@@ -51,14 +51,20 @@ struct ContentView: View {
                     }
                 }
 
-                VStack(spacing: 8) {
+                // Full width, separated from the instruments by a line along its top.
+                VStack(spacing: 0) {
                     chordLimitWarning
-                    ChordPanel()
+                        .padding(.horizontal, padding)
+                        .padding(.top, 8)
+                    ChordPanel(inset: padding)
                 }
-                .padding(.horizontal, padding)
-                .padding(.top, 8)
-                .padding(.bottom, Device.isPhone ? 4 : 16)
+                .padding(.bottom, Device.isPhone ? 0 : 8)
                 .centered()
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(theme.cardBorder)
+                        .frame(height: 1)
+                }
                 .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
             }
             .environment(\.layoutWidth, width)
@@ -202,6 +208,7 @@ struct ContentView: View {
     /// top bar follow along.
     private func instrumentPages(padding: CGFloat) -> some View {
         GeometryReader { area in
+            ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
                     ForEach(0..<pageCount, id: \.self) { page in
@@ -211,6 +218,7 @@ struct ContentView: View {
                                 .padding(.horizontal, padding)
                                 .padding(.vertical, 8)
                                 .frame(height: area.size.height)
+                                .id(page)
                         }
                     }
                 }
@@ -226,6 +234,13 @@ struct ContentView: View {
                 // Near either end of the repeated list: jump back to the same instrument in the middle.
                 let margin = instrumentOptions.count * 10
                 if page < margin || page > pageCount - margin { recenter() }
+            }
+            // When the space changes (the chord panel grows as chords are added or sync in, or the
+            // phone rotates), the pages resize but the scroll offset doesn't; snap back onto the page.
+            .onChange(of: area.size.height) { _, _ in
+                guard let page = currentPage else { return }
+                DispatchQueue.main.async { proxy.scrollTo(page, anchor: .top) }
+            }
             }
             .id(instrumentOptions)  // rebuild the pages when instruments are turned on or off
         }

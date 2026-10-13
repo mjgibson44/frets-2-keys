@@ -3,7 +3,19 @@ import Frets2KeysCore
 
 @main
 struct Frets2KeysApp: App {
-    @State private var model = AppModel()
+    @State private var model = Self.makeModel()
+
+    /// UI tests pass `-UITestFreshState` to start from an empty, unsynced state each run.
+    private static func makeModel() -> AppModel {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-UITestFreshState") {
+            let suite = "Frets2KeysUITests"
+            UserDefaults().removePersistentDomain(forName: suite)
+            return AppModel(defaults: UserDefaults(suiteName: suite)!, syncWithICloud: false)
+        }
+        #endif
+        return AppModel()
+    }
 
     var body: some Scene {
         #if os(macOS)

@@ -1,11 +1,13 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The chord set's saved chords, with the current selection and its controls attached underneath.
+/// The chord set's saved chords, with the current selection and its controls underneath. It sits
+/// full width at the bottom of the window; `inset` lines its content up with the instruments.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    var inset: CGFloat = 16
 
     /// A sideways iPhone has little height, so the saved chords share one scrolling row.
     private var usesSingleRow: Bool {
@@ -27,7 +29,7 @@ struct ChordPanel: View {
                     }
                     AddChordButton(compact: true)
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, inset)
                 .padding(.vertical, 10)
             } else {
                 VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
@@ -50,21 +52,19 @@ struct ChordPanel: View {
                         SavedChordChips(layout: .wrapping)
                     }
                 }
-                .padding(Device.isPhone ? 12 : 16)
+                .padding(.horizontal, inset)
+                .padding(.vertical, Device.isPhone ? 12 : 16)
             }
 
             Rectangle()
                 .fill(theme.cardBorder)
                 .frame(height: 1)
+                .padding(.horizontal, inset)
 
             SelectionBar()
-                .padding(.horizontal, Device.isPhone ? 12 : 16)
+                .padding(.horizontal, inset)
                 .padding(.vertical, Device.isPhone ? 6 : 10)
-                .background(theme.selectionBarBackground)
         }
-        .background(theme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.cardBorder, lineWidth: 1))
     }
 }
 
@@ -90,10 +90,11 @@ private struct AddChordButton: View {
                 .frame(minWidth: compact ? 36 : nil, minHeight: compact ? 36 : nil)
         }
         .buttonStyle(HighlightButtonStyle(
-            normal: model.isChordBankPresented ? theme.chipActive : theme.chip,
+            normal: model.isChordBankPresented ? theme.chipActive : theme.pageChip,
             highlighted: theme.chipHover,
             cornerRadius: 6
         ))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(theme.pageChipBorder, lineWidth: 1))
         .help("Choose a chord from the chord bank")
         // The compact (icon-only) style still needs a spoken name.
         .accessibilityLabel("Add Chord")
@@ -233,12 +234,11 @@ private struct SavedChordChips: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(isActive ? theme.chipActive : theme.chip)
+                .fill(isActive ? theme.chipActive : theme.pageChip)
         )
         .overlay {
-            if isActive {
-                RoundedRectangle(cornerRadius: 4).strokeBorder(theme.chipActiveRing, lineWidth: 1)
-            }
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(isActive ? theme.chipActiveRing : theme.pageChipBorder, lineWidth: 1)
         }
         .overlay {
             if isDropTarget {

@@ -109,4 +109,30 @@ final class PhoneLayoutTests: XCTestCase {
         app.swipeUp()
         XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Guitar 1" }, "\(visibleInstruments)")
     }
+
+    /// Adding chords grows the chord panel; the instrument must stay snapped between the bars.
+    func testInstrumentStaysCenteredWhenChordPanelGrows() throws {
+        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Instrument paging is iPhone-only")
+        app.terminate()
+        app.launchArguments = ["-UITestFreshState"]
+        app.launch()
+        XCUIDevice.shared.orientation = .portrait
+
+        let addChord = app.buttons["Add Chord"]
+        XCTAssertTrue(addChord.waitForExistence(timeout: 5))
+        for _ in 0..<5 {
+            addChord.tap()
+            let add = app.buttons["Add to Set"]
+            XCTAssertTrue(add.waitForExistence(timeout: 3))
+            add.tap()
+            _ = addChord.waitForExistence(timeout: 3)
+        }
+
+        let tabs = app.segmentedControls.firstMatch
+        XCTAssertTrue(waitUntil { self.visibleInstruments.count == 1 }, "\(visibleInstruments)")
+        let shown = try XCTUnwrap(onScreen(visibleInstruments[0]))
+        XCTAssertGreaterThanOrEqual(shown.frame.minY, tabs.frame.maxY, "instrument overlaps the top bar")
+        XCTAssertLessThanOrEqual(shown.frame.maxY, addChord.frame.minY, "instrument overlaps the chord panel")
+        saveScreenshot("phone-panel-grew")
+    }
 }

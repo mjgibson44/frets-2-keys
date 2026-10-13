@@ -117,11 +117,12 @@ struct Theme {
     var pianoPlainText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
     var blackKeyPlainText: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc600 }
 
-    // Chord panel
-    var selectionBarBackground: Color { isDark ? Color(hex: 0x2E2E33) : Color(hex: 0xFBF9F9) }
-
     // Chips and controls
     var chip: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
+    /// Chips sitting directly on the page background (the bottom panel): white in light mode,
+    /// outlined so they stand out from the page.
+    var pageChip: Color { isDark ? Tailwind.zinc700 : .white }
+    var pageChipBorder: Color { isDark ? .clear : cardBorder }
     var chipHover: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc200 }
     var chipActive: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc200 }
     var chipActiveRing: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
