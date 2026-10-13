@@ -5,10 +5,19 @@ import Frets2KeysCore
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    /// A sideways iPhone has little height, so the saved chords share one scrolling row.
+    private var usesSingleRow: Bool {
+        Device.isPhone && verticalSizeClass == .compact
+    }
+
+    /// Upright on iPhone, saved chords wrap up to about three rows, then scroll within them.
+    private static let phoneChipsMaxHeight: CGFloat = 3 * 37 + 2 * 8
 
     var body: some View {
         VStack(spacing: 0) {
-            if Device.isPhone {
+            if usesSingleRow {
                 // One row: set menu, saved chords scrolling sideways, then Add.
                 HStack(spacing: 8) {
                     SetMenu()
@@ -21,15 +30,27 @@ struct ChordPanel: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
             } else {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
                     HStack {
                         SetMenu()
                         Spacer(minLength: 0)
                         AddChordButton()
                     }
-                    SavedChordChips(layout: .wrapping)
+                    if Device.isPhone {
+                        // Grows with the set until it hits the cap, then scrolls.
+                        ViewThatFits(in: .vertical) {
+                            SavedChordChips(layout: .wrapping)
+                            ScrollView(.vertical) {
+                                SavedChordChips(layout: .wrapping)
+                            }
+                            .scrollIndicators(.visible)
+                        }
+                        .frame(maxHeight: Self.phoneChipsMaxHeight)
+                    } else {
+                        SavedChordChips(layout: .wrapping)
+                    }
                 }
-                .padding(16)
+                .padding(Device.isPhone ? 12 : 16)
             }
 
             Rectangle()
