@@ -87,8 +87,10 @@ struct PianoView: View {
             VStack {
                 Spacer(minLength: 0)
                 if appearance.showsLabel {
-                    NoteBadge(appearance: appearance, selectedSize: 24, unselectedSize: 16, plainTextColor: theme.blackKeyPlainText)
-                        .frame(width: 24, height: 24)
+                    // Same size as the white keys' badges (selected capped to fit the narrower key).
+                    let selectedSize = min(28, blackKeyWidth - 2)
+                    NoteBadge(appearance: appearance, selectedSize: selectedSize, unselectedSize: 20, plainTextColor: theme.blackKeyPlainText)
+                        .frame(width: selectedSize, height: selectedSize)
                 }
             }
             .padding(.bottom, 4)
