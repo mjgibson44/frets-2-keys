@@ -35,6 +35,13 @@ struct NoteBadge: View {
             .foregroundStyle(foreground)
             .frame(width: size, height: size)
             .background(background, in: RoundedRectangle(cornerRadius: 4))
+            .overlay {
+                // A soft edge, lighter than the full scale-degree border.
+                if case .inKey(let degree) = appearance.style {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(ScaleDegreePalette.all[degree].border(dark: theme.isDark).opacity(0.4), lineWidth: 1)
+                }
+            }
             .opacity(appearance.isDimmed ? 0.3 : 1)
     }
 
