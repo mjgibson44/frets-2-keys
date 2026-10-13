@@ -106,16 +106,23 @@ struct FretboardView: View {
         Button {
             model.toggle(note)
         } label: {
-            HStack(spacing: 0) {
-                if !isBelowCapo {
-                    stringLine
-                    if appearance.showsLabel {
-                        NoteBadge(
-                            appearance: appearance,
-                            selectedSize: min(28, cellHeight + 2),
-                            unselectedSize: min(20, cellHeight - 2)
-                        )
-                        stringLine
+            Group {
+                if case .selected(let role) = appearance.style {
+                    // A selected fret is filled solid with its note's color, inset a little so
+                    // neighboring selected frets stay separate.
+                    NoteLabel(name: appearance.label, weight: .medium)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: 4).inset(by: 1))
+                } else {
+                    HStack(spacing: 0) {
+                        if !isBelowCapo {
+                            stringLine
+                            if appearance.showsLabel {
+                                NoteBadge(appearance: appearance, size: min(20, cellHeight - 2))
+                                stringLine
+                            }
+                        }
                     }
                 }
             }

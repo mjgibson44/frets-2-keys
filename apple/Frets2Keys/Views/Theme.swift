@@ -82,6 +82,13 @@ enum NotePalette {
         case .chromatic(let pitchClass): return chromatic[pitchClass]
         }
     }
+
+    /// A faint wash of a role's color: the scale-degree tint for in-key notes, else a light
+    /// version of the solid color.
+    static func tint(for role: NoteColorRole, dark: Bool) -> Color {
+        if case .scaleDegree(let degree) = role { return ScaleDegreePalette.all[degree].tint(dark: dark) }
+        return solid(for: role).opacity(dark ? 0.22 : 0.12)
+    }
 }
 
 /// Surface and text colors for light and dark mode.
@@ -112,8 +119,9 @@ struct Theme {
     var whiteKey: Color { isDark ? Tailwind.zinc800 : .white }
     var whiteKeyHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
     var whiteKeyBorder: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xEDE9E9) }
-    var blackKey: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc200 }
-    var blackKeyHover: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc300 }
+    /// Black keys are only a shade off the white keys, so the colored notes stand out.
+    var blackKey: Color { isDark ? Color(hex: 0x323236) : Color(hex: 0xF0F0F2) }
+    var blackKeyHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc200 }
     var pianoPlainText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
     var blackKeyPlainText: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc600 }
 
@@ -166,6 +174,9 @@ extension EnvironmentValues {
     }
 }
 
+/// Corner radius shared by every card: the instruments and the glass cards below them.
+let cardCornerRadius: CGFloat = 16
+
 /// A rounded card matching the web app's panels.
 struct Card<Content: View>: View {
     @Environment(\.theme) private var theme
@@ -181,8 +192,8 @@ struct Card<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.cardBorder, lineWidth: 1))
+            .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous).strokeBorder(theme.cardBorder, lineWidth: 1))
     }
 }
 

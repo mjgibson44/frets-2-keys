@@ -13,14 +13,25 @@ struct PianoView: View {
     private var whiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
     private var blackKeyWidth: CGFloat { isNarrow ? 27 : 32 }
 
+    /// iPad and Mac: how tall the card may grow, to line up with the guitars when there's room.
+    /// It never shrinks below its usual size.
+    var targetHeight: CGFloat?
+
     var body: some View {
         let wide = layoutWidth >= 600
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
         let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
-        // Filling a height (iPhone landscape) makes the keys as tall as the space allows.
-        let whiteHeight: CGFloat = fillHeight.map { min(max($0 - 2 * inset, 112), 300) } ?? (wide ? 144 : 112)
-        let blackHeight: CGFloat = fillHeight == nil ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
+        let standardWhiteHeight: CGFloat = wide ? 144 : 112
+        let whiteHeight: CGFloat = if let fillHeight {
+            // Filling a height (iPhone) makes the keys as tall as the space allows.
+            min(max(fillHeight - 2 * inset, 112), 300)
+        } else if let targetHeight {
+            max(targetHeight - 2 * inset, standardWhiteHeight)
+        } else {
+            standardWhiteHeight
+        }
+        let blackHeight: CGFloat = fillHeight == nil && whiteHeight == standardWhiteHeight ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
 
         Card(padding: EdgeInsets(top: inset, leading: inset, bottom: inset, trailing: inset)) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -64,16 +75,16 @@ struct PianoView: View {
             VStack {
                 Spacer(minLength: 0)
                 if appearance.showsLabel {
-                    NoteBadge(appearance: appearance, selectedSize: 28, unselectedSize: 20, plainTextColor: theme.pianoPlainText)
-                        .frame(width: 28, height: 28)
+                    keyLabel(appearance, plainTextColor: theme.pianoPlainText)
                 }
             }
             .padding(.bottom, 8)
             .frame(width: whiteKeyWidth, height: height)
         }
-        .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover, cornerRadius: 4))
+        .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         .clipShape(shape)
-        .overlay(shape.strokeBorder(theme.whiteKeyBorder, lineWidth: 1))
+        // A filled key gets an edge in the card's color, separating it from a filled neighbor.
+        .overlay(shape.strokeBorder(appearance.isSelected ? theme.cardBackground : theme.whiteKeyBorder, lineWidth: 1))
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
@@ -87,19 +98,43 @@ struct PianoView: View {
             VStack {
                 Spacer(minLength: 0)
                 if appearance.showsLabel {
-                    // Same size as the white keys' badges (selected capped to fit the narrower key).
-                    let selectedSize = min(28, blackKeyWidth - 2)
-                    NoteBadge(appearance: appearance, selectedSize: selectedSize, unselectedSize: 20, plainTextColor: theme.blackKeyPlainText)
-                        .frame(width: selectedSize, height: selectedSize)
+                    keyLabel(appearance, plainTextColor: theme.blackKeyPlainText)
                 }
             }
             .padding(.bottom, 4)
             .frame(width: blackKeyWidth, height: height)
         }
-        .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover, cornerRadius: 4))
+        .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
+        // Sets the key apart from the white keys around it, which matters when both are filled.
+        // Its top edge sits just above the keyboard, where the scroll view clips it off.
+        .overlay {
+            UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
+                .strokeBorder(theme.cardBackground, lineWidth: 1.5)
+                .padding(.top, -2)
+        }
         .help(note.description)
         .accessibilityLabel("\(appearance.label)\(note.octave)")
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
+    }
+
+    /// A selected key is filled with its note's color, so its label needs no square of its own.
+    @ViewBuilder
+    private func keyLabel(_ appearance: NoteAppearance, plainTextColor: Color) -> some View {
+        if appearance.isSelected {
+            NoteLabel(name: appearance.label, weight: .medium)
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+        } else {
+            NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
+        }
+    }
+
+    private func keyButtonStyle(_ appearance: NoteAppearance, normal: Color, highlighted: Color) -> HighlightButtonStyle {
+        guard case .selected(let role) = appearance.style else {
+            return HighlightButtonStyle(normal: normal, highlighted: highlighted, cornerRadius: 4)
+        }
+        let solid = NotePalette.solid(for: role)
+        return HighlightButtonStyle(normal: solid, highlighted: solid.opacity(0.85), cornerRadius: 4)
     }
 }
