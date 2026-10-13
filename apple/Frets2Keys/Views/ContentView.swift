@@ -35,12 +35,19 @@ struct ContentView: View {
                     .padding(.bottom, 8)
                     .centered()
 
-                GeometryReader { middle in
+                if Device.isPhone {
+                    instrumentPages(padding: padding)
+                } else {
                     ScrollView(.vertical) {
-                        instruments(width: width, availableHeight: middle.size.height - 16)
-                            .padding(.horizontal, padding)
-                            .padding(.vertical, 8)
-                            .centered()
+                        VStack(spacing: 16) {
+                            fretboards(width: width)
+                            if model.state.showPiano {
+                                PianoView()
+                            }
+                        }
+                        .padding(.horizontal, padding)
+                        .padding(.vertical, 8)
+                        .centered()
                     }
                 }
 
@@ -121,7 +128,10 @@ struct ContentView: View {
             }
         }
         .onChange(of: instrumentOptions) { _, options in
-            if !options.contains(phoneInstrument), let first = options.first { phoneInstrument = first }
+            if !options.contains(phoneInstrument), let first = options.first {
+                phoneInstrument = first
+                scrolledInstrument = first
+            }
         }
         .onChange(of: model.isSheetPresented) { _, presented in
             if !presented { isFocused = true }
@@ -146,9 +156,15 @@ struct ContentView: View {
         InstrumentChoice.available(guitars: model.state.fretboards.count, piano: model.state.showPiano)
     }
 
-    /// iPhone shows one instrument at a time; the toggle appears when there's more than one.
+    /// The tabs in the top bar (iPhone). Picking one scrolls to that instrument.
     private var phoneInstrumentChoice: Binding<InstrumentChoice>? {
-        Device.isPhone ? $phoneInstrument : nil
+        guard Device.isPhone else { return nil }
+        return Binding(
+            get: { phoneShowing ?? .guitar },
+            set: { choice in
+                withAnimation(.snappy) { scrolledInstrument = choice }
+            }
+        )
     }
 
     /// The instrument to show on iPhone: the chosen one if it's turned on, otherwise the first available.
@@ -156,33 +172,48 @@ struct ContentView: View {
         instrumentOptions.contains(phoneInstrument) ? phoneInstrument : instrumentOptions.first
     }
 
+    /// The page the instrument scroll view is on.
+    @State private var scrolledInstrument: InstrumentChoice?
+
+    /// iPhone: one instrument per page, filling the space between the bars. Swiping up or down
+    /// moves to the next instrument; the tabs in the top bar follow along.
+    private func instrumentPages(padding: CGFloat) -> some View {
+        GeometryReader { area in
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 0) {
+                    ForEach(instrumentOptions) { option in
+                        instrumentPage(option)
+                            .environment(\.instrumentFillHeight, max(area.size.height - 16, 120))
+                            .padding(.horizontal, padding)
+                            .padding(.vertical, 8)
+                            .frame(height: area.size.height)
+                            .id(option)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $scrolledInstrument, anchor: .top)
+            .scrollIndicators(.hidden)
+            .onAppear { scrolledInstrument = phoneShowing }
+            .onChange(of: scrolledInstrument) { _, choice in
+                if let choice { phoneInstrument = choice }
+            }
+        }
+    }
+
     @ViewBuilder
-    private func instruments(width: CGFloat, availableHeight: CGFloat) -> some View {
-        if Device.isPhone {
-            let boards = model.state.fretboards
-            // The instrument grows to fill the space between the bars, centered when it doesn't
-            // need all of it.
-            Group {
-                switch phoneShowing {
-                case .guitar where !boards.isEmpty:
-                    FretboardView(fretboard: boards[0], title: "Guitar 1")
-                case .guitar2 where boards.count > 1:
-                    FretboardView(fretboard: boards[1], title: "Guitar 2")
-                case .piano:
-                    PianoView()
-                default:
-                    EmptyView()
-                }
-            }
-            .environment(\.instrumentFillHeight, max(availableHeight, 160))
-            .frame(minHeight: availableHeight)
-        } else {
-            VStack(spacing: 16) {
-                fretboards(width: width)
-                if model.state.showPiano {
-                    PianoView()
-                }
-            }
+    private func instrumentPage(_ choice: InstrumentChoice) -> some View {
+        let boards = model.state.fretboards
+        switch choice {
+        case .guitar where !boards.isEmpty:
+            FretboardView(fretboard: boards[0], title: "Guitar 1")
+        case .guitar2 where boards.count > 1:
+            FretboardView(fretboard: boards[1], title: "Guitar 2")
+        case .piano:
+            PianoView()
+        default:
+            EmptyView()
         }
     }
 

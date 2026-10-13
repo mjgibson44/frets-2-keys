@@ -30,6 +30,15 @@ enum InstrumentChoice: String, CaseIterable, Identifiable {
         }
     }
 
+    /// For tabs when space is tight.
+    var shortTitle: String {
+        switch self {
+        case .guitar: return "G1"
+        case .guitar2: return "G2"
+        case .piano: return "PN"
+        }
+    }
+
     /// The choices available for the current instruments.
     static func available(guitars: Int, piano: Bool) -> [InstrumentChoice] {
         let guitarChoices: [InstrumentChoice] = Array([.guitar, .guitar2].prefix(guitars))
@@ -54,9 +63,11 @@ struct HeaderView: View {
                 get: { model.state.selectedKey },
                 set: { model.state.selectedKey = $0 }
             ))
-            Spacer(minLength: 0)
             if let instrumentChoice, instrumentOptions.count > 1 {
-                InstrumentPicker(selection: instrumentChoice, options: instrumentOptions)
+                // Takes the space between the key menu and the buttons.
+                InstrumentTabs(selection: instrumentChoice, options: instrumentOptions)
+                    .frame(maxWidth: .infinity)
+            } else {
                 Spacer(minLength: 0)
             }
             HStack(spacing: 0) {
@@ -80,48 +91,33 @@ struct HeaderView: View {
     }
 }
 
-/// Guitar | Piano as a segmented control; with two guitars (three choices, too wide for the top
-/// bar) it becomes a compact menu.
-private struct InstrumentPicker: View {
-    @Environment(\.theme) private var theme
+/// Tabs for the instruments that are turned on, with full names when they fit ("Guitar 1"), or
+/// short ones ("G1", "G2", "PN") when space is tight.
+private struct InstrumentTabs: View {
     @Binding var selection: InstrumentChoice
     let options: [InstrumentChoice]
 
     var body: some View {
-        if options.count == 2 {
-            Picker("Instrument", selection: $selection) {
-                ForEach(options) { option in
-                    Text(option == .guitar && !options.contains(.guitar2) ? "Guitar" : option.title).tag(option)
-                }
+        ViewThatFits(in: .horizontal) {
+            tabs { option in
+                // A lone guitar doesn't need a number.
+                option == .guitar && !options.contains(.guitar2) ? "Guitar" : option.title
             }
-            .pickerStyle(.segmented)
-            .fixedSize()
-        } else {
-            Menu {
-                Picker("Instrument", selection: $selection) {
-                    ForEach(options) { option in
-                        Text(option.title).tag(option)
-                    }
-                }
-                .pickerStyle(.inline)
-            } label: {
-                HStack(spacing: 6) {
-                    Text(selection.title)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.secondaryText)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Tailwind.zinc500)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(theme.chip, in: Capsule())
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .fixedSize()
-            .accessibilityLabel("Instrument: \(selection.title)")
+            tabs(\.shortTitle)
         }
+        .accessibilityLabel("Instrument")
+    }
+
+    private func tabs(_ title: @escaping (InstrumentChoice) -> String) -> some View {
+        Picker("Instrument", selection: $selection) {
+            ForEach(options) { option in
+                Text(title(option))
+                    .accessibilityLabel(option.title)
+                    .tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
     }
 }
 

@@ -14,18 +14,29 @@ struct FretboardView: View {
     private static let standardCellHeight: CGFloat = 40
     private static let footerRowHeight: CGFloat = 24
 
+    /// A short space to fill (an iPhone held sideways): tighter padding, no fret-marker row, and
+    /// note badges that shrink with the strings, so the whole neck fits without scrolling.
+    private var isCompact: Bool { (fillHeight ?? .infinity) < 300 }
+
     private var padding: EdgeInsets {
+        if isCompact { return EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12) }
         if fillHeight != nil { return EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16) }
         let wide = layoutWidth >= 600
         return EdgeInsets(top: wide ? 24 : 16, leading: wide ? 24 : 16, bottom: wide ? 18 : 10, trailing: wide ? 24 : 16)
     }
 
+    private var footerRowHeight: CGFloat { isCompact ? 20 : Self.footerRowHeight }
+
+    private var footerRowCount: CGFloat {
+        let capoRow: CGFloat = model.state.anyCapoActive ? 1 : 0
+        return (isCompact ? 1 : 2) + capoRow
+    }
+
     /// String spacing: fixed normally; when filling a height, as tall as fits (within reason).
     private var cellHeight: CGFloat {
         guard let fillHeight, !fretboard.tuning.isEmpty else { return Self.standardCellHeight }
-        let footerRows: CGFloat = model.state.anyCapoActive ? 3 : 2
-        let available = fillHeight - padding.top - padding.bottom - footerRows * Self.footerRowHeight
-        return min(max(available / CGFloat(fretboard.tuning.count), 30), 52)
+        let available = fillHeight - padding.top - padding.bottom - footerRowCount * footerRowHeight
+        return min(max(available / CGFloat(fretboard.tuning.count), isCompact ? 18 : 30), 52)
     }
     private static let singleMarkers: Set<Int> = [3, 5, 7, 9, 15, 17, 19, 21]
     private static let doubleMarkers: Set<Int> = [12, 24]
@@ -49,7 +60,9 @@ struct FretboardView: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(theme.fretNumber)
                         }
-                        footerRow { fret in markers(for: fret) }
+                        if !isCompact {
+                            footerRow { fret in markers(for: fret) }
+                        }
                         if fretboard.capo > 0 {
                             footerRow { fret in
                                 Text(fret >= fretboard.capo ? "\(fret - fretboard.capo)" : "")
@@ -93,7 +106,11 @@ struct FretboardView: View {
                 if !isBelowCapo {
                     stringLine
                     if appearance.showsLabel {
-                        NoteBadge(appearance: appearance, selectedSize: 28, unselectedSize: 20)
+                        NoteBadge(
+                            appearance: appearance,
+                            selectedSize: min(28, cellHeight + 2),
+                            unselectedSize: min(20, cellHeight - 2)
+                        )
                         stringLine
                     }
                 }
@@ -120,7 +137,7 @@ struct FretboardView: View {
             ForEach(frets, id: \.self) { fret in
                 content(fret)
                     .frame(width: Self.cellWidth, height: 16)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, (footerRowHeight - 16) / 2)
                     .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretFooterDivider) }
             }
         }
