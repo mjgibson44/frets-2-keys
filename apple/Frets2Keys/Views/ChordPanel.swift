@@ -1,8 +1,9 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The bottom of the window: two glass cards. The selected chord and its controls (only while
-/// notes are selected) sit above the chord set's saved chords.
+/// The bottom of the window: two glass cards. The selected chord and its controls sit above the
+/// chord set's saved chords. The selection card always shows (with a hint when nothing is
+/// selected) so the instruments above don't jump.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -21,18 +22,14 @@ struct ChordPanel: View {
     var body: some View {
         GlassCardGroup(spacing: 8) {
             VStack(spacing: 8) {
-                if model.state.hasSelection {
-                    SelectionBar()
-                        .padding(.horizontal, padding)
-                        .padding(.vertical, Device.isPhone ? 8 : 10)
-                        .glassCard()
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                SelectionBar()
+                    .padding(.horizontal, padding)
+                    .padding(.vertical, Device.isPhone ? 8 : 10)
+                    .glassCard()
                 setsCard
                     .glassCard()
             }
         }
-        .animation(.snappy(duration: 0.25), value: model.state.hasSelection)
     }
 
     /// The set menu, Add Chord and the set's sections, sized to its content.
@@ -99,7 +96,7 @@ struct GlassCardGroup<Content: View>: View {
 extension View {
     /// A floating Liquid Glass card, or a frosted material card before iOS 26 / macOS 26.
     @ViewBuilder
-    func glassCard(cornerRadius: CGFloat = 22) -> some View {
+    func glassCard(cornerRadius: CGFloat = cardCornerRadius) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if #available(iOS 26, macOS 26, *) {
             frame(maxWidth: .infinity, alignment: .leading)
@@ -653,10 +650,14 @@ private struct SelectionBar: View {
         }
     }
 
+    private static let summaryHeight: CGFloat = 24
+
     private var summaryStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             summary
                 .padding(.vertical, 2)
+                // Same height with or without a selection, so the card never resizes.
+                .frame(minHeight: Self.summaryHeight)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }

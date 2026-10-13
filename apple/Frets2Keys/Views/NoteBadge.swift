@@ -45,25 +45,25 @@ extension NoteLabelContext {
     }
 }
 
-/// The colored square drawn on a fret or piano key.
+/// The colored square drawn on a fret or piano key. Selecting a note fills it in; it stays the
+/// same size.
 struct NoteBadge: View {
     @Environment(\.theme) private var theme
     let appearance: NoteAppearance
-    let selectedSize: CGFloat
-    let unselectedSize: CGFloat
+    let size: CGFloat
     /// Text color for plain (uncolored) labels.
     var plainTextColor: Color?
 
     var body: some View {
-        let size = appearance.isSelected ? selectedSize : unselectedSize
         NoteLabel(name: appearance.label, weight: appearance.isSelected ? .medium : .regular)
             .foregroundStyle(foreground)
             .frame(width: size, height: size)
             .background(background, in: RoundedRectangle(cornerRadius: 4))
             .overlay {
+                // A soft edge, lighter than the full scale-degree border.
                 if case .inKey(let degree) = appearance.style {
                     RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(ScaleDegreePalette.all[degree].border(dark: theme.isDark), lineWidth: 1)
+                        .strokeBorder(ScaleDegreePalette.all[degree].border(dark: theme.isDark).opacity(0.4), lineWidth: 1)
                 }
             }
             .opacity(appearance.isDimmed ? 0.3 : 1)
@@ -120,11 +120,7 @@ struct NoteTileStyle: ViewModifier {
 
     private var fill: Color {
         if isSelected { return role.map(NotePalette.solid(for:)) ?? selectedColor }
-        switch role {
-        case .scaleDegree(let degree)?: return ScaleDegreePalette.all[degree].tint(dark: theme.isDark)
-        case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.22 : 0.12)
-        case nil: return neutralFill ?? theme.chip
-        }
+        return role.map { NotePalette.tint(for: $0, dark: theme.isDark) } ?? neutralFill ?? theme.chip
     }
 
     private var border: Color {

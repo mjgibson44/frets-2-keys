@@ -59,14 +59,16 @@ struct ContentView: View {
                     ScrollView(.vertical) {
                         VStack(spacing: 16) {
                             fretboards(width: width)
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fretboardsHeight = $0 }
                             if model.state.showPiano {
-                                PianoView()
+                                PianoView(targetHeight: pianoTargetHeight)
                             }
                         }
                         .padding(.horizontal, padding)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, Self.instrumentsVerticalPadding)
                         .centered()
                     }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { instrumentsAreaHeight = $0 }
                 }
 
                 // Floating glass cards: the selected chord (when there is one) above the chord set.
@@ -247,6 +249,19 @@ struct ContentView: View {
         }
     }
 
+    // iPad and Mac: measured so the piano can grow into spare room, up to a guitar's height.
+    private static let instrumentsVerticalPadding: CGFloat = 8
+    @State private var instrumentsAreaHeight: CGFloat = 0
+    @State private var fretboardsHeight: CGFloat = 0
+    @State private var fretboardCardHeight: CGFloat = 0
+
+    /// As tall as a guitar card, or whatever's left below the guitars if that's less.
+    private var pianoTargetHeight: CGFloat? {
+        guard !model.state.fretboards.isEmpty, fretboardCardHeight > 0 else { return nil }
+        let spare = instrumentsAreaHeight - 2 * Self.instrumentsVerticalPadding - fretboardsHeight - 16
+        return min(fretboardCardHeight, spare)
+    }
+
     @ViewBuilder
     private func fretboards(width: CGFloat) -> some View {
         let boards = model.state.fretboards
@@ -256,6 +271,7 @@ struct ContentView: View {
             layout {
                 ForEach(Array(boards.enumerated()), id: \.element.id) { index, board in
                     FretboardView(fretboard: board, title: "Guitar \(index + 1)")
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fretboardCardHeight = $0 }
                 }
             }
         }
@@ -335,8 +351,8 @@ struct ChordLimitWarning: View {
         }
         .foregroundStyle(theme.warningText)
         .padding(12)
-        .background(theme.warningBackground, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.warningBorder, lineWidth: 1))
+        .background(theme.warningBackground, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous).strokeBorder(theme.warningBorder, lineWidth: 1))
         .accessibilityElement(children: .combine)
     }
 }
