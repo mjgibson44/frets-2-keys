@@ -406,6 +406,37 @@ final class SynthMixerTests: XCTestCase {
         XCTAssertEqual(mixer.activeVoiceCount, 1)
     }
 
+    func testScheduledNotesWaitForTheirTime() {
+        let rate = 44_100.0
+        var mixer = SynthMixer(sampleRate: rate)
+        mixer.playArpeggio(["C4", "E4"], at: 0.3)
+        let sound = mixer.render(seconds: 0.8)
+        XCTAssertEqual(peak(sound[0..<Int(0.29 * rate)]), 0)
+        XCTAssertGreaterThan(peak(sound[Int(0.35 * rate)..<Int(0.4 * rate)]), 0.1)
+        XCTAssertEqual(mixer.currentTime, 0.8, accuracy: 0.001)
+    }
+
+    func testScheduledChordCutsOffThePreviousOneWhenItStarts() {
+        var mixer = SynthMixer(sampleRate: 44_100)
+        mixer.playChord(["C4", "E4", "G4"])
+        _ = mixer.render(seconds: 0.2)
+        mixer.playChord(["D4", "F#4", "A4"], at: 0.5)
+        _ = mixer.render(seconds: 0.2)
+        // Still before the new chord: the first one keeps sounding.
+        XCTAssertEqual(mixer.activeVoiceCount, 6)
+        let before = mixer.render(seconds: 0.05)
+        XCTAssertGreaterThan(before.map(abs).max() ?? 0, 0.1)
+        _ = mixer.render(seconds: 0.2)
+        XCTAssertEqual(mixer.activeVoiceCount, 3)
+    }
+
+    func testPastTimesPlayNow() {
+        var mixer = SynthMixer(sampleRate: 44_100)
+        _ = mixer.render(seconds: 0.5)
+        mixer.playChord(["C4"], at: 0.1)
+        XCTAssertGreaterThan(peak(mixer.render(seconds: 0.1)[...]), 0.05)
+    }
+
     func testEnvelopeShape() {
         XCTAssertEqual(SynthMixer.envelope(at: 0, duration: 1, volume: 1), 0)
         XCTAssertEqual(SynthMixer.envelope(at: 0.02, duration: 1, volume: 1), 1, accuracy: 0.001)
@@ -729,7 +760,8 @@ final class DiatonicChordTests: XCTestCase {
     func testMinorKey() {
         let aMinor = MusicalKey(root: 9, type: .minor)
         XCTAssertEqual(names(aMinor), ["Am", "Bdim", "Cmaj", "Dm", "Em", "Fmaj", "Gmaj"])
-        XCTAssertEqual(aMinor.diatonicChords().map(\.numeral), ["i", "ii°", "III", "iv", "v", "VI", "VII"])
+        // Numerals follow the degrees: ♭III is built on ♭3.
+        XCTAssertEqual(aMinor.diatonicChords().map(\.numeral), ["i", "ii°", "♭III", "iv", "v", "♭VI", "♭VII"])
     }
 
     func testEveryKeyHasSevenOfEach() {

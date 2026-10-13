@@ -17,6 +17,7 @@ struct PianoView: View {
         let wide = layoutWidth >= 600
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
+        let context = model.state.noteLabelContext
         let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
         // Filling a height (iPhone landscape) makes the keys as tall as the space allows.
         let whiteHeight: CGFloat = fillHeight.map { min(max($0 - 2 * inset, 112), 300) } ?? (wide ? 144 : 112)
@@ -27,13 +28,13 @@ struct PianoView: View {
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
                         ForEach(whiteNotes, id: \.self) { note in
-                            whiteKey(note, height: whiteHeight)
+                            whiteKey(note, height: whiteHeight, context: context)
                         }
                     }
                     ForEach(Array(whiteNotes.enumerated()), id: \.element) { index, whiteNote in
                         let blackNote = whiteNote.transposed(by: 1)
                         if blackNote.isBlackKey && notes.contains(blackNote) {
-                            blackKey(blackNote, height: blackHeight)
+                            blackKey(blackNote, height: blackHeight, context: context)
                                 .offset(x: CGFloat(index + 1) * whiteKeyWidth - blackKeyWidth / 2)
                         }
                     }
@@ -45,18 +46,12 @@ struct PianoView: View {
         .accessibilityIdentifier("instrument.Piano")
     }
 
-    private func appearance(for note: Note) -> NoteAppearance {
-        NoteAppearance(
-            note: note,
-            isSelected: model.state.isSelected(note),
-            key: model.state.selectedKey,
-            keyLabelMode: model.state.keyLabelMode,
-            noteLabelMode: model.state.noteLabelMode
-        )
+    private func appearance(for note: Note, context: NoteLabelContext) -> NoteAppearance {
+        NoteAppearance(note: note, isSelected: model.state.isSelected(note), context: context)
     }
 
-    private func whiteKey(_ note: Note, height: CGFloat) -> some View {
-        let appearance = appearance(for: note)
+    private func whiteKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
+        let appearance = appearance(for: note, context: context)
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
         return Button {
             model.toggle(note)
@@ -75,12 +70,12 @@ struct PianoView: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(theme.whiteKeyBorder, lineWidth: 1))
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave)")
+        .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 
-    private func blackKey(_ note: Note, height: CGFloat) -> some View {
-        let appearance = appearance(for: note)
+    private func blackKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
+        let appearance = appearance(for: note, context: context)
         return Button {
             model.toggle(note)
         } label: {
@@ -99,7 +94,7 @@ struct PianoView: View {
         .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover, cornerRadius: 4))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave)")
+        .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 }

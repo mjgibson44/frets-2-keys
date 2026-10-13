@@ -26,6 +26,19 @@ final class SynthEngine: @unchecked Sendable {
         withMixer { $0.play(notes, mode: mode) }
     }
 
+    /// Schedules notes at `time` on the `currentTime` clock, so they start exactly on time however
+    /// late the caller runs.
+    func play(_ notes: [Note], mode: PlayMode, at time: Double) {
+        withMixer { $0.play(notes, mode: mode, at: time) }
+    }
+
+    /// Seconds of audio rendered so far; starts the engine if needed. Resets if the output device
+    /// changes.
+    var currentTime: Double {
+        startIfNeeded()
+        return mixer?.withLock { $0.currentTime } ?? 0
+    }
+
     private func withMixer(_ change: @Sendable (inout SynthMixer) -> Void) {
         startIfNeeded()
         mixer?.withLock { change(&$0) }

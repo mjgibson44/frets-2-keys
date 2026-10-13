@@ -62,7 +62,10 @@ struct HeaderView: View {
             KeyPickerMenu(selection: Binding(
                 get: { model.state.selectedKey },
                 set: { model.state.selectedKey = $0 }
-            ))
+            ), showsLabelOptions: true)
+            if layoutWidth >= 700 {
+                NoteLabelPicker()
+            }
             if let instrumentChoice, instrumentOptions.count > 1 {
                 // Takes the space between the key menu and the buttons.
                 InstrumentTabs(selection: instrumentChoice, options: instrumentOptions)
@@ -163,19 +166,71 @@ struct IconButton: View {
     }
 }
 
-/// A key menu (No key, 12 major, 12 minor) showing the chosen key and, on wider screens, its notes.
+/// Notes / Degrees / Intervals, for the top bar on wide screens. (Narrower screens have it in the
+/// key menu.)
+struct NoteLabelPicker: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Picker("Label Notes With", selection: Binding(
+            get: { model.state.noteLabelContent },
+            set: { model.state.noteLabelContent = $0 }
+        )) {
+            ForEach(NoteLabelContent.allCases) { content in
+                Text(content.title).tag(content)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Label notes with their names, scale degrees, or intervals from the chord's root (N)")
+    }
+}
+
+/// A key menu (No key, 12 major, 12 minor, other scales) showing the chosen key and, on wider
+/// screens, its notes or degrees.
 struct KeyPickerMenu: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Binding var selection: MusicalKey?
     var showsScale = true
+    /// Adds the Notes / Degrees / Intervals choice (the app's own key menu).
+    var showsLabelOptions = false
     @State private var isHovered = false
 
     var body: some View {
         let sharpsOnly = model.state.sharpsOnly
         Menu {
+            // Wide screens have this in the top bar instead.
+            if showsLabelOptions && layoutWidth < 700 {
+                Section("Label Notes With") {
+                    Picker("Label Notes With", selection: Binding(
+                        get: { model.state.noteLabelContent },
+                        set: { model.state.noteLabelContent = $0 }
+                    )) {
+                        ForEach(NoteLabelContent.allCases) { content in
+                            Text(content.title).tag(content)
+                        }
+                    }
+                    .pickerStyle(.palette)
+                }
+            }
             keyToggle(nil, title: "No key")
+            Menu("More Scales") {
+                ForEach(ScaleType.Family.allCases, id: \.self) { family in
+                    Section(family.rawValue) {
+                        ForEach(family.types.filter { $0 != .major && $0 != .minor }) { type in
+                            Menu(type.name.prefix(1).uppercased() + type.name.dropFirst()) {
+                                ForEach(0..<12, id: \.self) { root in
+                                    let key = MusicalKey(root: root, type: type)
+                                    keyToggle(key, title: key.name(sharpsOnly: sharpsOnly))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             Section("Major") {
                 ForEach(MusicalKey.all.filter { $0.type == .major }) { key in
                     keyToggle(key, title: key.name(sharpsOnly: sharpsOnly))
@@ -188,13 +243,17 @@ struct KeyPickerMenu: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Text(selection?.name(sharpsOnly: sharpsOnly) ?? "No key")
+                // Narrow screens use short names ("A min. pent.") so the top bar fits.
+                Text(selection.map { layoutWidth >= 600 ? $0.name(sharpsOnly: sharpsOnly) : $0.shortName(sharpsOnly: sharpsOnly) } ?? "No key")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(theme.secondaryText)
+                    .lineLimit(1)
                 if showsScale, let key = selection, layoutWidth >= 600 {
-                    Text(key.noteNames(sharpsOnly: sharpsOnly).joined(separator: " "))
+                    let showsDegrees = showsLabelOptions && model.state.noteLabelContent == .degrees
+                    Text((showsDegrees ? key.degreeLabels : key.noteNames(sharpsOnly: sharpsOnly)).joined(separator: " "))
                         .font(.system(size: 12))
                         .foregroundStyle(Tailwind.zinc500)
+                        .lineLimit(1)
                 }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 11, weight: .semibold))
@@ -208,7 +267,9 @@ struct KeyPickerMenu: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .fixedSize()
+        // On narrow screens the name can truncate rather than push the top bar off screen.
+        .fixedSize(horizontal: layoutWidth >= 600, vertical: true)
+        .layoutPriority(1)
         #if os(macOS)
         .onHover { isHovered = $0 }
         #else

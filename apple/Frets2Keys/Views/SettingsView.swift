@@ -59,13 +59,24 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Note Labels") {
+                Section {
+                    Picker("Label Notes With", selection: $model.state.noteLabelContent) {
+                        ForEach(NoteLabelContent.allCases) { content in
+                            Text(content.title).tag(content)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                     Picker("Note Labels", selection: $model.state.noteLabelMode) {
                         Text("Sharps and Flats").tag(NoteLabelMode.sharpsAndFlats)
                         Text("Sharps only").tag(NoteLabelMode.sharpsOnly)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                } header: {
+                    Text("Note Labels")
+                } footer: {
+                    Text("Degrees number notes in the key (1, 2, ♭3…). Intervals measure from the selected chord's root (R, 3, 5, ♭7…). Without a key or chord, notes show their names. Press N to switch.")
                 }
 
                 Section("Instruments") {

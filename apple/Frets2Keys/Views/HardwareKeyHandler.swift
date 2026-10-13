@@ -85,6 +85,7 @@ extension Shortcut {
             case "s": self = .update
             case "+", "=": self = .transposeUp
             case "-", "_": self = .transposeDown
+            case "n": self = .cycleLabels
             default: return nil
             }
         }

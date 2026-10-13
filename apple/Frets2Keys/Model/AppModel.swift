@@ -27,6 +27,8 @@ final class AppModel {
     }
 
     private(set) var isLooping = false
+    /// The section being looped, or nil when the loop covers the whole set (or isn't running).
+    private(set) var loopingSectionID: UUID?
     var showChordLimitWarning = false
     var isSettingsPresented = false
     var isTutorialPresented = false
@@ -35,14 +37,21 @@ final class AppModel {
 
     /// The chord bank side panel. It has no text fields, so keyboard shortcuts keep working while it's open.
     var isChordBankPresented = false
+    /// The section the chord bank adds to, when it was opened from one; otherwise the active section.
+    var bankTargetSectionID: UUID?
     /// The set whose rename prompt is showing.
     var setBeingRenamed: UUID?
     /// The set whose delete confirmation is showing.
     var setPendingDeletion: UUID?
+    /// The section whose rename prompt is showing.
+    var sectionBeingRenamed: UUID?
+    /// The section whose delete confirmation is showing.
+    var sectionPendingDeletion: UUID?
 
     /// True while a sheet or prompt is up, so plain-key shortcuts stay out of the way of typing.
     var isSheetPresented: Bool {
         isSettingsPresented || isTutorialPresented || setBeingRenamed != nil || setPendingDeletion != nil
+            || sectionBeingRenamed != nil || sectionPendingDeletion != nil
     }
 
     @ObservationIgnored private let synth = SynthEngine.shared
@@ -138,7 +147,37 @@ final class AppModel {
     }
 
     func addBankChord(_ notes: [Note]) {
-        handle(state.addChord(notes: notes))
+        handle(state.addChord(notes: notes, to: bankTargetSectionID))
+    }
+
+    /// Opens the chord bank, adding to `section` (or the active section).
+    func openChordBank(section: UUID? = nil) {
+        bankTargetSectionID = section
+        isChordBankPresented = true
+    }
+
+    // MARK: - Scales
+
+    /// Plays a scale going up, without changing anything.
+    func previewScale(_ scale: MusicalKey) {
+        synth.play(scale.ascendingNotes, mode: .arpeggio)
+    }
+
+    /// Makes `scale` the key, so the instruments highlight it, and plays it.
+    func showScale(_ scale: MusicalKey) {
+        state.selectedKey = scale
+        previewScale(scale)
+    }
+
+    func addScale(_ scale: MusicalKey) {
+        handle(state.addScale(scale, to: bankTargetSectionID))
+        if state.selectedKey == scale { previewScale(scale) }
+    }
+
+    // MARK: - Note labels
+
+    func cycleNoteLabels() {
+        state.noteLabelContent = state.noteLabelContent.next
     }
 
     private func handle(_ result: AppState.SaveResult) {
@@ -159,10 +198,19 @@ final class AppModel {
     }
 
     func updateActiveChord() { state.updateActiveChord() }
-    func selectChord(_ id: UUID) { state.selectChord(id: id) }
+
+    /// Selects a saved chord, or shows (and plays) a saved scale.
+    func selectChord(_ id: UUID) {
+        state.selectChord(id: id)
+        if let scale = state.savedChords.first(where: { $0.id == id })?.scale {
+            previewScale(scale)
+        }
+    }
+
     func selectPreviousChord() { state.selectPreviousChord() }
     func selectNextChord() { state.selectNextChord() }
     func moveChord(_ id: UUID, to targetID: UUID) { state.moveChord(id: id, to: targetID) }
+    func moveChord(_ id: UUID, toSection sectionID: UUID) { state.moveChord(id: id, toSection: sectionID) }
     func shiftChord(_ id: UUID, by offset: Int) { state.shiftChord(id: id, by: offset) }
 
     func deleteChord(_ id: UUID) {
@@ -182,37 +230,82 @@ final class AppModel {
         if !state.canLoop { stopLoop() }
     }
 
-    // MARK: - Loop
+    // MARK: - Sections
 
-    func toggleLoop() {
-        if isLooping {
-            stopLoop()
-        } else if state.canLoop {
-            startLoop()
+    func addSection() {
+        let id = state.addSection()
+        // Name it straight away.
+        sectionBeingRenamed = id
+    }
+
+    func renameSection(_ id: UUID, to name: String) { state.renameSection(id: id, to: name) }
+    func moveSection(_ id: UUID, to targetID: UUID) { state.moveSection(id: id, to: targetID) }
+    func shiftSection(_ id: UUID, by offset: Int) { state.shiftSection(id: id, by: offset) }
+
+    /// Deletes a section, asking first if it has anything in it.
+    func requestDeleteSection(_ id: UUID) {
+        let section = state.activeSet.sections.first { $0.id == id }
+        if section?.chords.isEmpty == true {
+            deleteSection(id)
+        } else {
+            sectionPendingDeletion = id
         }
     }
 
-    private func startLoop() {
+    func deleteSection(_ id: UUID) {
+        state.deleteSection(id: id)
+        if loopingSectionID == id || !state.canLoop { stopLoop() }
+    }
+
+    // MARK: - Loop
+
+    /// Starts or stops the loop. With `section`, loops just that section's chords (or switches the
+    /// running loop over to it).
+    func toggleLoop(section: UUID? = nil) {
+        if isLooping {
+            let switching = section != nil && section != loopingSectionID
+            stopLoop()
+            if switching { startLoop(section: section) }
+        } else if section != nil || state.canLoop {
+            startLoop(section: section)
+        }
+    }
+
+    private func startLoop(section: UUID? = nil) {
         isLooping = true
-        var sequencer = LoopSequencer(startingFrom: state)
+        loopingSectionID = section
+        var sequencer = LoopSequencer(startingFrom: state, sectionID: section)
         loopTask = Task { [weak self] in
+            // Beats are booked on the audio clock a moment ahead, so they land exactly one interval
+            // apart even when the task wakes late.
+            var nextBeat: Double?
             while !Task.isCancelled, let self {
                 guard let notes = sequencer.nextBeat(&self.state) else {
                     self.stopLoop()
                     return
                 }
                 let mode = self.state.playMode
-                self.synth.play(notes, mode: mode)
-                let interval = LoopSequencer.beatInterval(noteCount: notes.count, mode: mode)
-                try? await Task.sleep(for: .seconds(interval))
+                let now = self.synth.currentTime
+                var beat = nextBeat ?? now
+                // Fell behind (or the audio clock restarted after an output change): start afresh.
+                if beat < now || beat > now + 10 { beat = now }
+                self.synth.play(notes, mode: mode, at: beat)
+                let next = beat + LoopSequencer.beatInterval(noteCount: notes.count, mode: mode)
+                nextBeat = next
+                let wait = next - Self.loopLookahead - self.synth.currentTime
+                try? await Task.sleep(for: .seconds(max(0, wait)), tolerance: .milliseconds(10))
             }
         }
     }
+
+    /// How far ahead of each beat the loop wakes to book it.
+    private static let loopLookahead = 0.15
 
     func stopLoop() {
         loopTask?.cancel()
         loopTask = nil
         isLooping = false
+        loopingSectionID = nil
     }
 
     // MARK: - Appearance

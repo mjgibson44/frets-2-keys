@@ -77,17 +77,33 @@ struct AppCommands: Commands {
                 .disabled(!enabled || !state.hasSelection)
             Divider()
             Button(model.isChordBankPresented ? "Hide Chord Bank" : "Show Chord Bank") {
-                model.isChordBankPresented.toggle()
+                if model.isChordBankPresented {
+                    model.isChordBankPresented = false
+                } else {
+                    model.openChordBank()
+                }
             }
             .keyboardShortcut("b", modifiers: .command)
             .disabled(!enabled)
             Divider()
             Button("Previous Saved Chord") { model.selectPreviousChord() }
                 .plainKeyShortcut(.leftArrow)
-                .disabled(!enabled || state.savedChords.isEmpty)
+                .disabled(!enabled || state.chordsOnly.isEmpty)
             Button("Next Saved Chord") { model.selectNextChord() }
                 .plainKeyShortcut(.rightArrow)
-                .disabled(!enabled || state.savedChords.isEmpty)
+                .disabled(!enabled || state.chordsOnly.isEmpty)
+            Divider()
+            Picker("Label Notes With", selection: Binding(
+                get: { model.state.noteLabelContent },
+                set: { model.state.noteLabelContent = $0 }
+            )) {
+                ForEach(NoteLabelContent.allCases) { content in
+                    Text(content.title).tag(content)
+                }
+            }
+            Button("Next Note Labels") { model.cycleNoteLabels() }
+                .plainKeyShortcut("n")
+                .disabled(!enabled)
         }
         CommandMenu("Sets") {
             let state = model.state

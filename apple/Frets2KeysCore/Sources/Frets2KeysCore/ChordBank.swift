@@ -32,6 +32,8 @@ public enum ChordBank {
         .init(id: "dim7", label: "dim7", intervals: [0, 3, 6, 9]),
         .init(id: "m7b5", label: "m7♭5", intervals: [0, 3, 6, 10]),
         .init(id: "aug", label: "aug", intervals: [0, 4, 8]),
+        .init(id: "mMaj7", label: "m(maj7)", intervals: [0, 3, 7, 11]),
+        .init(id: "augMaj7", label: "maj7♯5", intervals: [0, 4, 8, 11]),
         .init(id: "5", label: "5 (power)", intervals: [0, 7, 12]),
     ]
 
@@ -51,13 +53,13 @@ public enum ChordBank {
 }
 
 extension AppState {
-    /// Selects `notes` and saves them as a new chord in the active set.
+    /// Selects `notes` and saves them as a new chord in `sectionID` (or the active section).
     @discardableResult
-    public mutating func addChord(notes: [Note]) -> SaveResult {
+    public mutating func addChord(notes: [Note], to sectionID: UUID? = nil) -> SaveResult {
         guard !notes.isEmpty else { return .nothingToSave }
         guard savedChords.count < Self.maxSavedChords else { return .limitReached }
         selectedNotes = notes
-        return saveAsNewChord()
+        return saveAsNewChord(in: sectionID)
     }
 
     /// Selects `notes` without saving them, as if they'd been tapped.
@@ -77,8 +79,12 @@ public struct DiatonicChord: Hashable, Sendable {
 
 extension MusicalKey {
     /// The chords built by stacking thirds on each scale degree: triads, or seventh chords.
+    /// Numerals carry the degree's accidental, so A minor reads i ii° ♭III iv v ♭VI ♭VII.
+    /// Empty for scales that don't have seven notes.
     public func diatonicChords(sevenths: Bool = false) -> [DiatonicChord] {
+        guard isHeptatonic else { return [] }
         let scale = pitchClasses
+        let degrees = type.degrees
         let numerals = ["I", "II", "III", "IV", "V", "VI", "VII"]
         return scale.indices.compactMap { degree in
             let stack = sevenths ? [0, 2, 4, 6] : [0, 2, 4]
@@ -87,10 +93,15 @@ extension MusicalKey {
             let intervals = stack.map { step in (scale[(degree + step) % 7] - root + 12) % 12 }
             guard let quality = ChordBank.qualities.first(where: { $0.intervals == intervals }) else { return nil }
             let isMinorish = intervals[1] == 3
-            var numeral = isMinorish ? numerals[degree].lowercased() : numerals[degree]
+            let accidental = degrees[degree].accidental < 0 ? "♭" : (degrees[degree].accidental > 0 ? "♯" : "")
+            var numeral = accidental + (isMinorish ? numerals[degree].lowercased() : numerals[degree])
             switch quality.id {
             case "dim": numeral += "°"
+            case "dim7": numeral += "°7"
             case "m7b5": numeral += "ø7"
+            case "aug": numeral += "+"
+            case "augMaj7": numeral += "+maj7"
+            case "mMaj7": numeral += "(maj7)"
             case "maj7": numeral += "maj7"
             case "7", "m7": numeral += "7"
             default: break

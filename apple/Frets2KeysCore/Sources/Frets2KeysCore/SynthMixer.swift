@@ -43,47 +43,55 @@ public struct SynthMixer: Sendable {
 
     public var activeVoiceCount: Int { voices.count }
 
+    /// Seconds rendered so far: the time `play(_:mode:at:)` measures from.
+    public var currentTime: Double { Double(renderedFrames) / sampleRate }
+
+    /// Time between arpeggio notes.
+    public static let arpeggioStep = 0.4
+
     // MARK: - Scheduling
 
     public mutating func playNote(_ note: Note, duration: Double = 0.8) {
-        schedule([note], offsets: [0], duration: duration, volume: 0.25, isChord: false)
+        schedule([note], offsets: [0], at: nil, duration: duration, volume: 0.25, isChord: false)
     }
 
     /// Plays all notes together, quickly fading out the previous chord so repeats don't pile up.
-    public mutating func playChord(_ notes: [Note], duration: Double = 1.2) {
+    /// `time` (on the `currentTime` clock) schedules it ahead; nil plays it now.
+    public mutating func playChord(_ notes: [Note], at time: Double? = nil, duration: Double = 1.2) {
         guard !notes.isEmpty else { return }
         let volume = min(0.25, 0.6 / Double(notes.count))
-        schedule(notes, offsets: Array(repeating: 0, count: notes.count), duration: duration, volume: volume, isChord: true)
+        schedule(notes, offsets: Array(repeating: 0, count: notes.count), at: time, duration: duration, volume: volume, isChord: true)
     }
 
-    /// Plays the notes one after another, 0.4 seconds apart by default.
-    public mutating func playArpeggio(_ notes: [Note], noteDuration: Double = 0.5, gap: Double = 0.1) {
+    /// Plays the notes one after another, `arpeggioStep` apart.
+    public mutating func playArpeggio(_ notes: [Note], at time: Double? = nil, noteDuration: Double = 0.5) {
         guard !notes.isEmpty else { return }
-        let step = noteDuration * 0.6 + gap
-        schedule(notes, offsets: notes.indices.map { Double($0) * step }, duration: noteDuration, volume: 0.25, isChord: false)
+        schedule(notes, offsets: notes.indices.map { Double($0) * Self.arpeggioStep }, at: time, duration: noteDuration, volume: 0.25, isChord: false)
     }
 
-    public mutating func play(_ notes: [Note], mode: PlayMode) {
+    public mutating func play(_ notes: [Note], mode: PlayMode, at time: Double? = nil) {
         switch mode {
-        case .chord: playChord(notes)
-        case .arpeggio: playArpeggio(notes)
+        case .chord: playChord(notes, at: time)
+        case .arpeggio: playArpeggio(notes, at: time)
         }
     }
 
-    private mutating func schedule(_ notes: [Note], offsets: [Double], duration: Double, volume: Double, isChord: Bool) {
-        let now = renderedFrames
+    private mutating func schedule(_ notes: [Note], offsets: [Double], at time: Double?, duration: Double, volume: Double, isChord: Bool) {
+        // A time in the past (or none) means now.
+        let start = max(renderedFrames, time.map { Int64(($0 * sampleRate).rounded()) } ?? 0)
         if isChord {
-            for index in voices.indices where voices[index].isChordNote && voices[index].fadeStartFrame == nil {
+            // The previous chord fades as this one starts.
+            for index in voices.indices where voices[index].isChordNote && voices[index].fadeStartFrame == nil && voices[index].startFrame < start {
                 let voice = voices[index]
-                let elapsed = Double(now - voice.startFrame) / sampleRate
+                let elapsed = Double(start - voice.startFrame) / sampleRate
                 voices[index].fadeStartGain = Self.envelope(at: elapsed, duration: voice.duration, volume: voice.volume)
-                voices[index].fadeStartFrame = now
+                voices[index].fadeStartFrame = start
             }
         }
         for (note, offset) in zip(notes, offsets) {
             voices.append(Voice(
                 frequency: note.frequency,
-                startFrame: now + Int64(offset * sampleRate),
+                startFrame: start + Int64(offset * sampleRate),
                 duration: duration,
                 volume: volume,
                 isChordNote: isChord
@@ -118,7 +126,7 @@ public struct SynthMixer: Sendable {
                 guard now >= voice.startFrame else { continue }
                 let elapsed = Double(now - voice.startFrame) / sampleRate
                 var gain = Self.envelope(at: elapsed, duration: voice.duration, volume: voice.volume)
-                if let fadeStart = voice.fadeStartFrame {
+                if let fadeStart = voice.fadeStartFrame, now >= fadeStart {
                     let progress = Double(now - fadeStart) / fadeFrames
                     gain = min(gain, voice.fadeStartGain * max(0, 1 - progress))
                 }

@@ -47,6 +47,7 @@ struct FretboardView: View {
     private var frets: Range<Int> { 0..<(Tunings.fretCount + 1) }
 
     var body: some View {
+        let context = model.state.noteLabelContext
         Card(padding: padding) {
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -54,7 +55,7 @@ struct FretboardView: View {
                     ForEach(Array(fretboard.tuning.enumerated().reversed()), id: \.offset) { stringIndex, openNote in
                         HStack(spacing: 0) {
                             ForEach(frets, id: \.self) { fret in
-                                fretCell(openNote: openNote, stringNumber: fretboard.tuning.count - stringIndex, fret: fret)
+                                fretCell(openNote: openNote, stringNumber: fretboard.tuning.count - stringIndex, fret: fret, context: context)
                             }
                         }
                     }
@@ -91,17 +92,11 @@ struct FretboardView: View {
     }
 
     @ViewBuilder
-    private func fretCell(openNote: Note, stringNumber: Int, fret: Int) -> some View {
+    private func fretCell(openNote: Note, stringNumber: Int, fret: Int, context: NoteLabelContext) -> some View {
         let note = openNote.transposed(by: fret)
         let isBelowCapo = fret < fretboard.capo
         let isSelected = model.state.isSelected(note) && !isBelowCapo
-        let appearance = NoteAppearance(
-            note: note,
-            isSelected: isSelected,
-            key: model.state.selectedKey,
-            keyLabelMode: model.state.keyLabelMode,
-            noteLabelMode: model.state.noteLabelMode
-        )
+        let appearance = NoteAppearance(note: note, isSelected: isSelected, context: context)
 
         Button {
             model.toggle(note)
@@ -125,7 +120,7 @@ struct FretboardView: View {
         .disabled(isBelowCapo)
         .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretDivider) }
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave), string \(stringNumber), fret \(fret)")
+        .accessibilityLabel("\(context.accessibilityName(for: note)), string \(stringNumber), fret \(fret)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
