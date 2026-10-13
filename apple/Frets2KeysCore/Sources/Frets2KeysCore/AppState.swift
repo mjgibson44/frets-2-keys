@@ -28,6 +28,14 @@ public struct SavedChord: Codable, Hashable, Identifiable, Sendable {
         self.name = name
         self.notes = notes
     }
+
+    /// The chord's root pitch class (0 = C), read from its name ("C#m7/G" → C#). Names come from
+    /// `ChordIdentifier`, which always starts with the root; falls back to the lowest note.
+    public var rootPitchClass: Int? {
+        let prefix = name.hasPrefix(name.prefix(1) + "#") ? String(name.prefix(2)) : String(name.prefix(1))
+        if let index = noteNamesSharp.firstIndex(of: prefix) { return index }
+        return notes.min()?.pitchClass
+    }
 }
 
 /// A named group of saved chords, like a song section or practice set.

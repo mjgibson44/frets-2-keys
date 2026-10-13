@@ -211,11 +211,12 @@ private struct SavedChordChips: View {
     private func chip(_ chord: SavedChord, index: Int, count: Int) -> some View {
         let isActive = chord.id == model.state.activeChordID
         let isDropTarget = chord.id == dropTargetID
+        // Colored by the chord's root, like that note on the instruments (for the app's key).
+        let role = chord.rootPitchClass.map { NoteAppearance.colorRole(for: Note(midi: 60 + $0), key: model.state.selectedKey) }
 
         return HStack(spacing: 8) {
             Text(chord.name)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(theme.secondaryText)
                 .lineLimit(1)
                 .fixedSize()
             Button {
@@ -223,23 +224,24 @@ private struct SavedChordChips: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(theme.icon)
+                    .foregroundStyle(isActive ? .white.opacity(0.85) : theme.icon)
                     .frame(width: 20, height: 20)
             }
-            .buttonStyle(HighlightButtonStyle(highlighted: theme.isDark ? Tailwind.zinc500 : Tailwind.zinc300, cornerRadius: 4))
+            .buttonStyle(HighlightButtonStyle(highlighted: (isActive ? Color.white : theme.icon).opacity(0.2), cornerRadius: 4))
             .help("Delete chord")
             .accessibilityLabel("Delete \(chord.name)")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isActive ? theme.chipActive : theme.pageChip)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(isActive ? theme.chipActiveRing : theme.pageChipBorder, lineWidth: 1)
-        }
+        .modifier(NoteTileStyle(
+            role: role,
+            isSelected: isActive,
+            selectedColor: theme.chipActive,
+            fillsWidth: false,
+            cornerRadius: 4,
+            neutralBorder: theme.pageChipBorder,
+            neutralFill: theme.pageChip
+        ))
         .overlay {
             if isDropTarget {
                 RoundedRectangle(cornerRadius: 4).stroke(Tailwind.blue500, lineWidth: 2)

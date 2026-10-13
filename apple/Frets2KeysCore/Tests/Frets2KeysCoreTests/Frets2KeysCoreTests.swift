@@ -739,3 +739,14 @@ final class DiatonicChordTests: XCTestCase {
         }
     }
 }
+
+final class SavedChordRootTests: XCTestCase {
+    func testRootFromName() {
+        XCTAssertEqual(SavedChord(name: "Cmaj/E", notes: ["E3", "G3", "C4"]).rootPitchClass, 0)
+        XCTAssertEqual(SavedChord(name: "C#m7", notes: []).rootPitchClass, 1)
+        XCTAssertEqual(SavedChord(name: "A (min 3rd)", notes: []).rootPitchClass, 9)
+        XCTAssertEqual(SavedChord(name: "G#?", notes: []).rootPitchClass, 8)
+        XCTAssertEqual(SavedChord(name: "", notes: ["D4", "A4"]).rootPitchClass, 2)
+        XCTAssertNil(SavedChord(name: "", notes: []).rootPitchClass)
+    }
+}

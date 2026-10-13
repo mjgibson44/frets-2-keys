@@ -61,3 +61,51 @@ struct NoteBadge: View {
         }
     }
 }
+
+/// Colors a tile or chip the way the instruments color notes: in-key notes get their scale-degree
+/// tint and border, other notes a light wash of their color, and a selected one is solid with
+/// white text.
+struct NoteTileStyle: ViewModifier {
+    @Environment(\.theme) private var theme
+    let role: NoteColorRole?
+    let isSelected: Bool
+    var selectedColor: Color = .accentColor
+    /// Tiles in a grid stretch to their column; chips keep their natural width.
+    var fillsWidth = true
+    var minHeight: CGFloat = 0
+    var cornerRadius: CGFloat = 6
+    /// Border for an uncolored, unselected tile (chips on the page need one to stand out).
+    var neutralBorder: Color = .clear
+    var neutralFill: Color?
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        content
+            .foregroundStyle(isSelected ? .white : theme.secondaryText)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: minHeight)
+            .background(fill, in: shape)
+            .overlay {
+                if !isSelected {
+                    shape.strokeBorder(border, lineWidth: 1)
+                }
+            }
+            .contentShape(shape)
+    }
+
+    private var fill: Color {
+        if isSelected { return role.map(NotePalette.solid(for:)) ?? selectedColor }
+        switch role {
+        case .scaleDegree(let degree)?: return ScaleDegreePalette.all[degree].tint(dark: theme.isDark)
+        case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.22 : 0.12)
+        case nil: return neutralFill ?? theme.chip
+        }
+    }
+
+    private var border: Color {
+        switch role {
+        case .scaleDegree(let degree)?: return ScaleDegreePalette.all[degree].border(dark: theme.isDark)
+        case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.7 : 0.55)
+        case nil: return neutralBorder
+        }
+    }
+}
