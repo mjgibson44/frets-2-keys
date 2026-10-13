@@ -19,15 +19,15 @@ final class PhoneLayoutTests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: "instrument.\(name)").firstMatch
     }
 
-    /// Instruments whose middle is on screen. (Neighboring pages may exist just offscreen.)
+    /// The copy of an instrument that's mostly on screen, if any. (The looping pages repeat each
+    /// instrument, and neighboring pages may exist just offscreen.)
+    private func onScreen(_ name: String) -> XCUIElement? {
+        // Hittable means its center is actually visible, not clipped by the scroll area.
+        app.descendants(matching: .any).matching(identifier: "instrument.\(name)").allElementsBoundByIndex.first { $0.isHittable }
+    }
+
     private var visibleInstruments: [String] {
-        let screen = app.windows.firstMatch.frame
-        return ["Guitar 1", "Guitar 2", "Piano"].filter { name in
-            let element = instrument(name)
-            guard element.exists else { return false }
-            let frame = element.frame
-            return screen.contains(CGPoint(x: frame.midX, y: frame.midY))
-        }
+        ["Guitar 1", "Guitar 2", "Piano"].filter { onScreen($0) != nil }
     }
 
     /// Polls until `condition` holds or `timeout` passes.
@@ -58,6 +58,7 @@ final class PhoneLayoutTests: XCTestCase {
         for orientation in [UIDeviceOrientation.portrait, .landscapeLeft] {
             XCUIDevice.shared.orientation = orientation
             _ = app.buttons["Add Chord"].waitForExistence(timeout: 5)
+            waitUntil { self.visibleInstruments.count == 1 }
             XCTAssertEqual(visibleInstruments.count, 1, "orientation \(orientation.rawValue): \(visibleInstruments)")
             // The chord panel stays on screen.
             XCTAssertTrue(app.buttons["Add Chord"].isHittable)
@@ -66,9 +67,9 @@ final class PhoneLayoutTests: XCTestCase {
 
         // Sideways, a guitar's whole neck (all strings and fret numbers) fits without scrolling.
         // Swipe on the instrument itself: whole-app swipes don't follow the rotation reliably.
-        if visibleInstruments.first == "Piano" { instrument("Piano").swipeDown() }
+        if visibleInstruments.first == "Piano" { onScreen("Piano")?.swipeUp() }
         XCTAssertTrue(waitUntil { self.visibleInstruments.first?.hasPrefix("Guitar") == true }, "\(visibleInstruments)")
-        let guitar = instrument(visibleInstruments.first ?? "Guitar 1")
+        let guitar = try XCTUnwrap(onScreen(visibleInstruments.first ?? "Guitar 1"))
         let screen = app.windows.firstMatch.frame
         XCTAssertTrue(screen.contains(guitar.frame), "fretboard \(guitar.frame) not within \(screen)")
         saveScreenshot("phone-landscape-guitar")
@@ -79,16 +80,33 @@ final class PhoneLayoutTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         _ = app.buttons["Add Chord"].waitForExistence(timeout: 5)
         let first = try XCTUnwrap(visibleInstruments.first)
-        // The piano is the last page, so from there the next instrument is above.
-        let startsAtEnd = first == "Piano"
-        let towardNext = { startsAtEnd ? self.app.swipeDown() : self.app.swipeUp() }
-        let towardFirst = { startsAtEnd ? self.app.swipeUp() : self.app.swipeDown() }
 
-        towardNext()
+        app.swipeUp()
         XCTAssertTrue(waitUntil { self.visibleInstruments.first != first }, "still on \(first)")
         XCTAssertEqual(visibleInstruments.count, 1)
 
-        towardFirst()
+        app.swipeDown()
         XCTAssertTrue(waitUntil { self.visibleInstruments.first == first }, "didn't return to \(first)")
+    }
+
+    /// The pages loop: up from the first instrument is the last, and down from the last is the first.
+    func testSwipingWrapsAround() throws {
+        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Instrument paging is iPhone-only")
+        XCUIDevice.shared.orientation = .portrait
+        _ = app.buttons["Add Chord"].waitForExistence(timeout: 5)
+
+        let tabs = app.segmentedControls.firstMatch
+        XCTAssertTrue(tabs.waitForExistence(timeout: 3))
+        let firstTab = tabs.buttons.element(boundBy: 0)
+        firstTab.tap()
+        XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Guitar 1" }, "\(visibleInstruments)")
+
+        // Swiping down from the first instrument wraps to the last (the piano).
+        app.swipeDown()
+        XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Piano" }, "\(visibleInstruments)")
+
+        // And up from the piano wraps back to the first.
+        app.swipeUp()
+        XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Guitar 1" }, "\(visibleInstruments)")
     }
 }

@@ -6,11 +6,15 @@ struct FretboardView: View {
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.instrumentFillHeight) private var fillHeight
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     let fretboard: Fretboard
     let title: String
 
-    private static let cellWidth: CGFloat = 56
+    /// Fret width: narrower on an upright iPhone so more frets fit across the screen.
+    private var cellWidth: CGFloat {
+        Device.isPhone && verticalSizeClass == .regular ? 44 : 56
+    }
     private static let standardCellHeight: CGFloat = 40
     private static let footerRowHeight: CGFloat = 24
 
@@ -115,7 +119,7 @@ struct FretboardView: View {
                     }
                 }
             }
-            .frame(width: Self.cellWidth, height: cellHeight)
+            .frame(width: cellWidth, height: cellHeight)
         }
         .buttonStyle(HighlightButtonStyle(highlighted: theme.subtleHover))
         .disabled(isBelowCapo)
@@ -136,7 +140,7 @@ struct FretboardView: View {
         HStack(spacing: 0) {
             ForEach(frets, id: \.self) { fret in
                 content(fret)
-                    .frame(width: Self.cellWidth, height: 16)
+                    .frame(width: cellWidth, height: 16)
                     .padding(.vertical, (footerRowHeight - 16) / 2)
                     .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretFooterDivider) }
             }

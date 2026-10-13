@@ -290,17 +290,30 @@ private struct SelectionBar: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
-        // Always one row: a long chord's notes scroll sideways, the controls stay put.
-        HStack(spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                summary
-                    .padding(.vertical, 2)
+        if Device.isPhone && verticalSizeClass == .regular {
+            // Upright iPhone: the chord on one line, its controls spread across the next.
+            VStack(alignment: .leading, spacing: 4) {
+                summaryStrip
+                controls(spread: true)
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            controls
+        } else {
+            // One row: a long chord's notes scroll sideways, the controls stay put.
+            HStack(spacing: 8) {
+                summaryStrip
+                controls(spread: false)
+            }
         }
+    }
+
+    private var summaryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            summary
+                .padding(.vertical, 2)
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     @ViewBuilder
@@ -336,7 +349,7 @@ private struct SelectionBar: View {
             }
         } else {
             // Short on phones so the hint and controls share one row.
-            Text(layoutWidth >= 600 ? "Tap notes to build a chord" : "Select notes")
+            Text(layoutWidth >= 600 || verticalSizeClass == .regular ? "Tap notes to build a chord" : "Select notes")
                 .font(.system(size: 13))
                 .foregroundStyle(theme.mutedText)
                 .lineLimit(1)
@@ -344,9 +357,9 @@ private struct SelectionBar: View {
         }
     }
 
-    private var controls: some View {
+    private func controls(spread: Bool) -> some View {
         let state = model.state
-        let size: CGFloat = layoutWidth >= 600 ? 32 : 36
+        let size: CGFloat = layoutWidth >= 600 && !spread ? 32 : 36
         return HStack(spacing: 0) {
             IconButton(symbol: ActionIcon.clear, help: "Clear selection (Delete)", size: size, isEnabled: state.hasSelection) {
                 model.clearSelection()
@@ -364,6 +377,8 @@ private struct SelectionBar: View {
                 model.transpose(by: -1)
             }
         }
-        .fixedSize()
+        // Spread across the line, or packed at the end of the single row.
+        .environment(\.iconButtonFillsWidth, spread)
+        .fixedSize(horizontal: !spread, vertical: true)
     }
 }

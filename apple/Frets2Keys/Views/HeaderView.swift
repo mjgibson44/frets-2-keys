@@ -121,8 +121,21 @@ private struct InstrumentTabs: View {
     }
 }
 
+private struct IconButtonFillsWidthKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Icon buttons in a row share its width equally (a wider tap target) instead of staying square.
+    var iconButtonFillsWidth: Bool {
+        get { self[IconButtonFillsWidthKey.self] }
+        set { self[IconButtonFillsWidthKey.self] = newValue }
+    }
+}
+
 struct IconButton: View {
     @Environment(\.theme) private var theme
+    @Environment(\.iconButtonFillsWidth) private var fillsWidth
     let symbol: String
     let help: String
     var size: CGFloat = 32
@@ -135,7 +148,8 @@ struct IconButton: View {
             Image(systemName: symbol)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(isActive ? .white : (isEnabled ? theme.icon : theme.iconDisabled))
-                .frame(width: size, height: size)
+                .frame(width: fillsWidth ? nil : size, height: size)
+                .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
         .buttonStyle(HighlightButtonStyle(
             normal: isActive ? Tailwind.green500 : .clear,

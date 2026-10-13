@@ -6,9 +6,12 @@ struct PianoView: View {
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.instrumentFillHeight) private var fillHeight
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    private static let whiteKeyWidth: CGFloat = 40
-    private static let blackKeyWidth: CGFloat = 32
+    /// Keys are narrower on an upright iPhone so more of the keyboard fits across the screen.
+    private var isNarrow: Bool { Device.isPhone && verticalSizeClass == .regular }
+    private var whiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
+    private var blackKeyWidth: CGFloat { isNarrow ? 27 : 32 }
 
     var body: some View {
         let wide = layoutWidth >= 600
@@ -31,7 +34,7 @@ struct PianoView: View {
                         let blackNote = whiteNote.transposed(by: 1)
                         if blackNote.isBlackKey && notes.contains(blackNote) {
                             blackKey(blackNote, height: blackHeight)
-                                .offset(x: CGFloat(index + 1) * Self.whiteKeyWidth - Self.blackKeyWidth / 2)
+                                .offset(x: CGFloat(index + 1) * whiteKeyWidth - blackKeyWidth / 2)
                         }
                     }
                 }
@@ -66,7 +69,7 @@ struct PianoView: View {
                 }
             }
             .padding(.bottom, 8)
-            .frame(width: Self.whiteKeyWidth, height: height)
+            .frame(width: whiteKeyWidth, height: height)
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover, cornerRadius: 4))
         .clipShape(shape)
@@ -89,7 +92,7 @@ struct PianoView: View {
                 }
             }
             .padding(.bottom, 4)
-            .frame(width: Self.blackKeyWidth, height: height)
+            .frame(width: blackKeyWidth, height: height)
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover, cornerRadius: 4))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
