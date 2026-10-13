@@ -13,14 +13,25 @@ struct PianoView: View {
     private var whiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
     private var blackKeyWidth: CGFloat { isNarrow ? 27 : 32 }
 
+    /// iPad and Mac: how tall the card may grow, to line up with the guitars when there's room.
+    /// It never shrinks below its usual size.
+    var targetHeight: CGFloat?
+
     var body: some View {
         let wide = layoutWidth >= 600
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
         let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
-        // Filling a height (iPhone landscape) makes the keys as tall as the space allows.
-        let whiteHeight: CGFloat = fillHeight.map { min(max($0 - 2 * inset, 112), 300) } ?? (wide ? 144 : 112)
-        let blackHeight: CGFloat = fillHeight == nil ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
+        let standardWhiteHeight: CGFloat = wide ? 144 : 112
+        let whiteHeight: CGFloat = if let fillHeight {
+            // Filling a height (iPhone) makes the keys as tall as the space allows.
+            min(max(fillHeight - 2 * inset, 112), 300)
+        } else if let targetHeight {
+            max(targetHeight - 2 * inset, standardWhiteHeight)
+        } else {
+            standardWhiteHeight
+        }
+        let blackHeight: CGFloat = fillHeight == nil && whiteHeight == standardWhiteHeight ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
 
         Card(padding: EdgeInsets(top: inset, leading: inset, bottom: inset, trailing: inset)) {
             ScrollView(.horizontal, showsIndicators: false) {

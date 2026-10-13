@@ -174,6 +174,9 @@ extension EnvironmentValues {
     }
 }
 
+/// Corner radius shared by every card: the instruments and the glass cards below them.
+let cardCornerRadius: CGFloat = 16
+
 /// A rounded card matching the web app's panels.
 struct Card<Content: View>: View {
     @Environment(\.theme) private var theme
@@ -189,8 +192,8 @@ struct Card<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.cardBorder, lineWidth: 1))
+            .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous).strokeBorder(theme.cardBorder, lineWidth: 1))
     }
 }
 

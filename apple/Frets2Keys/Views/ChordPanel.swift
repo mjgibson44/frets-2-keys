@@ -2,8 +2,8 @@ import SwiftUI
 import Frets2KeysCore
 
 /// The bottom of the window: two glass cards. The selected chord and its controls sit above the
-/// chord set's saved chords. On iPhone the selection card always shows (with a hint when nothing
-/// is selected) so the instrument above doesn't jump; elsewhere it appears with a selection.
+/// chord set's saved chords. The selection card always shows (with a hint when nothing is
+/// selected) so the instruments above don't jump.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -22,18 +22,14 @@ struct ChordPanel: View {
     var body: some View {
         GlassCardGroup(spacing: 8) {
             VStack(spacing: 8) {
-                if Device.isPhone || model.state.hasSelection {
-                    SelectionBar()
-                        .padding(.horizontal, padding)
-                        .padding(.vertical, Device.isPhone ? 8 : 10)
-                        .glassCard()
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                SelectionBar()
+                    .padding(.horizontal, padding)
+                    .padding(.vertical, Device.isPhone ? 8 : 10)
+                    .glassCard()
                 setsCard
                     .glassCard()
             }
         }
-        .animation(.snappy(duration: 0.25), value: model.state.hasSelection)
     }
 
     /// The set menu, Add Chord and the set's chords, sized to its content.
@@ -95,7 +91,7 @@ struct GlassCardGroup<Content: View>: View {
 extension View {
     /// A floating Liquid Glass card, or a frosted material card before iOS 26 / macOS 26.
     @ViewBuilder
-    func glassCard(cornerRadius: CGFloat = 22) -> some View {
+    func glassCard(cornerRadius: CGFloat = cardCornerRadius) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if #available(iOS 26, macOS 26, *) {
             frame(maxWidth: .infinity, alignment: .leading)
