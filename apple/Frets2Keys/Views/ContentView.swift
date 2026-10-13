@@ -25,25 +25,33 @@ struct ContentView: View {
 
         GeometryReader { proxy in
             let width = proxy.size.width
-            ScrollView(.vertical) {
-                Group {
-                    if isPhoneLandscape {
-                        landscapeLayout(height: proxy.size.height)
-                    } else {
-                        VStack(spacing: 16) {
-                            HeaderView()
-                            ChordPanel()
-                            chordLimitWarning
-                            fretboards(width: width)
-                            if model.state.showPiano {
-                                PianoView()
-                            }
-                        }
-                        .padding(width >= 600 ? 32 : 24)
+            let padding: CGFloat = Device.isPhone ? 16 : (width >= 600 ? 32 : 24)
+
+            // Top bar and chord panel stay put; the instruments scroll between them.
+            VStack(spacing: 0) {
+                HeaderView(instrumentChoice: phoneInstrumentChoice, instrumentOptions: instrumentOptions)
+                    .padding(.horizontal, padding)
+                    .padding(.top, Device.isPhone ? 4 : 16)
+                    .padding(.bottom, 8)
+                    .centered()
+
+                GeometryReader { middle in
+                    ScrollView(.vertical) {
+                        instruments(width: width, availableHeight: middle.size.height - 16)
+                            .padding(.horizontal, padding)
+                            .padding(.vertical, 8)
+                            .centered()
                     }
                 }
-                .frame(maxWidth: 1280)
-                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 8) {
+                    chordLimitWarning
+                    ChordPanel()
+                }
+                .padding(.horizontal, padding)
+                .padding(.top, 8)
+                .padding(.bottom, Device.isPhone ? 4 : 16)
+                .centered()
                 .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
             }
             .environment(\.layoutWidth, width)
@@ -112,6 +120,9 @@ struct ContentView: View {
                 renameText = set.name
             }
         }
+        .onChange(of: instrumentOptions) { _, options in
+            if !options.contains(phoneInstrument), let first = options.first { phoneInstrument = first }
+        }
         .onChange(of: model.isSheetPresented) { _, presented in
             if !presented { isFocused = true }
         }
@@ -125,59 +136,55 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - iPhone landscape
-
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
-    @AppStorage("landscapeInstrument") private var landscapeInstrument = LandscapeInstrument.guitar
-
-    /// An iPhone held sideways: show one instrument at a time, filling the screen.
-    private var isPhoneLandscape: Bool {
-        #if os(iOS)
-        return verticalSizeClass == .compact
-        #else
-        return false
-        #endif
-    }
-
-    private func landscapeLayout(height: CGFloat) -> some View {
-        let hasGuitar = !model.state.fretboards.isEmpty
-        let hasPiano = model.state.showPiano
-        let instrument: LandscapeInstrument? = switch (hasGuitar, hasPiano) {
-        case (true, true): landscapeInstrument
-        case (true, false): .guitar
-        case (false, true): .piano
-        case (false, false): nil
-        }
-        let padding: CGFloat = 12
-        let headerHeight: CGFloat = 40
-        // The instrument fills what's left of the screen below the top bar; the chord panel is
-        // a scroll away.
-        let fillHeight = max(height - 2 * padding - headerHeight - padding, 160)
-
-        return VStack(spacing: padding) {
-            HeaderView(instrumentChoice: hasGuitar && hasPiano ? $landscapeInstrument : nil)
-                .frame(height: headerHeight)
-            switch instrument {
-            case .guitar:
-                VStack(spacing: padding) {
-                    ForEach(Array(model.state.fretboards.enumerated()), id: \.element.id) { index, board in
-                        FretboardView(fretboard: board, title: "Guitar \(index + 1)")
-                    }
-                }
-                .environment(\.instrumentFillHeight, fillHeight)
-            case .piano:
-                PianoView()
-                    .environment(\.instrumentFillHeight, fillHeight)
-            case nil:
-                EmptyView()
-            }
-            chordLimitWarning
-            ChordPanel()
-        }
-        .padding(padding)
-    }
-
     // MARK: - Instruments
+
+    /// On iPhone, which instrument is showing. Kept under its original key from when this was
+    /// landscape-only.
+    @AppStorage("landscapeInstrument") private var phoneInstrument = InstrumentChoice.guitar
+
+    private var instrumentOptions: [InstrumentChoice] {
+        InstrumentChoice.available(guitars: model.state.fretboards.count, piano: model.state.showPiano)
+    }
+
+    /// iPhone shows one instrument at a time; the toggle appears when there's more than one.
+    private var phoneInstrumentChoice: Binding<InstrumentChoice>? {
+        Device.isPhone ? $phoneInstrument : nil
+    }
+
+    /// The instrument to show on iPhone: the chosen one if it's turned on, otherwise the first available.
+    private var phoneShowing: InstrumentChoice? {
+        instrumentOptions.contains(phoneInstrument) ? phoneInstrument : instrumentOptions.first
+    }
+
+    @ViewBuilder
+    private func instruments(width: CGFloat, availableHeight: CGFloat) -> some View {
+        if Device.isPhone {
+            let boards = model.state.fretboards
+            // The instrument grows to fill the space between the bars, centered when it doesn't
+            // need all of it.
+            Group {
+                switch phoneShowing {
+                case .guitar where !boards.isEmpty:
+                    FretboardView(fretboard: boards[0], title: "Guitar 1")
+                case .guitar2 where boards.count > 1:
+                    FretboardView(fretboard: boards[1], title: "Guitar 2")
+                case .piano:
+                    PianoView()
+                default:
+                    EmptyView()
+                }
+            }
+            .environment(\.instrumentFillHeight, max(availableHeight, 160))
+            .frame(minHeight: availableHeight)
+        } else {
+            VStack(spacing: 16) {
+                fretboards(width: width)
+                if model.state.showPiano {
+                    PianoView()
+                }
+            }
+        }
+    }
 
     @ViewBuilder
     private func fretboards(width: CGFloat) -> some View {

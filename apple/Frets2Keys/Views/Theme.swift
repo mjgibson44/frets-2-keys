@@ -219,3 +219,21 @@ struct HighlightButtonStyle: ButtonStyle {
         }
     }
 }
+
+enum Device {
+    /// iPhone (in any orientation), as opposed to iPad or Mac.
+    static var isPhone: Bool {
+        #if os(iOS)
+        return UIDevice.current.userInterfaceIdiom == .phone
+        #else
+        return false
+        #endif
+    }
+}
+
+extension View {
+    /// Limits content to the app's maximum width and centers it.
+    func centered(maxWidth: CGFloat = 1280) -> some View {
+        frame(maxWidth: maxWidth).frame(maxWidth: .infinity)
+    }
+}

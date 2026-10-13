@@ -8,23 +8,37 @@ struct ChordPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
+            if Device.isPhone {
+                // One row: set menu, saved chords scrolling sideways, then Add.
+                HStack(spacing: 8) {
                     SetMenu()
-                    Spacer(minLength: 0)
-                    AddChordButton()
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        SavedChordChips(layout: .row)
+                            .padding(.vertical, 2)
+                    }
+                    AddChordButton(compact: true)
                 }
-                SavedChordChips()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        SetMenu()
+                        Spacer(minLength: 0)
+                        AddChordButton()
+                    }
+                    SavedChordChips(layout: .wrapping)
+                }
+                .padding(16)
             }
-            .padding(16)
 
             Rectangle()
                 .fill(theme.cardBorder)
                 .frame(height: 1)
 
             SelectionBar()
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, Device.isPhone ? 12 : 16)
+                .padding(.vertical, Device.isPhone ? 6 : 10)
                 .background(theme.selectionBarBackground)
         }
         .background(theme.cardBackground)
@@ -39,16 +53,20 @@ struct ChordPanel: View {
 private struct AddChordButton: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    /// Icon only, for the single-row iPhone layout.
+    var compact = false
 
     var body: some View {
         Button {
             withAnimation { model.isChordBankPresented.toggle() }
         } label: {
             Label("Add Chord", systemImage: "plus")
+                .labelStyle(AddChordLabelStyle(compact: compact))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(theme.secondaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.horizontal, compact ? 0 : 10)
+                .padding(.vertical, compact ? 0 : 5)
+                .frame(minWidth: compact ? 36 : nil, minHeight: compact ? 36 : nil)
         }
         .buttonStyle(HighlightButtonStyle(
             normal: model.isChordBankPresented ? theme.chipActive : theme.chip,
@@ -56,7 +74,21 @@ private struct AddChordButton: View {
             cornerRadius: 6
         ))
         .help("Choose a chord from the chord bank")
+        // The compact (icon-only) style still needs a spoken name.
+        .accessibilityLabel("Add Chord")
         .accessibilityAddTraits(model.isChordBankPresented ? .isSelected : [])
+    }
+}
+
+private struct AddChordLabelStyle: LabelStyle {
+    let compact: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.icon.font(.system(size: 15, weight: .semibold))
+        } else {
+            Label(configuration)
+        }
     }
 }
 
@@ -129,9 +161,12 @@ struct SetActions: View {
 // MARK: - Saved chord chips
 
 private struct SavedChordChips: View {
+    enum Layout { case wrapping, row }
+
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @State private var dropTargetID: UUID?
+    let layout: Layout
 
     var body: some View {
         let chords = model.state.savedChords
@@ -139,10 +174,11 @@ private struct SavedChordChips: View {
             Text("No saved chords")
                 .font(.system(size: 14))
                 .foregroundStyle(theme.mutedText)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: layout == .wrapping ? .infinity : nil, alignment: layout == .wrapping ? .center : .leading)
                 .padding(.vertical, 4)
         } else {
-            FlowLayout(spacing: 8) {
+            let container = layout == .row ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(FlowLayout(spacing: 8))
+            container {
                 ForEach(Array(chords.enumerated()), id: \.element.id) { index, chord in
                     chip(chord, index: index, count: chords.count)
                 }
@@ -235,20 +271,14 @@ private struct SelectionBar: View {
     @Environment(\.layoutWidth) private var layoutWidth
 
     var body: some View {
-        // One row when it fits; otherwise the controls drop below the notes.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
+        // Always one row: a long chord's notes scroll sideways, the controls stay put.
+        HStack(spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 summary
-                Spacer(minLength: 0)
-                controls
+                    .padding(.vertical, 2)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                summary
-                HStack {
-                    Spacer(minLength: 0)
-                    controls
-                }
-            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            controls
         }
     }
 
@@ -256,7 +286,6 @@ private struct SelectionBar: View {
     private var summary: some View {
         let state = model.state
         if state.hasSelection {
-            let limit = layoutWidth >= 600 ? 6 : 4
             HStack(spacing: 8) {
                 if let chordName = state.chordName {
                     Text(chordName)
@@ -267,7 +296,7 @@ private struct SelectionBar: View {
                         .accessibilityLabel("Chord: \(chordName)")
                 }
                 HStack(spacing: 4) {
-                    ForEach(state.selectedNotes.prefix(limit), id: \.self) { note in
+                    ForEach(state.selectedNotes, id: \.self) { note in
                         // The web app shows sharp names here regardless of key.
                         Text(note.name)
                             .font(.system(size: 12, weight: .medium))
@@ -278,14 +307,6 @@ private struct SelectionBar: View {
                                 NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: state.selectedKey)),
                                 in: RoundedRectangle(cornerRadius: 4)
                             )
-                    }
-                    if state.selectedNotes.count > limit {
-                        Text("+\(state.selectedNotes.count - limit)")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(theme.overflowChipText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(theme.overflowChip, in: RoundedRectangle(cornerRadius: 4))
                     }
                 }
                 .fixedSize()

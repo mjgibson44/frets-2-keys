@@ -18,7 +18,6 @@
 		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
 		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
 		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
-		8463EAAB6C009259A23048B1 /* LandscapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */; };
 		8842A8F981D4FF992913501C /* ChordBankPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */; };
 		9739D1E2AB56E482326FB46F /* PianoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922B9441959B18FFFD9581C3 /* PianoView.swift */; };
 		9D112C679E7C7F3E67208DAA /* ChordPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649E0531C661CF6D575B0EFF /* ChordPanel.swift */; };
@@ -27,6 +26,7 @@
 		E984ABFD1535D7F4456BB2C7 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4205C64622525D72C49AE6F /* AppModel.swift */; };
 		ECEC03D490EA44D4B49C6707 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43E94CD27A2FEECE27B77AE /* SettingsView.swift */; };
 		EE1FB52D1E657A06E02A3F96 /* FretboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD76668D47FABAF6D3D2D22 /* FretboardView.swift */; };
+		EF91136E4CC1E54178B9ACA4 /* PhoneLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ACA3936CB15C226037750C /* PhoneLayoutTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,7 +52,7 @@
 		87E137C640951B037603265D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
 		922B9441959B18FFFD9581C3 /* PianoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianoView.swift; sourceTree = "<group>"; };
-		B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapeTests.swift; sourceTree = "<group>"; };
+		94ACA3936CB15C226037750C /* PhoneLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneLayoutTests.swift; sourceTree = "<group>"; };
 		BA38CBBFC343444FE7B23D7F /* Frets2Keys.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Frets2Keys.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4205C64622525D72C49AE6F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		C957D380454D694521317558 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -158,7 +158,7 @@
 			isa = PBXGroup;
 			children = (
 				36CFCB4B5B6C7A84383E6357 /* ChordBankTests.swift */,
-				B50A8E595F692D03F4AD4494 /* LandscapeTests.swift */,
+				94ACA3936CB15C226037750C /* PhoneLayoutTests.swift */,
 			);
 			path = Frets2KeysUITests;
 			sourceTree = "<group>";
@@ -273,7 +273,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				37CEF6C6C0FB886D2CC27FA4 /* ChordBankTests.swift in Sources */,
-				8463EAAB6C009259A23048B1 /* LandscapeTests.swift in Sources */,
+				EF91136E4CC1E54178B9ACA4 /* PhoneLayoutTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

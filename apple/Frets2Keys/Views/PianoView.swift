@@ -16,7 +16,7 @@ struct PianoView: View {
         let whiteNotes = notes.filter { !$0.isBlackKey }
         let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
         // Filling a height (iPhone landscape) makes the keys as tall as the space allows.
-        let whiteHeight: CGFloat = fillHeight.map { max($0 - 2 * inset, 112) } ?? (wide ? 144 : 112)
+        let whiteHeight: CGFloat = fillHeight.map { min(max($0 - 2 * inset, 112), 300) } ?? (wide ? 144 : 112)
         let blackHeight: CGFloat = fillHeight == nil ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
 
         Card(padding: EdgeInsets(top: inset, leading: inset, bottom: inset, trailing: inset)) {

@@ -25,7 +25,7 @@ struct FretboardView: View {
         guard let fillHeight, !fretboard.tuning.isEmpty else { return Self.standardCellHeight }
         let footerRows: CGFloat = model.state.anyCapoActive ? 3 : 2
         let available = fillHeight - padding.top - padding.bottom - footerRows * Self.footerRowHeight
-        return min(max(available / CGFloat(fretboard.tuning.count), 30), 72)
+        return min(max(available / CGFloat(fretboard.tuning.count), 30), 52)
     }
     private static let singleMarkers: Set<Int> = [3, 5, 7, 9, 15, 17, 19, 21]
     private static let doubleMarkers: Set<Int> = [12, 24]

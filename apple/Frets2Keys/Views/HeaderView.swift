@@ -13,10 +13,28 @@ enum ActionIcon {
     static let settings = "gearshape.fill"
 }
 
-/// Which instrument fills the screen on an iPhone held sideways.
-enum LandscapeInstrument: String {
+/// Which instrument an iPhone shows (it shows one at a time).
+enum InstrumentChoice: String, CaseIterable, Identifiable {
+    // "guitar" is Guitar 1; the raw value predates the second guitar option.
     case guitar
+    case guitar2
     case piano
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .guitar: return "Guitar 1"
+        case .guitar2: return "Guitar 2"
+        case .piano: return "Piano"
+        }
+    }
+
+    /// The choices available for the current instruments.
+    static func available(guitars: Int, piano: Bool) -> [InstrumentChoice] {
+        let guitarChoices: [InstrumentChoice] = Array([.guitar, .guitar2].prefix(guitars))
+        return guitarChoices + (piano ? [.piano] : [])
+    }
 }
 
 /// Top bar: key picker on the left, playback and settings on the right.
@@ -24,8 +42,9 @@ enum LandscapeInstrument: String {
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.layoutWidth) private var layoutWidth
-    /// Shown on iPhone in landscape, where one instrument fills the screen.
-    var instrumentChoice: Binding<LandscapeInstrument>?
+    /// Shown on iPhone, where one instrument is shown at a time.
+    var instrumentChoice: Binding<InstrumentChoice>?
+    var instrumentOptions: [InstrumentChoice] = []
 
     var body: some View {
         let state = model.state
@@ -36,13 +55,8 @@ struct HeaderView: View {
                 set: { model.state.selectedKey = $0 }
             ))
             Spacer(minLength: 0)
-            if let instrumentChoice {
-                Picker("Instrument", selection: instrumentChoice) {
-                    Label("Guitar", systemImage: "guitars").tag(LandscapeInstrument.guitar)
-                    Label("Piano", systemImage: "pianokeys").tag(LandscapeInstrument.piano)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
+            if let instrumentChoice, instrumentOptions.count > 1 {
+                InstrumentPicker(selection: instrumentChoice, options: instrumentOptions)
                 Spacer(minLength: 0)
             }
             HStack(spacing: 0) {
@@ -62,6 +76,51 @@ struct HeaderView: View {
                     model.isSettingsPresented = true
                 }
             }
+        }
+    }
+}
+
+/// Guitar | Piano as a segmented control; with two guitars (three choices, too wide for the top
+/// bar) it becomes a compact menu.
+private struct InstrumentPicker: View {
+    @Environment(\.theme) private var theme
+    @Binding var selection: InstrumentChoice
+    let options: [InstrumentChoice]
+
+    var body: some View {
+        if options.count == 2 {
+            Picker("Instrument", selection: $selection) {
+                ForEach(options) { option in
+                    Text(option == .guitar && !options.contains(.guitar2) ? "Guitar" : option.title).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+        } else {
+            Menu {
+                Picker("Instrument", selection: $selection) {
+                    ForEach(options) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                HStack(spacing: 6) {
+                    Text(selection.title)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(theme.secondaryText)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Tailwind.zinc500)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(theme.chip, in: Capsule())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("Instrument: \(selection.title)")
         }
     }
 }
