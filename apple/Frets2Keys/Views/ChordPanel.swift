@@ -1,8 +1,9 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The bottom of the window: two glass cards. The selected chord and its controls (only while
-/// notes are selected) sit above the chord set's saved chords.
+/// The bottom of the window: two glass cards. The selected chord and its controls sit above the
+/// chord set's saved chords. On iPhone the selection card always shows (with a hint when nothing
+/// is selected) so the instrument above doesn't jump; elsewhere it appears with a selection.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -21,7 +22,7 @@ struct ChordPanel: View {
     var body: some View {
         GlassCardGroup(spacing: 8) {
             VStack(spacing: 8) {
-                if model.state.hasSelection {
+                if Device.isPhone || model.state.hasSelection {
                     SelectionBar()
                         .padding(.horizontal, padding)
                         .padding(.vertical, Device.isPhone ? 8 : 10)
@@ -349,10 +350,14 @@ private struct SelectionBar: View {
         }
     }
 
+    private static let summaryHeight: CGFloat = 24
+
     private var summaryStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             summary
                 .padding(.vertical, 2)
+                // Same height with or without a selection, so the card never resizes.
+                .frame(minHeight: Self.summaryHeight)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
