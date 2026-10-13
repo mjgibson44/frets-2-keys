@@ -76,6 +76,8 @@ struct NoteTileStyle: ViewModifier {
     var cornerRadius: CGFloat = 6
     /// Border for an uncolored, unselected tile (chips on the page need one to stand out).
     var neutralBorder: Color = .clear
+    /// Whether a colored tile gets a matching border, or just the tinted background.
+    var showsColorBorder = true
     var neutralFill: Color?
 
     func body(content: Content) -> some View {
@@ -102,6 +104,7 @@ struct NoteTileStyle: ViewModifier {
     }
 
     private var border: Color {
+        if role != nil && !showsColorBorder { return .clear }
         switch role {
         case .scaleDegree(let degree)?: return ScaleDegreePalette.all[degree].border(dark: theme.isDark)
         case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.7 : 0.55)

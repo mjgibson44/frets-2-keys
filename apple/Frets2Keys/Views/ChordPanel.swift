@@ -240,6 +240,7 @@ private struct SavedChordChips: View {
             fillsWidth: false,
             cornerRadius: 4,
             neutralBorder: theme.pageChipBorder,
+            showsColorBorder: false,
             neutralFill: theme.pageChip
         ))
         .overlay {

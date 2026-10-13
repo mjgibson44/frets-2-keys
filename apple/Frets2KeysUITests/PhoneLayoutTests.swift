@@ -22,8 +22,13 @@ final class PhoneLayoutTests: XCTestCase {
     /// The copy of an instrument that's mostly on screen, if any. (The looping pages repeat each
     /// instrument, and neighboring pages may exist just offscreen.)
     private func onScreen(_ name: String) -> XCUIElement? {
-        // Hittable means its center is actually visible, not clipped by the scroll area.
-        app.descendants(matching: .any).matching(identifier: "instrument.\(name)").allElementsBoundByIndex.first { $0.isHittable }
+        // Showing means its center is in the band between the top bar and the chord panel.
+        let top = app.buttons["Settings"].frame.maxY
+        let bottom = app.buttons["Add Chord"].frame.minY
+        return app.descendants(matching: .any).matching(identifier: "instrument.\(name)").allElementsBoundByIndex.first { element in
+            let frame = element.frame
+            return !frame.isEmpty && frame.midY > top && frame.midY < bottom
+        }
     }
 
     private var visibleInstruments: [String] {

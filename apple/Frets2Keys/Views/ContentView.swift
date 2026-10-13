@@ -137,7 +137,6 @@ struct ContentView: View {
             if !options.contains(phoneInstrument), let first = options.first {
                 phoneInstrument = first
             }
-            recenter()
         }
         .onChange(of: model.isSheetPresented) { _, presented in
             if !presented { isFocused = true }
@@ -162,15 +161,12 @@ struct ContentView: View {
         InstrumentChoice.available(guitars: model.state.fretboards.count, piano: model.state.showPiano)
     }
 
-    /// The tabs in the top bar (iPhone). Picking one scrolls to that instrument.
+    /// The tabs in the top bar (iPhone). Picking one shows that instrument.
     private var phoneInstrumentChoice: Binding<InstrumentChoice>? {
         guard Device.isPhone else { return nil }
         return Binding(
             get: { phoneShowing ?? .guitar },
-            set: { choice in
-                guard let target = page(for: choice, near: currentPage) else { return }
-                withAnimation(.snappy) { currentPage = target }
-            }
+            set: { phoneInstrument = $0 }
         )
     }
 
@@ -179,77 +175,22 @@ struct ContentView: View {
         instrumentOptions.contains(phoneInstrument) ? phoneInstrument : instrumentOptions.first
     }
 
-    // MARK: Looping pages
-
-    /// The instruments repeat this many times so swiping can go round and round in both
-    /// directions. Swiping near either end quietly recenters, so it never runs out.
-    private static let pageCycles = 200
-
-    /// The page the instrument scroll view is on (an index into the repeated list).
-    @State private var currentPage: Int?
-
-    private var pageCount: Int { instrumentOptions.count * Self.pageCycles }
-
-    private func instrument(atPage page: Int) -> InstrumentChoice? {
-        let options = instrumentOptions
-        return options.isEmpty ? nil : options[((page % options.count) + options.count) % options.count]
-    }
-
-    /// The page showing `choice` in the middle cycle, or in the same cycle as `page`.
-    private func page(for choice: InstrumentChoice, near page: Int? = nil) -> Int? {
-        let options = instrumentOptions
-        guard let index = options.firstIndex(of: choice) else { return nil }
-        let cycle = page.map { $0 / options.count } ?? Self.pageCycles / 2
-        return cycle * options.count + index
-    }
-
     /// iPhone: one instrument per page, filling the space between the bars. Swiping up or down
-    /// moves to the next instrument, wrapping around from the last to the first; the tabs in the
-    /// top bar follow along.
+    /// moves to the next instrument, looping around; the tabs in the top bar follow along.
     private func instrumentPages(padding: CGFloat) -> some View {
-        GeometryReader { area in
-            ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 0) {
-                    ForEach(0..<pageCount, id: \.self) { page in
-                        if let choice = instrument(atPage: page) {
-                            instrumentPage(choice)
-                                .environment(\.instrumentFillHeight, max(area.size.height - 16, 120))
-                                .padding(.horizontal, padding)
-                                .padding(.vertical, 8)
-                                .frame(height: area.size.height)
-                                .id(page)
-                        }
-                    }
-                }
-                .scrollTargetLayout()
+        let options = instrumentOptions
+        let index = Binding(
+            get: { phoneShowing.flatMap { options.firstIndex(of: $0) } ?? 0 },
+            set: { if options.indices.contains($0) { phoneInstrument = options[$0] } }
+        )
+        return GeometryReader { area in
+            InstrumentPager(count: options.count, index: index) { pageIndex in
+                instrumentPage(options[pageIndex])
+                    .environment(\.instrumentFillHeight, max(area.size.height - 16, 120))
+                    .padding(.horizontal, padding)
+                    .padding(.vertical, 8)
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $currentPage, anchor: .top)
-            .scrollIndicators(.hidden)
-            .onAppear { recenter() }
-            .onChange(of: currentPage) { _, page in
-                guard let page, let choice = instrument(atPage: page) else { return }
-                phoneInstrument = choice
-                // Near either end of the repeated list: jump back to the same instrument in the middle.
-                let margin = instrumentOptions.count * 10
-                if page < margin || page > pageCount - margin { recenter() }
-            }
-            // When the space changes (the chord panel grows as chords are added or sync in, or the
-            // phone rotates), the pages resize but the scroll offset doesn't; snap back onto the page.
-            .onChange(of: area.size.height) { _, _ in
-                guard let page = currentPage else { return }
-                DispatchQueue.main.async { proxy.scrollTo(page, anchor: .top) }
-            }
-            }
-            .id(instrumentOptions)  // rebuild the pages when instruments are turned on or off
         }
-    }
-
-    /// Puts the scroll view on the current instrument in the middle of the repeated list.
-    private func recenter() {
-        guard let choice = phoneShowing else { return }
-        currentPage = page(for: choice)
     }
 
     @ViewBuilder
