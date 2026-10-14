@@ -34,13 +34,26 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
 
-                Section("Playback Mode") {
+                Section {
                     Picker("Playback Mode", selection: $model.state.playMode) {
                         Text("Chord").tag(PlayMode.chord)
                         Text("Arpeggio").tag(PlayMode.arpeggio)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                    Picker("Sound", selection: Binding(
+                        get: { model.state.instrument },
+                        set: { model.setInstrument($0) }
+                    )) {
+                        ForEach(SynthInstrument.allCases) { instrument in
+                            Text(instrument.name).tag(instrument)
+                        }
+                    }
+                    TempoControl(tempo: $model.state.tempo)
+                } header: {
+                    Text("Playback")
+                } footer: {
+                    Text("A looped chord lasts one beat; arpeggios play two notes a beat.")
                 }
 
                 Section {
@@ -59,16 +72,27 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Note Labels") {
+                Section {
+                    Picker("Label Notes With", selection: $model.state.noteLabelContent) {
+                        ForEach(NoteLabelContent.allCases) { content in
+                            Text(content.title).tag(content)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                     Picker("Note Labels", selection: $model.state.noteLabelMode) {
                         Text("Sharps and Flats").tag(NoteLabelMode.sharpsAndFlats)
                         Text("Sharps only").tag(NoteLabelMode.sharpsOnly)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                } header: {
+                    Text("Note Labels")
+                } footer: {
+                    Text("Degrees number notes in the key (1, 2, ♭3…). Intervals measure from the selected chord's root (R, 3, 5, ♭7…). Without a key or chord, notes show their names. Press N to switch.")
                 }
 
-                Section("Instruments") {
+                Section {
                     Toggle("Guitar 1", isOn: Binding(
                         get: { model.state.fretboards.count >= 1 },
                         set: { model.state.setFretboardCount($0 ? max(1, model.state.fretboards.count) : 0) }
@@ -78,6 +102,11 @@ struct SettingsView: View {
                         set: { model.state.setFretboardCount($0 ? 2 : 1) }
                     ))
                     Toggle("Piano", isOn: $model.state.showPiano)
+                    Toggle("Show next chord", isOn: $model.state.showNextChord)
+                } header: {
+                    Text("Instruments")
+                } footer: {
+                    Text("While looping, the instruments show the next chord's notes in a lighter color over each chord's last two beats.")
                 }
 
                 ForEach(0..<AppState.maxFretboards, id: \.self) { index in
@@ -98,6 +127,78 @@ struct SettingsView: View {
         #if os(macOS)
         .frame(minWidth: 520, idealWidth: 560, minHeight: 560, idealHeight: 720)
         #endif
+    }
+}
+
+/// Tempo in beats per minute: a slider for quick changes and a field for an exact number.
+private struct TempoControl: View {
+    @Binding var tempo: Int
+    @State private var text = ""
+    @FocusState private var isEditing: Bool
+
+    var body: some View {
+        let range = AppState.tempoRange
+        VStack(spacing: 8) {
+            HStack {
+                Text("Tempo")
+                Spacer()
+                HStack(spacing: 4) {
+                    // Forms on the Mac show a control's label beside it, so hide it (VoiceOver still reads it).
+                    TextField("BPM", text: $text)
+                        .labelsHidden()
+                        .focused($isEditing)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 44)
+                        .monospacedDigit()
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #else
+                        .textFieldStyle(.roundedBorder)
+                        #endif
+                        .onSubmit(commit)
+                        .accessibilityLabel("Tempo in beats per minute")
+                    Text("BPM")
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize()
+            }
+            // Rounded here rather than with `step`, which draws a tick for every value.
+            Slider(
+                value: Binding(get: { Double(tempo) }, set: { tempo = Int($0.rounded()) }),
+                in: Double(range.lowerBound)...Double(range.upperBound)
+            ) {
+                Text("Tempo")
+            } minimumValueLabel: {
+                Image(systemName: "tortoise.fill").foregroundStyle(.secondary)
+            } maximumValueLabel: {
+                Image(systemName: "hare.fill").foregroundStyle(.secondary)
+            }
+            .labelsHidden()
+            .accessibilityValue("\(tempo) beats per minute")
+        }
+        .onAppear { text = "\(tempo)" }
+        .onChange(of: tempo) { _, newValue in
+            if !isEditing { text = "\(newValue)" }
+        }
+        .onChange(of: isEditing) { _, editing in
+            if !editing { commit() }
+        }
+        #if os(iOS)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { isEditing = false }
+            }
+        }
+        #endif
+    }
+
+    /// Applies the typed number, kept within range; anything else puts the current tempo back.
+    private func commit() {
+        if let value = Int(text.trimmingCharacters(in: .whitespaces)) {
+            tempo = AppState.clampedTempo(value)
+        }
+        text = "\(tempo)"
     }
 }
 

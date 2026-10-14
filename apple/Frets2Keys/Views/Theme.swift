@@ -54,9 +54,10 @@ struct ScaleDegreePalette {
 }
 
 enum NotePalette {
-    // pink, lime, teal, indigo, rose
+    // pink, lime, teal, indigo, rose, then fuchsia and stone for scales with fewer than 7 notes.
     static let outOfKey: [Color] = [
         Color(hex: 0xEC4899), Color(hex: 0x65A30D), Color(hex: 0x0D9488), Color(hex: 0x6366F1), Color(hex: 0xF43F5E),
+        Color(hex: 0xC026D3), Color(hex: 0x78716C),
     ]
 
     // One color per pitch class, C through B, used when no key is selected.
@@ -78,7 +79,7 @@ enum NotePalette {
     static func solid(for role: NoteColorRole) -> Color {
         switch role {
         case .scaleDegree(let degree): return ScaleDegreePalette.all[degree].solid
-        case .outOfKey(let index): return outOfKey[index]
+        case .outOfKey(let index): return outOfKey[index % outOfKey.count]
         case .chromatic(let pitchClass): return chromatic[pitchClass]
         }
     }

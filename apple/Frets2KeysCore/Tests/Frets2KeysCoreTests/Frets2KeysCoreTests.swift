@@ -343,6 +343,33 @@ final class LoopTests: XCTestCase {
     func testBeatInterval() {
         XCTAssertEqual(LoopSequencer.beatInterval(noteCount: 3, mode: .chord), 0.8)
         XCTAssertEqual(LoopSequencer.beatInterval(noteCount: 3, mode: .arpeggio), 1.2, accuracy: 0.0001)
+        XCTAssertEqual(LoopSequencer.beatInterval(noteCount: 3, mode: .chord, tempo: 120), 0.5, accuracy: 0.0001)
+        XCTAssertEqual(LoopSequencer.beatInterval(noteCount: 4, mode: .arpeggio, tempo: 120), 1.0, accuracy: 0.0001)
+    }
+
+    func testTempoIsClampedAndPersisted() throws {
+        var state = AppState()
+        XCTAssertEqual(state.tempo, 75)
+        XCTAssertEqual(state.arpeggioStep, 0.4, accuracy: 0.0001)
+        state.tempo = 500
+        XCTAssertEqual(state.tempo, 180)
+        state.tempo = 10
+        XCTAssertEqual(state.tempo, 60)
+        state.tempo = 96
+        let decoded = try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(decoded.tempo, 96)
+        XCTAssertEqual(try JSONDecoder().decode(AppState.self, from: Data("{}".utf8)).tempo, 75)
+        XCTAssertEqual(try JSONDecoder().decode(AppState.self, from: Data(#"{"tempo":999}"#.utf8)).tempo, 180)
+    }
+
+    func testArpeggioFollowsTheStep() {
+        let rate = 44_100.0
+        var mixer = SynthMixer(sampleRate: rate)
+        mixer.playArpeggio(["C4", "E4"], step: 0.25)
+        let sound = mixer.render(seconds: 0.3)
+        // The second note has started by 0.27s (it wouldn't have at the default 0.4s step).
+        XCTAssertGreaterThan(sound[Int(0.26 * rate)..<Int(0.3 * rate)].map(abs).max() ?? 0, 0.1)
+        XCTAssertEqual(mixer.activeVoiceCount, 2)
     }
 }
 
@@ -404,6 +431,67 @@ final class SynthMixerTests: XCTestCase {
         XCTAssertGreaterThan(peak(sound[Int(0.05 * rate)..<Int(0.1 * rate)]), 0.1)
         XCTAssertGreaterThan(peak(sound[Int(0.85 * rate)..<Int(0.9 * rate)]), 0.1)
         XCTAssertEqual(mixer.activeVoiceCount, 1)
+    }
+
+    func testScheduledNotesWaitForTheirTime() {
+        let rate = 44_100.0
+        var mixer = SynthMixer(sampleRate: rate)
+        mixer.playArpeggio(["C4", "E4"], at: 0.3)
+        let sound = mixer.render(seconds: 0.8)
+        XCTAssertEqual(peak(sound[0..<Int(0.29 * rate)]), 0)
+        XCTAssertGreaterThan(peak(sound[Int(0.35 * rate)..<Int(0.4 * rate)]), 0.1)
+        XCTAssertEqual(mixer.currentTime, 0.8, accuracy: 0.001)
+    }
+
+    func testScheduledChordCutsOffThePreviousOneWhenItStarts() {
+        var mixer = SynthMixer(sampleRate: 44_100)
+        mixer.playChord(["C4", "E4", "G4"])
+        _ = mixer.render(seconds: 0.2)
+        mixer.playChord(["D4", "F#4", "A4"], at: 0.5)
+        _ = mixer.render(seconds: 0.2)
+        // Still before the new chord: the first one keeps sounding.
+        XCTAssertEqual(mixer.activeVoiceCount, 6)
+        let before = mixer.render(seconds: 0.05)
+        XCTAssertGreaterThan(before.map(abs).max() ?? 0, 0.1)
+        _ = mixer.render(seconds: 0.2)
+        XCTAssertEqual(mixer.activeVoiceCount, 3)
+    }
+
+    func testPastTimesPlayNow() {
+        var mixer = SynthMixer(sampleRate: 44_100)
+        _ = mixer.render(seconds: 0.5)
+        mixer.playChord(["C4"], at: 0.1)
+        XCTAssertGreaterThan(peak(mixer.render(seconds: 0.1)[...]), 0.05)
+    }
+
+    func testEveryInstrumentPlaysInRangeThenStops() {
+        for instrument in SynthInstrument.allCases {
+            var mixer = SynthMixer(sampleRate: 44_100)
+            mixer.playChord(["E2", "B2", "E3", "G#3", "B3", "E4"], instrument: instrument)
+            let sound = mixer.render(seconds: 1.0)
+            XCTAssertGreaterThan(peak(sound[...]), 0.05, instrument.name)
+            XCTAssertLessThanOrEqual(peak(sound[...]), 1, instrument.name)
+            _ = mixer.render(seconds: 3)
+            XCTAssertEqual(mixer.activeVoiceCount, 0, instrument.name)
+        }
+    }
+
+    func testStruckInstrumentsDieAway() {
+        for instrument in [SynthInstrument.keys, .pluck, .glass] {
+            let early = SynthMixer.envelope(at: 0.05, duration: 2, volume: 1, instrument: instrument)
+            let late = SynthMixer.envelope(at: 0.6, duration: 2, volume: 1, instrument: instrument)
+            XCTAssertLessThan(late, early * 0.7, instrument.name)
+        }
+        // The pad swells in slowly.
+        XCTAssertLessThan(SynthMixer.envelope(at: 0.05, duration: 2, volume: 1, instrument: .pad), 0.3)
+    }
+
+    func testInstrumentPersists() throws {
+        var state = AppState()
+        XCTAssertEqual(state.instrument, .classic)
+        state.instrument = .glass
+        XCTAssertEqual(try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(state)).instrument, .glass)
+        XCTAssertEqual(try JSONDecoder().decode(AppState.self, from: Data(#"{"instrument":"theremin"}"#.utf8)).instrument, .classic)
     }
 
     func testEnvelopeShape() {
@@ -729,7 +817,8 @@ final class DiatonicChordTests: XCTestCase {
     func testMinorKey() {
         let aMinor = MusicalKey(root: 9, type: .minor)
         XCTAssertEqual(names(aMinor), ["Am", "Bdim", "Cmaj", "Dm", "Em", "Fmaj", "Gmaj"])
-        XCTAssertEqual(aMinor.diatonicChords().map(\.numeral), ["i", "ii°", "III", "iv", "v", "VI", "VII"])
+        // Numerals follow the degrees: ♭III is built on ♭3.
+        XCTAssertEqual(aMinor.diatonicChords().map(\.numeral), ["i", "ii°", "♭III", "iv", "v", "♭VI", "♭VII"])
     }
 
     func testEveryKeyHasSevenOfEach() {

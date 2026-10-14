@@ -7,6 +7,7 @@ struct FretboardView: View {
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.instrumentFillHeight) private var fillHeight
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.nextChordHint) private var hint
 
     let fretboard: Fretboard
     let title: String
@@ -47,6 +48,7 @@ struct FretboardView: View {
     private var frets: Range<Int> { 0..<(Tunings.fretCount + 1) }
 
     var body: some View {
+        let context = model.state.noteLabelContext
         Card(padding: padding) {
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -54,7 +56,7 @@ struct FretboardView: View {
                     ForEach(Array(fretboard.tuning.enumerated().reversed()), id: \.offset) { stringIndex, openNote in
                         HStack(spacing: 0) {
                             ForEach(frets, id: \.self) { fret in
-                                fretCell(openNote: openNote, stringNumber: fretboard.tuning.count - stringIndex, fret: fret)
+                                fretCell(openNote: openNote, stringNumber: fretboard.tuning.count - stringIndex, fret: fret, context: context)
                             }
                         }
                     }
@@ -91,49 +93,54 @@ struct FretboardView: View {
     }
 
     @ViewBuilder
-    private func fretCell(openNote: Note, stringNumber: Int, fret: Int) -> some View {
+    private func fretCell(openNote: Note, stringNumber: Int, fret: Int, context: NoteLabelContext) -> some View {
         let note = openNote.transposed(by: fret)
         let isBelowCapo = fret < fretboard.capo
         let isSelected = model.state.isSelected(note) && !isBelowCapo
-        let appearance = NoteAppearance(
-            note: note,
-            isSelected: isSelected,
-            key: model.state.selectedKey,
-            keyLabelMode: model.state.keyLabelMode,
-            noteLabelMode: model.state.noteLabelMode
-        )
+        let appearance = NoteAppearance(note: note, isSelected: isSelected, context: context)
+        let isSounding = model.soundingNotes.contains(note) && !isBelowCapo
+        let isPreviewed = !isBelowCapo && hint.isPreviewed(note, isSelected: isSelected)
 
         Button {
             model.toggle(note)
         } label: {
-            Group {
-                if case .selected(let role) = appearance.style {
-                    // A selected fret is filled solid with its note's color, inset a little so
-                    // neighboring selected frets stay separate.
-                    NoteLabel(name: appearance.label, weight: .medium)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: 4).inset(by: 1))
-                } else {
-                    HStack(spacing: 0) {
-                        if !isBelowCapo {
-                            stringLine
-                            if appearance.showsLabel {
-                                NoteBadge(appearance: appearance, size: min(20, cellHeight - 2))
-                                stringLine
-                            }
-                        }
-                    }
-                }
-            }
-            .frame(width: cellWidth, height: cellHeight)
+            cellContent(appearance, isBelowCapo: isBelowCapo, isSounding: isSounding)
+                .frame(width: cellWidth, height: cellHeight)
+                // A selected fret shades inside its fill; others shade the cell behind the badge.
+                .noteFlash(isSounding && !appearance.isSelected, inset: 1, cornerRadius: 4)
+                .nextChordFill(isPreviewed, hint: hint, color: NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: context.key)), inset: 1)
         }
         .buttonStyle(HighlightButtonStyle(highlighted: theme.subtleHover))
         .disabled(isBelowCapo)
         .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretDivider) }
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave), string \(stringNumber), fret \(fret)")
+        .accessibilityLabel("\(context.accessibilityName(for: note)), string \(stringNumber), fret \(fret)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// A fret cell's contents: a solid fill for a selected note, otherwise the string and its badge.
+    @ViewBuilder
+    private func cellContent(_ appearance: NoteAppearance, isBelowCapo: Bool, isSounding: Bool) -> some View {
+        if case .selected(let role) = appearance.style {
+            // A selected fret is filled solid with its note's color, inset a little so
+            // neighboring selected frets stay separate.
+            NoteLabel(name: appearance.label, weight: .medium)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .noteFlash(isSounding, inset: 1, cornerRadius: 4)
+                .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: 4).inset(by: 1))
+        } else {
+            HStack(spacing: 0) {
+                if !isBelowCapo {
+                    stringLine
+                    if appearance.showsLabel {
+                        NoteBadge(appearance: appearance, size: min(20, cellHeight - 2))
+                        stringLine
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     private var stringLine: some View {
@@ -170,6 +177,50 @@ struct FretboardView: View {
             dot
         } else {
             Color.clear.frame(height: 6)
+        }
+    }
+}
+
+// MARK: - Next chord
+
+/// The coming chord, shown on the instruments over the last beats before a change while looping:
+/// its notes fill in a light version of their color.
+struct NextChordHint: Equatable {
+    var notes: Set<Note> = []
+    var isShowing = false
+    var fadeDuration = 0.0
+
+    /// Whether a note gets the light fill: it's in the next chord and isn't already filled.
+    func isPreviewed(_ note: Note, isSelected: Bool) -> Bool {
+        !isSelected && notes.contains(note)
+    }
+}
+
+private struct NextChordHintKey: EnvironmentKey {
+    static let defaultValue = NextChordHint()
+}
+
+extension EnvironmentValues {
+    var nextChordHint: NextChordHint {
+        get { self[NextChordHintKey.self] }
+        set { self[NextChordHintKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// A light fill of a next-chord note's color behind its label, fading in over the hint's
+    /// duration and gone the moment the chord changes.
+    func nextChordFill(_ isPreviewed: Bool, hint: NextChordHint, color: Color, inset: CGFloat, cornerRadius: CGFloat = 4) -> some View {
+        background {
+            if isPreviewed {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .inset(by: inset)
+                    .fill(color.opacity(0.35))
+                    .opacity(hint.isShowing ? 1 : 0)
+                    .animation(hint.isShowing ? .easeInOut(duration: hint.fadeDuration) : nil, value: hint.isShowing)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
     }
 }

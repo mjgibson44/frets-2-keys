@@ -1,23 +1,47 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// A note name with a small raised accidental, e.g. "B♭" drawn as "B" + small "b".
+/// A note name with a small raised accidental, e.g. "B♭" drawn as "B" + small "b". Degrees and
+/// intervals put theirs first: "♭3" is a small "♭" + "3".
 struct NoteLabel: View {
     let name: String
     var fontSize: CGFloat = 12
     var weight: Font.Weight = .regular
 
+    private static let leadingAccidentals: Set<Character> = ["♭", "♯", "𝄫", "𝄪"]
+
     var body: some View {
-        let parts = splitNoteDisplay(name)
         HStack(alignment: .top, spacing: 0) {
-            Text(parts.letter)
-                .font(.system(size: fontSize, weight: weight))
-            if let accidental = parts.accidental {
-                Text(accidental)
-                    .font(.system(size: 8, weight: weight))
+            if let first = name.first, Self.leadingAccidentals.contains(first), name.count > 1 {
+                small(String(first))
+                main(String(name.dropFirst()))
+            } else {
+                let parts = splitNoteDisplay(name)
+                main(parts.letter)
+                if let accidental = parts.accidental {
+                    small(accidental)
+                }
             }
         }
         .fixedSize()
+    }
+
+    private func main(_ text: String) -> some View {
+        // Two-digit intervals (11, 13) are a touch smaller to fit the badge.
+        Text(text).font(.system(size: text.count > 1 && text.allSatisfy(\.isNumber) ? fontSize - 1 : fontSize, weight: weight))
+    }
+
+    private func small(_ text: String) -> some View {
+        Text(text).font(.system(size: 8, weight: weight))
+    }
+}
+
+extension NoteLabelContext {
+    /// Spoken name for a note: "Bb3", plus its degree or interval when those are showing.
+    func accessibilityName(for note: Note) -> String {
+        let name = displayName(for: note, key: key, sharpsOnly: noteLabelMode == .sharpsOnly)
+        let label = label(for: note)
+        return label == name ? "\(name)\(note.octave)" : "\(name)\(note.octave), \(label)"
     }
 }
 
@@ -106,5 +130,36 @@ struct NoteTileStyle: ViewModifier {
         case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.7 : 0.55)
         case nil: return neutralBorder
         }
+    }
+}
+
+/// While a note sounds during playback, its fret or piano key briefly shades: darker in light mode,
+/// lighter in dark mode. It snaps on and off. Apply it inside any fill it should shade.
+struct NoteFlash: ViewModifier {
+    @Environment(\.theme) private var theme
+    let isFlashing: Bool
+    /// Fret cells shade the same inset rounded square a selected fret is filled with.
+    var inset: CGFloat = 0
+    var cornerRadius: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        // Behind the content, so the note's label stays crisp on top of the shade.
+        content
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .inset(by: inset)
+                    .fill(theme.isDark ? Color.white : Color.black)
+                    .opacity(isFlashing ? (theme.isDark ? 0.38 : 0.32) : 0)
+                    // Instant both ways, so one note's shade doesn't linger into the next.
+                    .transaction { $0.animation = nil }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+extension View {
+    func noteFlash(_ isFlashing: Bool, inset: CGFloat = 0, cornerRadius: CGFloat = 0) -> some View {
+        modifier(NoteFlash(isFlashing: isFlashing, inset: inset, cornerRadius: cornerRadius))
     }
 }

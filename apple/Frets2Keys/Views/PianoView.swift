@@ -7,6 +7,7 @@ struct PianoView: View {
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.instrumentFillHeight) private var fillHeight
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.nextChordHint) private var hint
 
     /// Keys are narrower on an upright iPhone so more of the keyboard fits across the screen.
     private var isNarrow: Bool { Device.isPhone && verticalSizeClass == .regular }
@@ -21,6 +22,7 @@ struct PianoView: View {
         let wide = layoutWidth >= 600
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
+        let context = model.state.noteLabelContext
         let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
         let standardWhiteHeight: CGFloat = wide ? 144 : 112
         let whiteHeight: CGFloat = if let fillHeight {
@@ -38,13 +40,13 @@ struct PianoView: View {
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
                         ForEach(whiteNotes, id: \.self) { note in
-                            whiteKey(note, height: whiteHeight)
+                            whiteKey(note, height: whiteHeight, context: context)
                         }
                     }
                     ForEach(Array(whiteNotes.enumerated()), id: \.element) { index, whiteNote in
                         let blackNote = whiteNote.transposed(by: 1)
                         if blackNote.isBlackKey && notes.contains(blackNote) {
-                            blackKey(blackNote, height: blackHeight)
+                            blackKey(blackNote, height: blackHeight, context: context)
                                 .offset(x: CGFloat(index + 1) * whiteKeyWidth - blackKeyWidth / 2)
                         }
                     }
@@ -56,18 +58,21 @@ struct PianoView: View {
         .accessibilityIdentifier("instrument.Piano")
     }
 
-    private func appearance(for note: Note) -> NoteAppearance {
-        NoteAppearance(
-            note: note,
-            isSelected: model.state.isSelected(note),
-            key: model.state.selectedKey,
-            keyLabelMode: model.state.keyLabelMode,
-            noteLabelMode: model.state.noteLabelMode
-        )
+    private func appearance(for note: Note, context: NoteLabelContext) -> NoteAppearance {
+        NoteAppearance(note: note, isSelected: model.state.isSelected(note), context: context)
     }
 
-    private func whiteKey(_ note: Note, height: CGFloat) -> some View {
-        let appearance = appearance(for: note)
+    private func isSounding(_ note: Note) -> Bool {
+        model.soundingNotes.contains(note)
+    }
+
+    /// The light fill marking a key in the next chord.
+    private func previewColor(_ note: Note, context: NoteLabelContext) -> Color {
+        NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: context.key))
+    }
+
+    private func whiteKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
+        let appearance = appearance(for: note, context: context)
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
         return Button {
             model.toggle(note)
@@ -80,18 +85,20 @@ struct PianoView: View {
             }
             .padding(.bottom, 8)
             .frame(width: whiteKeyWidth, height: height)
+            .noteFlash(isSounding(note))
+            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         .clipShape(shape)
         // A filled key gets an edge in the card's color, separating it from a filled neighbor.
         .overlay(shape.strokeBorder(appearance.isSelected ? theme.cardBackground : theme.whiteKeyBorder, lineWidth: 1))
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave)")
+        .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 
-    private func blackKey(_ note: Note, height: CGFloat) -> some View {
-        let appearance = appearance(for: note)
+    private func blackKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
+        let appearance = appearance(for: note, context: context)
         return Button {
             model.toggle(note)
         } label: {
@@ -103,6 +110,8 @@ struct PianoView: View {
             }
             .padding(.bottom, 4)
             .frame(width: blackKeyWidth, height: height)
+            .noteFlash(isSounding(note))
+            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
@@ -114,7 +123,7 @@ struct PianoView: View {
                 .padding(.top, -2)
         }
         .help(note.description)
-        .accessibilityLabel("\(appearance.label)\(note.octave)")
+        .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 

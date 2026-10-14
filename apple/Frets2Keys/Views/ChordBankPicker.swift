@@ -1,9 +1,14 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// Pick a root and chord type, hear it, then add it to the active set or just select it.
+/// Pick a root and chord type (or scale), hear it, then add it to the active set or just show it.
 /// Shown in the side panel (an inspector), which iPhone presents as a sheet.
 struct ChordBankPicker: View {
+    enum Mode: String, CaseIterable {
+        case chords = "Chords"
+        case scales = "Scales"
+    }
+
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     #if os(iOS)
@@ -11,6 +16,8 @@ struct ChordBankPicker: View {
     #endif
     @AppStorage("chordBankRoot") private var root = 0
     @AppStorage("chordBankQuality") private var qualityID = ChordBank.qualities[0].id
+    @AppStorage("chordBankMode") private var mode = Mode.chords
+    @AppStorage("scaleBankType") private var scaleType = ScaleType.major
     /// The bank's own key, starting from the app's key. Changing it doesn't change the app's key.
     @State private var key: MusicalKey?
     @State private var hasLoadedKey = false
@@ -21,6 +28,21 @@ struct ChordBankPicker: View {
 
     private var notes: [Note] { ChordBank.notes(root: root, quality: quality) }
 
+    private var scale: MusicalKey { MusicalKey(root: root, type: scaleType) }
+
+    /// The section additions go to, named on the button when the set has sections.
+    private var targetSection: ChordSection? {
+        let set = model.state.activeSet
+        guard set.sections.count > 1 else { return nil }
+        let id = model.bankTargetSectionID ?? model.state.activeSectionID
+        return set.sections.first { $0.id == id } ?? set.sections.last
+    }
+
+    private var addTitle: String {
+        guard let section = targetSection,
+              let index = model.state.activeSet.sections.firstIndex(of: section) else { return "Add to Set" }
+        return "Add to \(section.displayName(index: index))"
+    }
     var body: some View {
         ScrollView {
             content
@@ -42,6 +64,7 @@ struct ChordBankPicker: View {
 
     private func close() {
         model.isChordBankPresented = false
+        model.bankTargetSectionID = nil
     }
 
     /// Beside the instruments (iPad, Mac) the panel stays open so several chords can be added in a
@@ -71,6 +94,22 @@ struct ChordBankPicker: View {
                 .accessibilityLabel("Close")
             }
 
+            Picker("Add", selection: $mode) {
+                ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            switch mode {
+            case .chords: chordChoices
+            case .scales: scaleChoices
+            }
+        }
+        .padding(20)
+    }
+
+    private var chordChoices: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Text("Key")
                     .font(.subheadline.weight(.medium))
@@ -80,7 +119,7 @@ struct ChordBankPicker: View {
                 Spacer(minLength: 0)
             }
 
-            if let key {
+            if let key, key.isHeptatonic {
                 section("Chords in \(key.name(sharpsOnly: model.state.sharpsOnly))") {
                     VStack(spacing: 6) {
                         diatonicRow(key.diatonicChords())
@@ -112,13 +151,127 @@ struct ChordBankPicker: View {
                     }
                 }
             }
-
         }
-        .padding(20)
+    }
+
+    private var scaleChoices: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            section("Root") {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                    ForEach(0..<12, id: \.self) { pitchClass in
+                        tile(rootName(pitchClass), isSelected: root == pitchClass, role: .chromatic(pitchClass)) {
+                            root = pitchClass
+                            model.previewScale(MusicalKey(root: pitchClass, type: scaleType))
+                        }
+                    }
+                }
+            }
+
+            ForEach(ScaleType.Family.allCases, id: \.self) { family in
+                section(family.rawValue) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 6)], spacing: 6) {
+                        ForEach(family.types) { type in
+                            tile(
+                                type.name.prefix(1).uppercased() + type.name.dropFirst(),
+                                isSelected: scaleType == type,
+                                selectedColor: NotePalette.chromatic[root]
+                            ) {
+                                scaleType = type
+                                model.previewScale(MusicalKey(root: root, type: type))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        switch mode {
+        case .chords: chordFooter
+        case .scales: scaleFooter
+        }
+    }
+
+    /// The chosen scale's name, notes and degrees, with Show / Add to Set.
+    private var scaleFooter: some View {
+        let isFull = model.state.savedChords.count >= AppState.maxSavedChords
+        let sharpsOnly = model.state.sharpsOnly
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(scale.name(sharpsOnly: sharpsOnly))
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                Button {
+                    model.previewScale(scale)
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Hear this scale")
+                .accessibilityLabel("Hear this scale")
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(Array(zip(scale.noteNames(sharpsOnly: sharpsOnly), scale.type.degrees)), id: \.1) { name, degree in
+                        VStack(spacing: 1) {
+                            Text(name).font(.system(size: 12, weight: .medium))
+                            Text(degree.label).font(.system(size: 10)).opacity(0.85)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 28)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 3)
+                        .background(NotePalette.solid(for: .scaleDegree(degree.number - 1)), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(zip(scale.noteNames(sharpsOnly: sharpsOnly), scale.degreeLabels).map { "\($0) \($1)" }.joined(separator: ", "))
+
+            HStack(spacing: 8) {
+                Button {
+                    model.showScale(scale)
+                    closeIfCoveringContent()
+                } label: {
+                    Text("Show").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .help("Highlight this scale on the instruments without saving it")
+
+                Button {
+                    model.addScale(scale)
+                    closeIfCoveringContent()
+                } label: {
+                    Text(addTitle)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Tailwind.blue500)
+                .disabled(isFull)
+                .help("Save this scale in \(model.state.activeSet.name)")
+            }
+            .controlSize(.large)
+
+            if isFull {
+                Text("This set has \(AppState.maxSavedChords) chords and scales, the maximum. Delete one to add more.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 
     /// The chosen chord's name and notes, with Select / Add to Set.
-    private var footer: some View {
+    private var chordFooter: some View {
         let isFull = model.state.savedChords.count >= AppState.maxSavedChords
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -163,7 +316,8 @@ struct ChordBankPicker: View {
                     model.addBankChord(notes)
                     closeIfCoveringContent()
                 } label: {
-                    Text("Add to Set")
+                    Text(addTitle)
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -175,7 +329,7 @@ struct ChordBankPicker: View {
             .controlSize(.large)
 
             if isFull {
-                Text("This set has \(AppState.maxSavedChords) chords, the maximum. Delete one to add more.")
+                Text("This set has \(AppState.maxSavedChords) chords and scales, the maximum. Delete one to add more.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -225,6 +379,10 @@ struct ChordBankPicker: View {
         switch quality.id {
         case "maj": return ""
         case "dim": return "°"
+        case "dim7": return "°7"
+        case "aug": return "+"
+        case "augMaj7": return "+maj7"
+        case "mMaj7": return "m(maj7)"
         case "m7b5": return "ø7"
         default: return quality.id
         }

@@ -21,6 +21,7 @@ struct TutorialView: View {
         ("Transpose down", "- / _"),
         ("Play chord", "Return"),
         ("Toggle loop", "Space"),
+        ("Notes / degrees / intervals", "N"),
         ("Previous chord", "←"),
         ("Next chord", "→"),
     ]
@@ -46,7 +47,9 @@ struct TutorialView: View {
                     }
 
                     section("Keys") {
-                        Text("You can choose to select a major/minor key from the menu in the top left to have notes highlighted for that selected key. You can also choose how those notes will be displayed by going to the settings. You can hide notes outside of the key. You can also select \"No key\" and it will show all the notes without any highlighting.")
+                        Text("You can choose to select a major/minor key from the menu in the top left to have notes highlighted for that selected key. More Scales has modes, pentatonics, blues and more. You can also choose how those notes will be displayed by going to the settings. You can hide notes outside of the key. You can also select \"No key\" and it will show all the notes without any highlighting.")
+                            .bodyStyle()
+                        Text("Notes can be labeled by name, by scale degree in the key (1, 2, ♭3…), or by interval from the selected chord's root (R, 3, 5, ♭7…). Switch in the key menu, or press N.")
                             .bodyStyle()
                     }
 
@@ -70,14 +73,18 @@ struct TutorialView: View {
                     }
 
                     section("Chord Sets") {
-                        Text("Saved chords belong to a chord set, such as a song or a practice routine. Use the set menu at the top of the chord panel to switch sets, or to create, rename, duplicate and delete them. Looping plays through the current set.")
+                        Text("Saved chords belong to a chord set, such as a song or a practice routine. Use the set menu at the top of the chord panel to switch sets, or to create, rename, duplicate and delete them.")
+                            .bodyStyle()
+                        Text("Split a set into sections, like a verse and chorus, with the Add Section button. Drag chords between sections, drag a section's name to reorder it, or use the section's menu. Looping plays through the whole set, section by section, and each section can loop on its own.")
+                            .bodyStyle()
+                        Text("While looping, the instruments show the next chord's notes in a lighter color over each chord's last two beats. You can turn this off with Show next chord in Settings.")
                             .bodyStyle()
                         Text("Your chord sets sync through iCloud to your other devices signed in to the same Apple Account.")
                             .bodyStyle()
                     }
 
                     section("Chord Bank") {
-                        Text("Tap Add Chord to pick from common chords by root and type. You'll hear each one as you choose; then add it to the current set, or just select it to see it on the instruments.")
+                        Text("Tap Add Chord to pick from common chords by root and type. You'll hear each one as you choose; then add it to the current set, or just select it to see it on the instruments. The Scales tab works the same way for scales: a saved scale shows on the instruments when you tap it, so you can see a chord against it.")
                             .bodyStyle()
                     }
 

@@ -5,6 +5,9 @@ struct ContentView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var isFocused: Bool
     @State private var renameText = ""
+    @State private var sectionRenameText = ""
+    /// The section's current name, shown as the placeholder.
+    @State private var sectionRenamePlaceholder = ""
 
     private var renameBinding: Binding<Bool> {
         Binding(get: { model.setBeingRenamed != nil }, set: { if !$0 { model.setBeingRenamed = nil } })
@@ -12,6 +15,21 @@ struct ContentView: View {
 
     private var deleteBinding: Binding<Bool> {
         Binding(get: { model.setPendingDeletion != nil }, set: { if !$0 { model.setPendingDeletion = nil } })
+    }
+
+    private var sectionRenameBinding: Binding<Bool> {
+        Binding(get: { model.sectionBeingRenamed != nil }, set: { if !$0 { model.sectionBeingRenamed = nil } })
+    }
+
+    private var sectionDeleteBinding: Binding<Bool> {
+        Binding(get: { model.sectionPendingDeletion != nil }, set: { if !$0 { model.sectionPendingDeletion = nil } })
+    }
+
+    private var sectionDeleteTitle: String {
+        let sections = model.state.activeSet.sections
+        let index = sections.firstIndex { $0.id == model.sectionPendingDeletion }
+        let name = index.map { sections[$0].displayName(index: $0) } ?? "Section"
+        return "Delete \u{201C}\(name)\u{201D}?"
     }
 
     private var deleteTitle: String {
@@ -37,6 +55,7 @@ struct ContentView: View {
 
                 if Device.isPhone {
                     instrumentPages(padding: padding)
+                        .environment(\.nextChordHint, nextChordHint)
                 } else {
                     ScrollView(.vertical) {
                         VStack(spacing: 16) {
@@ -46,6 +65,7 @@ struct ContentView: View {
                                 PianoView(targetHeight: pianoTargetHeight)
                             }
                         }
+                        .environment(\.nextChordHint, nextChordHint)
                         .padding(.horizontal, padding)
                         .padding(.vertical, Self.instrumentsVerticalPadding)
                         .centered()
@@ -124,6 +144,32 @@ struct ContentView: View {
             }
         } message: {
             Text("Its saved chords will be removed. This can't be undone.")
+        }
+        .alert("Rename Section", isPresented: sectionRenameBinding) {
+            TextField(sectionRenamePlaceholder, text: $sectionRenameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Rename") {
+                if let id = model.sectionBeingRenamed { model.renameSection(id, to: sectionRenameText) }
+            }
+        } message: {
+            Text("For example Verse, Chorus or Bridge.")
+        }
+        .alert(sectionDeleteTitle, isPresented: sectionDeleteBinding) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let id = model.sectionPendingDeletion { model.deleteSection(id) }
+            }
+        } message: {
+            Text("Its chords and scales will be removed. This can't be undone.")
+        }
+        .onChange(of: model.sectionBeingRenamed) { _, id in
+            let sections = model.state.activeSet.sections
+            if let id, let index = sections.firstIndex(where: { $0.id == id }) {
+                // Numbered default names ("Section 2") are left out so typing replaces them.
+                let name = sections[index].displayName(index: index)
+                sectionRenamePlaceholder = name
+                sectionRenameText = name.wholeMatch(of: /Section \d+/) == nil ? name : ""
+            }
         }
         .onChange(of: model.setBeingRenamed) { _, id in
             if let id, let set = model.state.chordSets.first(where: { $0.id == id }) {
@@ -218,6 +264,13 @@ struct ContentView: View {
         return min(fretboardCardHeight, spare)
     }
 
+    /// The next chord's notes, shown in a light fill over the last two beats before a change while
+    /// looping.
+    private var nextChordHint: NextChordHint {
+        guard let next = model.nextChord, model.isLooping else { return NextChordHint() }
+        return NextChordHint(notes: Set(next.notes), isShowing: model.isPreviewingNext, fadeDuration: model.previewFadeDuration)
+    }
+
     @ViewBuilder
     private func fretboards(width: CGFloat) -> some View {
         let boards = model.state.fretboards
@@ -247,7 +300,7 @@ struct ContentView: View {
 
 /// The web app's keyboard shortcuts.
 enum Shortcut: CaseIterable {
-    case clear, saveNew, update, transposeUp, transposeDown, play, loop, previous, next
+    case clear, saveNew, update, transposeUp, transposeDown, play, loop, previous, next, cycleLabels
 
     init?(_ press: KeyPress) {
         switch press.key {
@@ -262,6 +315,7 @@ enum Shortcut: CaseIterable {
             case "s": self = .update
             case "+", "=": self = .transposeUp
             case "-", "_": self = .transposeDown
+            case "n": self = .cycleLabels
             default: return nil
             }
         }
@@ -279,6 +333,7 @@ enum Shortcut: CaseIterable {
         case .loop: model.toggleLoop()
         case .previous: model.selectPreviousChord()
         case .next: model.selectNextChord()
+        case .cycleLabels: model.cycleNoteLabels()
         }
     }
 }
@@ -290,7 +345,7 @@ struct ChordLimitWarning: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-            Text("Maximum of \(AppState.maxSavedChords) chords reached. Delete some chords to save new ones.")
+            Text("This set is full (\(AppState.maxSavedChords) chords and scales). Delete some to save new ones.")
                 .font(.system(size: 14))
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {
