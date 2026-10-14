@@ -9,6 +9,10 @@ final class SynthEngine: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private var sourceNode: AVAudioSourceNode?
     private var mixer: OSAllocatedUnfairLock<SynthMixer>?
+    /// The latest render: the audio time (seconds) of its first sample, and the host time at which
+    /// that sample reaches the output.
+    private let lastRender = OSAllocatedUnfairLock<(audioTime: Double, hostTime: UInt64)?>(initialState: nil)
+    private var sampleRate = 44_100.0
 
     private init() {
         NotificationCenter.default.addObserver(
@@ -18,18 +22,14 @@ final class SynthEngine: @unchecked Sendable {
         }
     }
 
-    func playNote(_ note: Note) {
-        withMixer { $0.playNote(note) }
+    func playNote(_ note: Note, instrument: SynthInstrument) {
+        withMixer { $0.playNote(note, instrument: instrument) }
     }
 
-    func play(_ notes: [Note], mode: PlayMode) {
-        withMixer { $0.play(notes, mode: mode) }
-    }
-
-    /// Schedules notes at `time` on the `currentTime` clock, so they start exactly on time however
-    /// late the caller runs.
-    func play(_ notes: [Note], mode: PlayMode, at time: Double) {
-        withMixer { $0.play(notes, mode: mode, at: time) }
+    /// Plays notes now, or at `time` on the `currentTime` clock so they start exactly on time
+    /// however late the caller runs.
+    func play(_ notes: [Note], mode: PlayMode, at time: Double? = nil, arpeggioStep: Double, instrument: SynthInstrument) {
+        withMixer { $0.play(notes, mode: mode, at: time, arpeggioStep: arpeggioStep, instrument: instrument) }
     }
 
     /// Seconds of audio rendered so far; starts the engine if needed. Resets if the output device
@@ -37,6 +37,26 @@ final class SynthEngine: @unchecked Sendable {
     var currentTime: Double {
         startIfNeeded()
         return mixer?.withLock { $0.currentTime } ?? 0
+    }
+
+    /// Seconds from now until the sample at `audioTime` (on the `currentTime` clock) is actually
+    /// heard: rendering runs ahead of the speakers by the output buffer and device latency.
+    func secondsUntilHeard(_ audioTime: Double) -> Double {
+        startIfNeeded()
+        guard let render = lastRender.withLock({ $0 }) else { return audioTime - currentTime }
+        let latency = engine.outputNode.presentationLatency
+        let heardAt = Self.seconds(fromHostTime: render.hostTime) + (audioTime - render.audioTime) + latency
+        return heardAt - Self.seconds(fromHostTime: mach_absolute_time())
+    }
+
+    private static let timebase: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
+
+    private static func seconds(fromHostTime hostTime: UInt64) -> Double {
+        Double(hostTime) * Double(timebase.numer) / Double(timebase.denom) / 1_000_000_000
     }
 
     private func withMixer(_ change: @Sendable (inout SynthMixer) -> Void) {
@@ -66,13 +86,22 @@ final class SynthEngine: @unchecked Sendable {
             let sampleRate = outputRate > 0 ? outputRate : 44_100
             guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return }
 
+            self.sampleRate = sampleRate
             let mixer = OSAllocatedUnfairLock(initialState: SynthMixer(sampleRate: sampleRate))
-            let node = AVAudioSourceNode(format: format) { _, _, frameCount, bufferList in
+            let lastRender = self.lastRender
+            lastRender.withLock { $0 = nil }
+            let node = AVAudioSourceNode(format: format) { _, timestamp, frameCount, bufferList in
                 let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
+                let hostTime = timestamp.pointee.mFlags.contains(.hostTimeValid) ? timestamp.pointee.mHostTime : nil
                 for buffer in buffers {
                     guard let data = buffer.mData?.assumingMemoryBound(to: Float.self) else { continue }
                     nonisolated(unsafe) let output = data
-                    mixer.withLock { $0.render(into: output, frameCount: Int(frameCount)) }
+                    let start = mixer.withLock { mixer -> Double in
+                        let start = mixer.currentTime
+                        mixer.render(into: output, frameCount: Int(frameCount))
+                        return start
+                    }
+                    if let hostTime { lastRender.withLock { $0 = (start, hostTime) } }
                     break
                 }
                 // Mono source: copy into any extra channels.

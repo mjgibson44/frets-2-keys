@@ -357,3 +357,71 @@ final class SectionTests: XCTestCase {
         XCTAssertEqual(mac.activeSet.sections.map(\.name), ["Verse", "Chorus"])
     }
 }
+
+final class NextChordTests: XCTestCase {
+    func testNextChordWrapsAndSkipsScales() {
+        var state = AppState()
+        state.addChord(notes: ["C4", "E4", "G4"])
+        let c = state.activeChordID
+        state.addScale(.cMajor)
+        state.addChord(notes: ["F4", "A4", "C5"])
+        let f = state.activeChordID
+        XCTAssertEqual(state.chord(after: c)?.name, "Fmaj")
+        XCTAssertEqual(state.chord(after: f)?.name, "Cmaj")
+        XCTAssertNil(state.chord(after: nil))
+    }
+
+    func testNextChordWithinASection() {
+        var state = AppState()
+        state.addChord(notes: ["C4", "E4", "G4"])
+        let chorus = state.addSection(named: "Chorus")
+        state.addChord(notes: ["G3", "B3", "D4"], to: chorus)
+        let g = state.activeChordID
+        state.addChord(notes: ["A3", "C4", "E4"], to: chorus)
+        XCTAssertEqual(state.chord(after: g)?.name, "Am")
+        XCTAssertEqual(state.chord(after: state.activeChordID, inSection: chorus)?.name, "Gmaj")
+        XCTAssertEqual(state.chord(after: state.activeChordID)?.name, "Cmaj")
+    }
+
+    func testLoneChordHasNoNext() {
+        var state = AppState()
+        state.addChord(notes: ["C4", "E4", "G4"])
+        XCTAssertNil(state.chord(after: state.activeChordID))
+    }
+
+    func testSequencerSignalsTheLastRepeat() {
+        var state = AppState()
+        state.addChord(notes: ["C4", "E4", "G4"])
+        state.addChord(notes: ["F4", "A4", "C5"])
+        state.selectChord(id: state.savedChords[0].id)
+        var sequencer = LoopSequencer(startingFrom: state)
+        var signals: [Bool] = []
+        var countdown: [Int?] = []
+        for _ in 0..<LoopSequencer.repeatsPerChord {
+            _ = sequencer.nextBeat(&state)
+            signals.append(sequencer.changesOnNextBeat)
+            countdown.append(sequencer.beatsUntilChange)
+        }
+        XCTAssertEqual(signals, [false, false, false, true])
+        XCTAssertEqual(countdown, [4, 3, 2, 1])
+    }
+
+    func testIntervalsForAnotherChord() {
+        var state = AppState()
+        state.noteLabelContent = .intervals
+        state.select(notes: ["C4", "E4", "G4"])
+        let context = state.noteLabelContext(for: ["G3", "B3", "D4", "F4"])
+        XCTAssertEqual(context.label(for: "G4"), "R")
+        XCTAssertEqual(context.label(for: "F4"), "♭7")
+    }
+
+    func testSettingIsOnByDefaultAndPersists() throws {
+        var state = AppState()
+        XCTAssertTrue(state.showNextChord)
+        state.showNextChord = false
+        XCTAssertFalse(try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(state)).showNextChord)
+        XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: Data("{}".utf8)).showNextChord)
+        // The earlier off-by-default setting is ignored.
+        XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: Data(#"{"showNextChord":false}"#.utf8)).showNextChord)
+    }
+}

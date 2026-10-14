@@ -151,6 +151,17 @@ public struct ChordSet: Codable, Hashable, Identifiable, Sendable {
 /// Everything the app displays, plus the operations the UI and keyboard shortcuts perform.
 /// The selection itself isn't persisted (matching the web app); everything else is.
 public struct AppState: Codable, Equatable, Sendable {
+    public static let tempoRange = 60...180
+    /// The speed playback has always had: a chord every 0.8s, arpeggio notes 0.4s apart.
+    public static let defaultTempo = 75
+
+    public static func clampedTempo(_ tempo: Int) -> Int {
+        min(max(tempo, tempoRange.lowerBound), tempoRange.upperBound)
+    }
+
+    /// Seconds between arpeggio notes at the current tempo (an eighth note).
+    public var arpeggioStep: Double { 30 / Double(tempo) }
+
     /// Most chords and scales a set can hold, across all its sections.
     public static let maxSavedChords = 48
     public static let maxFretboards = 2
@@ -171,6 +182,14 @@ public struct AppState: Codable, Equatable, Sendable {
     public var keyLabelMode: KeyLabelMode = .showAll
     public var noteLabelMode: NoteLabelMode = .sharpsAndFlats
     public var noteLabelContent: NoteLabelContent = .names
+    /// Beats per minute for playback: a looped chord lasts one beat; arpeggios play two notes a beat.
+    public var tempo: Int = Self.defaultTempo {
+        didSet { tempo = Self.clampedTempo(tempo) }
+    }
+    /// The sound playback uses.
+    public var instrument: SynthInstrument = .classic
+    /// While looping, fades the set's next chord in on the instruments just before the change.
+    public var showNextChord = true
     public var darkMode = false
 
     public init() {
@@ -306,16 +325,27 @@ public struct AppState: Codable, Equatable, Sendable {
     }
 
     /// How notes are labeled and colored right now.
-    public var noteLabelContext: NoteLabelContext {
-        NoteLabelContext(
+    public var noteLabelContext: NoteLabelContext { noteLabelContext(for: selectedNotes) }
+
+    /// How notes are labeled and colored when showing `notes` (intervals measure from their root).
+    public func noteLabelContext(for notes: [Note]) -> NoteLabelContext {
+        let root = notes.isEmpty ? nil : chordRoot(named: ChordIdentifier.identify(notes) ?? "", notes: notes)
+        return NoteLabelContext(
             key: selectedKey,
             keyLabelMode: keyLabelMode,
             noteLabelMode: noteLabelMode,
             content: noteLabelContent,
-            intervals: noteLabelContent == .intervals
-                ? chordRootPitchClass.map { IntervalSpeller(root: $0, chord: selectedNotes) }
-                : nil
+            intervals: noteLabelContent == .intervals ? root.map { IntervalSpeller(root: $0, chord: notes) } : nil
         )
+    }
+
+    /// The chord after `chordID` (skipping scales, wrapping around), within `sectionID` when
+    /// given. Nil without a current chord, or when there's no other chord to move to.
+    public func chord(after chordID: UUID?, inSection sectionID: UUID? = nil) -> SavedChord? {
+        let chords = sectionID.flatMap { id in activeSet.sections.first { $0.id == id } }
+            .map { $0.chords.filter { !$0.isScale } } ?? chordsOnly
+        guard chords.count > 1, let chordID, let index = chords.firstIndex(where: { $0.id == chordID }) else { return nil }
+        return chords[(index + 1) % chords.count]
     }
 
     /// Piano keys from the C at or below the lowest open string up to E6.
@@ -605,7 +635,9 @@ public struct AppState: Codable, Equatable, Sendable {
     // MARK: - Persistence
 
     private enum CodingKeys: String, CodingKey {
-        case fretboards, chordSets, activeSetID, deletedSetIDs, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, noteLabelContent, darkMode
+        case fretboards, chordSets, activeSetID, deletedSetIDs, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, noteLabelContent, tempo, instrument, darkMode
+        /// Stored under a new name since it became on by default.
+        case showNextChord = "showsNextChord"
         /// Before chord sets existed, saved chords were stored directly.
         case savedChords
     }
@@ -632,6 +664,10 @@ public struct AppState: Codable, Equatable, Sendable {
         keyLabelMode = try container.decodeIfPresent(KeyLabelMode.self, forKey: .keyLabelMode) ?? .showAll
         noteLabelMode = try container.decodeIfPresent(NoteLabelMode.self, forKey: .noteLabelMode) ?? .sharpsAndFlats
         noteLabelContent = try container.decodeIfPresent(NoteLabelContent.self, forKey: .noteLabelContent) ?? .names
+        tempo = Self.clampedTempo(try container.decodeIfPresent(Int.self, forKey: .tempo) ?? Self.defaultTempo)
+        // An instrument from a newer version falls back to the classic sound.
+        instrument = (try? container.decodeIfPresent(SynthInstrument.self, forKey: .instrument)) ?? .classic
+        showNextChord = try container.decodeIfPresent(Bool.self, forKey: .showNextChord) ?? true
         darkMode = try container.decodeIfPresent(Bool.self, forKey: .darkMode) ?? false
     }
 
@@ -647,6 +683,9 @@ public struct AppState: Codable, Equatable, Sendable {
         try container.encode(keyLabelMode, forKey: .keyLabelMode)
         try container.encode(noteLabelMode, forKey: .noteLabelMode)
         try container.encode(noteLabelContent, forKey: .noteLabelContent)
+        try container.encode(tempo, forKey: .tempo)
+        try container.encode(instrument, forKey: .instrument)
+        try container.encode(showNextChord, forKey: .showNextChord)
         try container.encode(darkMode, forKey: .darkMode)
     }
 
@@ -666,6 +705,10 @@ public struct LoopSequencer: Sendable {
     public let sectionID: UUID?
     private var chordIndex = 0
     private var playCount = 0
+    /// True when the beat just played was the current chord's last, so the next beat moves on.
+    public private(set) var changesOnNextBeat = false
+    /// Beats (counting the one just played) until the next chord, or nil when it won't change.
+    public private(set) var beatsUntilChange: Int?
 
     public init(startingFrom state: AppState, sectionID: UUID? = nil) {
         self.sectionID = sectionID
@@ -694,26 +737,34 @@ public struct LoopSequencer: Sendable {
             state.activeChordID = chord.id
             notes = chord.notes
             playCount += 1
-            if playCount >= Self.repeatsPerChord {
+            beatsUntilChange = Self.repeatsPerChord - playCount + 1
+            changesOnNextBeat = playCount >= Self.repeatsPerChord
+            if changesOnNextBeat {
                 playCount = 0
                 chordIndex = (chordIndex + 1) % chords.count
             }
         } else if let chord = chords.first, sectionID != nil || state.selectedNotes.isEmpty {
             // A one-chord section (or set, with nothing else selected) repeats that chord.
+            changesOnNextBeat = false
+            beatsUntilChange = nil
             state.selectedNotes = chord.notes
             state.activeChordID = chord.id
             notes = chord.notes
         } else {
+            changesOnNextBeat = false
+            beatsUntilChange = nil
             notes = state.selectedNotes
         }
         return notes.isEmpty ? nil : notes
     }
 
-    /// Seconds until the next beat. Arpeggio notes are 0.4s apart, so the gap between loops matches.
-    public static func beatInterval(noteCount: Int, mode: PlayMode) -> Double {
+    /// Seconds until the next beat: one beat for a chord, or all of an arpeggio's notes (two a
+    /// beat), so the next arpeggio carries straight on.
+    public static func beatInterval(noteCount: Int, mode: PlayMode, tempo: Int = AppState.defaultTempo) -> Double {
+        let beat = 60 / Double(tempo)
         switch mode {
-        case .chord: return 0.8
-        case .arpeggio: return Double(noteCount) * SynthMixer.arpeggioStep
+        case .chord: return beat
+        case .arpeggio: return Double(noteCount) * beat / 2
         }
     }
 }

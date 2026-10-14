@@ -132,3 +132,34 @@ struct NoteTileStyle: ViewModifier {
         }
     }
 }
+
+/// While a note sounds during playback, its fret or piano key briefly shades: darker in light mode,
+/// lighter in dark mode. It snaps on and off. Apply it inside any fill it should shade.
+struct NoteFlash: ViewModifier {
+    @Environment(\.theme) private var theme
+    let isFlashing: Bool
+    /// Fret cells shade the same inset rounded square a selected fret is filled with.
+    var inset: CGFloat = 0
+    var cornerRadius: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        // Behind the content, so the note's label stays crisp on top of the shade.
+        content
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .inset(by: inset)
+                    .fill(theme.isDark ? Color.white : Color.black)
+                    .opacity(isFlashing ? (theme.isDark ? 0.38 : 0.32) : 0)
+                    // Instant both ways, so one note's shade doesn't linger into the next.
+                    .transaction { $0.animation = nil }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+extension View {
+    func noteFlash(_ isFlashing: Bool, inset: CGFloat = 0, cornerRadius: CGFloat = 0) -> some View {
+        modifier(NoteFlash(isFlashing: isFlashing, inset: inset, cornerRadius: cornerRadius))
+    }
+}

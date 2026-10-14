@@ -55,6 +55,7 @@ struct ContentView: View {
 
                 if Device.isPhone {
                     instrumentPages(padding: padding)
+                        .environment(\.nextChordHint, nextChordHint)
                 } else {
                     ScrollView(.vertical) {
                         VStack(spacing: 16) {
@@ -64,6 +65,7 @@ struct ContentView: View {
                                 PianoView(targetHeight: pianoTargetHeight)
                             }
                         }
+                        .environment(\.nextChordHint, nextChordHint)
                         .padding(.horizontal, padding)
                         .padding(.vertical, Self.instrumentsVerticalPadding)
                         .centered()
@@ -260,6 +262,13 @@ struct ContentView: View {
         guard !model.state.fretboards.isEmpty, fretboardCardHeight > 0 else { return nil }
         let spare = instrumentsAreaHeight - 2 * Self.instrumentsVerticalPadding - fretboardsHeight - 16
         return min(fretboardCardHeight, spare)
+    }
+
+    /// The next chord's notes, shown in a light fill over the last two beats before a change while
+    /// looping.
+    private var nextChordHint: NextChordHint {
+        guard let next = model.nextChord, model.isLooping else { return NextChordHint() }
+        return NextChordHint(notes: Set(next.notes), isShowing: model.isPreviewingNext, fadeDuration: model.previewFadeDuration)
     }
 
     @ViewBuilder

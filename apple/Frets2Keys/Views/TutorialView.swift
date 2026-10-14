@@ -77,6 +77,8 @@ struct TutorialView: View {
                             .bodyStyle()
                         Text("Split a set into sections, like a verse and chorus, with the Add Section button. Drag chords between sections, drag a section's name to reorder it, or use the section's menu. Looping plays through the whole set, section by section, and each section can loop on its own.")
                             .bodyStyle()
+                        Text("While looping, the instruments show the next chord's notes in a lighter color over each chord's last two beats. You can turn this off with Show next chord in Settings.")
+                            .bodyStyle()
                         Text("Your chord sets sync through iCloud to your other devices signed in to the same Apple Account.")
                             .bodyStyle()
                     }

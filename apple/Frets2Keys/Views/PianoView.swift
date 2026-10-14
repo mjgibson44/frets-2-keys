@@ -7,6 +7,7 @@ struct PianoView: View {
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.instrumentFillHeight) private var fillHeight
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.nextChordHint) private var hint
 
     /// Keys are narrower on an upright iPhone so more of the keyboard fits across the screen.
     private var isNarrow: Bool { Device.isPhone && verticalSizeClass == .regular }
@@ -61,6 +62,15 @@ struct PianoView: View {
         NoteAppearance(note: note, isSelected: model.state.isSelected(note), context: context)
     }
 
+    private func isSounding(_ note: Note) -> Bool {
+        model.soundingNotes.contains(note)
+    }
+
+    /// The light fill marking a key in the next chord.
+    private func previewColor(_ note: Note, context: NoteLabelContext) -> Color {
+        NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: context.key))
+    }
+
     private func whiteKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
         let appearance = appearance(for: note, context: context)
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
@@ -75,6 +85,8 @@ struct PianoView: View {
             }
             .padding(.bottom, 8)
             .frame(width: whiteKeyWidth, height: height)
+            .noteFlash(isSounding(note))
+            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         .clipShape(shape)
@@ -98,6 +110,8 @@ struct PianoView: View {
             }
             .padding(.bottom, 4)
             .frame(width: blackKeyWidth, height: height)
+            .noteFlash(isSounding(note))
+            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
         }
         .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
