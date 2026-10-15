@@ -58,6 +58,9 @@ jobs:
             echo "BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 100 ))"
           } >> "$GITHUB_ENV"
 
+      - name: Check API key
+        run: python3 .github/scripts/check_asc_key.py
+
       - name: Archive
         run: |
           xcodebuild archive \
@@ -72,7 +75,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
 
-      - name: Export and upload
+      - name: Export
         run: |
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
@@ -81,9 +84,29 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" || {
+            echo "::group::Distribution logs"
+            find "${TMPDIR:-/tmp}" -path '*xcdistributionlogs*' -name '*.log' -exec tail -n 60 {} \; 2>/dev/null
+            echo "::endgroup::"
+            exit 1
+          }
+          ls -la "$EXPORT_PATH"
+
+      - name: Upload to App Store Connect
+        run: |
+          # altool looks for the key as AuthKey_<id>.p8 in this folder.
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          cp "$KEY_PATH" "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8"
+          export API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/private_keys"
+          if [ "${{ matrix.platform }}" = "iOS" ]; then
+            PACKAGE=$(ls "$EXPORT_PATH"/*.ipa); TYPE=ios
+          else
+            PACKAGE=$(ls "$EXPORT_PATH"/*.pkg); TYPE=macos
+          fi
+          xcrun altool --upload-app -f "$PACKAGE" -t "$TYPE" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
           echo "Uploaded ${{ matrix.platform }} build $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove API key
         if: always()
-        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+        run: rm -rf "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/private_keys"
