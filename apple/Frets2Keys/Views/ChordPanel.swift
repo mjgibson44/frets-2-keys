@@ -317,7 +317,7 @@ private struct SectionView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @State private var isDropTarget = false
-    private var collapsed = CollapsedSections()
+    private let collapsed = CollapsedSections()
     let section: ChordSection
     let index: Int
     let count: Int
