@@ -58,6 +58,9 @@ jobs:
             echo "BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 100 ))"
           } >> "$GITHUB_ENV"
 
+      - name: Check API key
+        run: python3 .github/scripts/check_asc_key.py
+
       - name: Archive
         run: |
           xcodebuild archive \
