@@ -1,0 +1,89 @@
+name: TestFlight
+
+# Archives the app and uploads it to App Store Connect, where it shows up in
+# TestFlight once processing finishes. Run it from the Actions tab.
+#
+# Needs three repository secrets, all from an App Store Connect API key
+# (Users and Access > Integrations > App Store Connect API, role Admin):
+#   ASC_KEY_ID         the key's ID
+#   ASC_ISSUER_ID      the issuer ID shown above the keys table
+#   ASC_KEY_P8_BASE64  the downloaded AuthKey_<id>.p8, base64-encoded
+# Signing is cloud-managed: Xcode creates the certificate and profiles with the key.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which build to upload
+        type: choice
+        options: [iOS, macOS, both]
+        default: iOS
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["iOS","macOS"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Write API key
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          if [ -z "$ASC_KEY_P8_BASE64" ] || [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_ISSUER_ID" ]; then
+            echo "::error::Set the ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8_BASE64 secrets"; exit 1
+          fi
+          KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$KEY_PATH"
+          {
+            echo "KEY_PATH=$KEY_PATH"
+            echo "ARCHIVE_PATH=$RUNNER_TEMP/Frets2Keys.xcarchive"
+            echo "EXPORT_PATH=$RUNNER_TEMP/export"
+            # Offset leaves room for builds uploaded by hand from Xcode.
+            echo "BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 100 ))"
+          } >> "$GITHUB_ENV"
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project apple/Frets2Keys.xcodeproj \
+            -scheme Frets2Keys \
+            -configuration Release \
+            -destination "generic/platform=${{ matrix.platform }}" \
+            -archivePath "$ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
+
+      - name: Export and upload
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist apple/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "Uploaded ${{ matrix.platform }} build $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"

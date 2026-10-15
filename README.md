@@ -77,6 +77,18 @@ Pick the **Frets2Keys** scheme and choose an iPhone/iPad simulator or **My Mac**
 - `apple/Frets2KeysUITests/`: UI tests (iPhone landscape mode).
 - `apple/project.yml`: the [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec the Xcode project is generated from. After adding or removing source files, run `xcodegen generate` in `apple/` (install with `brew install xcodegen`).
 
+### Releasing to TestFlight
+
+The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives the app on a GitHub macOS runner and uploads it to App Store Connect. Run it from the Actions tab and pick iOS, macOS or both. Build numbers are the run number plus 100; bump `MARKETING_VERSION` in `apple/project.yml` (and the project) for a new version.
+
+One-time setup:
+
+1. In App Store Connect, create the app with bundle ID `com.mjgibson44.frets2keys` (register it under Certificates, Identifiers & Profiles first if it isn't listed, with iCloud enabled).
+2. Under Users and Access > Integrations > App Store Connect API, create a key with the **Admin** role (cloud-managed signing needs it) and download the `.p8`.
+3. Add repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8_BASE64` (`base64 -i AuthKey_XXXX.p8 | pbcopy`).
+
+To upload by hand instead: in Xcode choose Product > Archive, then Distribute App > TestFlight & App Store.
+
 ## Keyboard Shortcuts
 
 | Action | Shortcut |

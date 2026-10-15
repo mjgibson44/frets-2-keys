@@ -15,6 +15,7 @@
 		3D57F05C30CAA3A6D90CA8B4 /* HardwareKeyHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10560538D765892911349D8F /* HardwareKeyHandler.swift */; };
 		4AA607D8A26FA44A08517D3C /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E77F6DE21AC3BD604E375 /* FlowLayout.swift */; };
 		4AA662B6096EFCE71F872BB8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 62BD8F5050045D9731DCA9A1 /* Assets.xcassets */; };
+		7B3E1F0A2C4D5E6F7A8B9C0D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7B3E1F0A2C4D5E6F7A8B9C0E /* PrivacyInfo.xcprivacy */; };
 		4CC7B4B014CBE3A16143FD3D /* Frets2KeysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3469DF48E36B1A4EB678D28 /* Frets2KeysApp.swift */; };
 		50539B669DF78250A9922960 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116C88214FB3EC290861C99 /* ContentView.swift */; };
 		5DA4A108732E1DBAD48E2D96 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFDB65B29A9B6BFE59CDF05 /* TutorialView.swift */; };
@@ -46,6 +47,7 @@
 		2D93F6A12F829E1005F0DAA0 /* ChordLibrarySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordLibrarySync.swift; sourceTree = "<group>"; };
 		36CFCB4B5B6C7A84383E6357 /* ChordBankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordBankTests.swift; sourceTree = "<group>"; };
 		62BD8F5050045D9731DCA9A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7B3E1F0A2C4D5E6F7A8B9C0E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		649E0531C661CF6D575B0EFF /* ChordPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPanel.swift; sourceTree = "<group>"; };
 		6A4D45772E9285E4C67D5033 /* ChordBankPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordBankPicker.swift; sourceTree = "<group>"; };
 		6EED0E2BF15661D10AF16550 /* Frets2KeysCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Frets2KeysCore; path = Frets2KeysCore; sourceTree = SOURCE_ROOT; };
@@ -141,6 +143,7 @@
 				62BD8F5050045D9731DCA9A1 /* Assets.xcassets */,
 				C9EAD0833DBFAED29F817771 /* Frets2Keys-iOS.entitlements */,
 				87A292A63AD60178324355A7 /* Frets2Keys-macOS.entitlements */,
+				7B3E1F0A2C4D5E6F7A8B9C0E /* PrivacyInfo.xcprivacy */,
 				53151ED80747AB4848C4A291 /* App */,
 				A31CD29E8E655C2DC9CF53A9 /* Audio */,
 				E4CF1EADE0B274DAAE6CC796 /* Model */,
@@ -265,6 +268,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4AA662B6096EFCE71F872BB8 /* Assets.xcassets in Resources */,
+				7B3E1F0A2C4D5E6F7A8B9C0D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +334,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Frets 2 Keys";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Matt Gibson in 2026";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -463,6 +468,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Frets 2 Keys";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Created by Matt Gibson in 2026";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
