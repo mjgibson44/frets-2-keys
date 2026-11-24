@@ -3,6 +3,9 @@
 import pathlib
 out = pathlib.Path(__file__).parent
 
+# The variation the app uses. It is also written as icon.svg, the one SVG that is checked in.
+CHOSEN = "a11a-inset"
+
 RAINBOW = ["#EF4444", "#F97316", "#EAB308", "#22C55E", "#06B6D4", "#3B82F6"]
 RED, YEL, CYN = "#EF4444", "#EAB308", "#06B6D4"
 GOLD, IVORY, PAPER, SILVER = "#EBCB6B", "#FAFAF9", "#F4F4F5", "#D4D4D8"
@@ -14,17 +17,19 @@ def lin(id, stops, x1, y1, x2, y2):
 def backdrop(id, top, bottom):
     return lin(id, [(0, top), (1, bottom)], 0, 0, 0, 1024), f'<rect width="1024" height="1024" fill="url(#{id})"/>'
 
-def headstock(x, y, w, h, fill, hole):
-    """A block headstock: six string holes, three tuning pegs on each side."""
+def headstock(x, y, w, h, fill, hole, peg=None):
+    """A block headstock: six string holes, three tuning pegs on each side. `peg` scales the
+    pegs on their own, for when the body is enlarged and they'd otherwise run out of room."""
     k = w / 200
+    kp = peg or k
     p = []
     for cy in (y + h*0.231, y + h*0.5, y + h*0.769):
         for edge, d in ((x, -1), (x + w, 1)):
-            stem = (edge - 38*k, 40*k) if d < 0 else (edge - 2*k, 40*k)
-            knob = edge - 54*k if d < 0 else edge + 26*k
-            p.append(f'<rect x="{stem[0]:.1f}" y="{cy - 7*k:.1f}" width="{stem[1]:.1f}" height="{14*k:.1f}" fill="{fill}"/>')
-            p.append(f'<rect x="{knob:.1f}" y="{cy - 19*k:.1f}" width="{28*k:.1f}" height="{38*k:.1f}" rx="{6*k:.1f}" fill="{fill}"/>')
-    p.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{20*k:.1f}" fill="{fill}"/>')
+            stem = edge - 38*kp if d < 0 else edge - 2*kp
+            knob = edge - 54*kp if d < 0 else edge + 26*kp
+            p.append(f'<rect x="{stem:.1f}" y="{cy - 7*kp:.1f}" width="{40*kp:.1f}" height="{14*kp:.1f}" fill="{fill}"/>')
+            p.append(f'<rect x="{knob:.1f}" y="{cy - 19*kp:.1f}" width="{28*kp:.1f}" height="{38*kp:.1f}" rx="{6*kp:.1f}" fill="{fill}"/>')
+    p.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" rx="{20*k:.1f}" fill="{fill}"/>')
     for cx in (x + w*0.25, x + w*0.75):
         for cy in (y + h*0.231, y + h*0.5, y + h*0.769):
             p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{20*k:.1f}" fill="{hole}"/>')
@@ -41,18 +46,46 @@ def keys3(x, y, w, h, fill, cut):
         p.append(f'<rect x="{cx - 24*k:.1f}" y="{y - 1}" width="{48*k:.1f}" height="{h*0.575 + 1:.1f}" rx="{9*k:.1f}" fill="{cut}"/>')
     return "\n".join(p)
 
-def loops(stroke_for, width=13):
+def loops(stroke_for, width=13, step=24, count=6, offsets=None):
+    """`width` is one stroke width or one per string. `offsets` places each string's centre line
+    inwards from the outer one, for strings of unequal width; otherwise they're `step` apart."""
     s = []
-    for i in range(6):
-        x, y, w, h = 200 + 24*i, 96 + 24*i, 624 - 48*i, 832 - 48*i
-        s.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{w/2}" fill="none" stroke="{stroke_for(i)}" stroke-width="{width}"/>')
+    for i in range(count):
+        o = offsets[i] if offsets else step*i
+        sw = width[i] if isinstance(width, (list, tuple)) else width
+        x, y, w, h = 200 + o, 96 + o, 624 - 2*o, 832 - 2*o
+        s.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{w/2}" fill="none" stroke="{stroke_for(i)}" stroke-width="{sw}"/>')
     return "\n".join(s)
 
-def full_loop(pid, top, bottom, stroke_for, width, head, keys):
+def full_loop(pid, top, bottom, stroke_for, width, head, keys, k=1.0, step=24, count=6, peg=None, offsets=None, scale=1.0):
+    """The loop with the instruments scaled by k. Up to about 1.4 they grow from their centres
+    until they near the edge of the canvas, then inwards. Past that they're laid out across the
+    whole width: equal margins outside the pegs and the keys, and a gap between them."""
     d, r = backdrop(pid + "bg", top, bottom)
     bg = f"url(#{pid}bg)"
-    gaps = f'<rect x="170" y="356" width="236" height="312" fill="{bg}"/><rect x="596" y="356" width="292" height="312" fill="{bg}"/>'
-    return d, r + loops(stroke_for, width) + gaps + headstock(188, 378, 200, 268, head, bg) + keys3(616, 378, 252, 268, keys, bg)
+    if scale != 1:
+        # `scale` shrinks the whole drawing about the centre, for more margin. Cut-outs inside
+        # the scaled group use a copy of the background gradient stretched the opposite way, so
+        # they still match the background behind them.
+        d += lin(pid + "bgi", [(0, top), (1, bottom)], 0, round(512 - 512/scale, 2), 0, round(512 + 512/scale, 2))
+        bg = f"url(#{pid}bgi)"
+    hw, kw, h = 200*k, 252*k, 268*k
+    if k >= 1.45:
+        reach = 54 * (peg or k)
+        spare = 1024 - (hw + 2*reach + kw)
+        gap = max(40, spare*0.29)
+        margin = (spare - gap) / 2
+        hx, kx = margin + reach, 1024 - margin - kw
+    else:
+        hx = max(150, 188 - (hw - 200)/2)
+        kx = min(915, 868 + (kw - 252)/2) - kw
+    y = 512 - h/2
+    gaps = (f'<rect x="{hx - 18:.1f}" y="{y - 22:.1f}" width="{hw + 36:.1f}" height="{h + 44:.1f}" fill="{bg}"/>'
+            f'<rect x="{kx - 20:.1f}" y="{y - 22:.1f}" width="{kw + 40:.1f}" height="{h + 44:.1f}" fill="{bg}"/>')
+    art = loops(stroke_for, width, step, count, offsets) + gaps + headstock(hx, y, hw, h, head, bg, peg) + keys3(kx, y, kw, h, keys, bg)
+    if scale != 1:
+        art = f'<g transform="translate(512 512) scale({scale}) translate(-512 -512)">{art}</g>'
+    return d, r + art
 
 # Half-loop geometry: the instruments sit side by side and six strings join them in one curve.
 CX, R0, STEP, HALF_W = 524, 350, 34, 20
@@ -147,6 +180,48 @@ def build():
     gold = lambda pid, x1, x2: lin(pid + "str", [(0, GOLD), (1, "#FFFFFF")], x1, 0, x2, 0)
     d, b = full_loop("a", "#3A3A3F", "#202023", lambda i: "url(#astr)", 13, GOLD, IVORY)
     v.append(("a-refined", "A · Refined", "Unchanged from the last round.", d + gold("a", 200, 824), b))
+    # slug, k, string width, string spacing, string count, peg scale, name, description
+    for slug, k, width, step, count, peg, name, desc in [
+        ("a3-larger", 1.15, 13, 24, 6, None, "A3 · 15% larger", "A with the headstock and keys 15% larger. The loop is unchanged."),
+        ("a4-larger", 1.3, 13, 24, 6, None, "A4 · 30% larger", "The headstock and keys 30% larger. The strings now meet them at a slight angle."),
+        ("a5-larger", 1.4, 13, 24, 6, None, "A5 · 40% larger", "About as large as they go before the tuning pegs crowd the keys."),
+        ("a6-larger", 1.3, 16, 26, 6, None, "A6 · 30% larger, thicker strings", "A4 with strings about a quarter thicker, to match the heavier instruments."),
+        ("a7-larger-50", 1.5, 16, 26, 6, 1.25, "A7 · 50% larger", "Six strings as in A6. The tuning pegs grow less than the headstock so everything fits."),
+        ("a8-larger-60", 1.6, 16, 26, 6, 1.1, "A8 · 60% larger", "About the limit: the headstock and keys nearly fill the width."),
+        ("a9-5-strings", 1.3, 17, 29, 5, None, "A9 · 5 strings", "A6's size with five strings, each about a third thicker than A's."),
+        ("a10-4-strings", 1.3, 22, 37, 4, None, "A10 · 4 strings", "Four strings, each about two-thirds thicker than A's."),
+        ("a11-3-strings", 1.3, 29, 52, 3, None, "A11 · 3 strings", "Three strings, each more than twice as thick as A's."),
+        ("a12-larger-4-strings", 1.5, 22, 37, 4, 1.25, "A12 · 50% larger, 4 strings", "A7's size with A10's four strings."),
+        ("a13-larger-3-strings", 1.6, 29, 52, 3, 1.1, "A13 · 60% larger, 3 strings", "A8's size with A11's three strings."),
+    ]:
+        pid = slug.split("-")[0]
+        d, b = full_loop(pid, "#3A3A3F", "#202023", lambda i, pid=pid: f"url(#{pid}str)", width, GOLD, IVORY, k, step, count, peg)
+        v.append((slug, name, desc, d + gold(pid, 200, 824), b))
+    # Iterations on A11: three strings, with the instruments 20% larger than A's unless k says otherwise.
+    CHAMPAGNE, BLUE = "#F5E3A8", "#60A5FA"
+    def three(slug, name, desc, k=1.2, width=29, strokes=None, head=GOLD, keys=IVORY, ground=("#3A3A3F", "#202023"), offsets=None, scale=1.0):
+        pid = slug.split("-")[0]
+        stroke_for = (lambda i: strokes[i]) if strokes else (lambda i: f"url(#{pid}str)")
+        d, b = full_loop(pid, *ground, stroke_for, width, head, keys, k, 52, 3, None, offsets, scale)
+        if not strokes:  # the strings fade from the headstock's colour to the keys' white
+            d += lin(pid + "str", [(0, head), (1, "#FFFFFF")], 200, 0, 824, 0)
+        v.append((slug, name, desc, d, b))
+    # The same drawing as A11, A20 and A21, shrunk a little for more margin at the edges.
+    three("a11a-inset", "A11a · 6% smaller", "A11 with everything 6% smaller, for a little more margin.", k=1.3, scale=0.94)
+    three("a11b-inset", "A11b · 12% smaller", "A11 with everything 12% smaller.", k=1.3, scale=0.88)
+    three("a14-smaller", "A14 · Smaller instruments", "A11 with the headstock and keys a step smaller: 20% larger than A's, where A11's are 30%.")
+    three("a15-smaller-still", "A15 · Smaller still", "10% larger than A's, so more of the loop shows.", k=1.1)
+    three("a16-solid-gold", "A16 · Solid gold strings", "All three strings in the headstock's gold, with no fade to white.", strokes=[GOLD]*3)
+    three("a17-three-tones", "A17 · Three tones", "One tone per string: gold outside, pale gold, then white inside.", strokes=[GOLD, CHAMPAGNE, "#FFFFFF"])
+    three("a18-chord", "A18 · Chord colours", "The strings as a chord's root, third and fifth in the app's note colours, with white instruments.",
+          strokes=[RED, YEL, CYN], head=PAPER, keys=PAPER, ground=("#232327", "#0C0C0E"))
+    three("a19-blue", "A19 · Blue", "A lighter tint of the app's accent blue in place of gold.", head=BLUE)
+    three("a20-tapered", "A20 · Tapered strings", "Thick to thin from the outside in, like bass to treble strings.", width=[36, 27, 18], offsets=[0, 54.5, 100])
+    three("a20a-inset", "A20a · 6% smaller", "A20 with everything 6% smaller.", width=[36, 27, 18], offsets=[0, 54.5, 100], scale=0.94)
+    three("a20b-inset", "A20b · 12% smaller", "A20 with everything 12% smaller.", width=[36, 27, 18], offsets=[0, 54.5, 100], scale=0.88)
+    three("a21-finer", "A21 · Finer strings", "Thinner strings with more space between them.", width=20)
+    three("a21a-inset", "A21a · 6% smaller", "A21 with everything 6% smaller.", width=20, scale=0.94)
+    three("a21b-inset", "A21b · 12% smaller", "A21 with everything 12% smaller.", width=20, scale=0.88)
     d, b = half_loop("a2", "#3A3A3F", "#202023", lambda i: "url(#a2str)", GOLD, IVORY)
     v.append(("a2-half-loop", "A2 · No top loop", "A with only the bottom loop. The headstock and keys are about 25% taller and the strings half as thick again.", d + gold("a2", 174, 874), b))
     d, b = full_loop("b1", "#232327", "#0C0C0E", lambda i: RAINBOW[i], 14, PAPER, PAPER)
@@ -170,7 +245,10 @@ def build():
 if __name__ == "__main__":
     variants = build()
     for slug, name, desc, defs, body in variants:
-        (out / f"{slug}.svg").write_text(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>{defs}</defs>{body}</svg>\n')
+        text = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>{defs}</defs>{body}</svg>\n'
+        (out / f"{slug}.svg").write_text(text)
+        if slug == CHOSEN:
+            (out / "icon.svg").write_text(text)
     # Contact sheet: every variant with a rounded mask, large and at 2× home-screen size.
     size, pad, cols = 300, 24, 4
     rows = -(-len(variants) // cols)

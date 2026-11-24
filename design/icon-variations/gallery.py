@@ -6,7 +6,9 @@ subprocess.run([sys.executable, str(here / "gen.py")], check=True, stdout=subpro
 sys.path.insert(0, str(here))
 import gen
 
-NEW = {"a2-half-loop", "b2-half-loop", "b3-arch", "c2-pared-down", "c3-rainbow", "c4-headstock", "c5-headstock-gold"}
+NEW = {"a11a-inset", "a11b-inset", "a20a-inset", "a20b-inset", "a21a-inset", "a21b-inset"}
+# Slug prefixes to show, e.g. `python3 gallery.py a-refined a3 a4`; everything when none are given.
+SHOW = tuple(sys.argv[1:])
 GROUPS = [("A", "Strings loop from the headstock to the keys, in gold."),
           ("B", "The same idea in the app's scale-degree colours."),
           ("C", "Six strings become the six gaps between seven white keys.")]
@@ -19,11 +21,12 @@ def card(slug, name, desc):
 <div class="meta"><h3>{name}{tag}</h3><p>{desc}</p>
 <div class="walls"><div class="wall light">{sizes}</div><div class="wall dark">{sizes}</div></div></div></section>'''
 
-variants = gen.build()
+variants = [v for v in gen.build() if not SHOW or v[0].startswith(SHOW)]
 parts = []
 for letter, blurb in GROUPS:
     cards = "".join(card(slug, name, desc) for slug, name, desc, _, _ in variants if slug.startswith(letter.lower()))
-    parts.append(f'<h2>{letter} <span>{blurb}</span></h2><main>{cards}</main>')
+    if cards:
+        parts.append(f'<h2>{letter} <span>{blurb}</span></h2><main>{cards}</main>')
 
 html = f'''<!doctype html><html><head><meta charset="utf-8"><title>Frets 2 Keys icon variations</title>
 <style>
@@ -39,7 +42,7 @@ h3{{font-size:16px;margin:0 0 6px}} p{{margin:0 0 12px;color:#52525b;font-size:1
 .light{{background:linear-gradient(135deg,#dbeafe,#fce7f3)}} .dark{{background:linear-gradient(135deg,#1e1b4b,#111827)}}
 .s60{{width:60px;height:60px;border-radius:22.4%}} .s40{{width:40px;height:40px;border-radius:22.4%}} .s20{{width:20px;height:20px;border-radius:22.4%}}
 @media (prefers-color-scheme:dark){{body{{background:#18181b;color:#f4f4f5}} section{{background:#27272a;border-color:#3f3f46}} p,.lede{{color:#a1a1aa}} h2 span{{color:#a1a1aa}} .new{{color:#bfdbfe;background:#1e3a8a}}}}
-</style></head><body><h1>Frets 2 Keys — app icon variations, round 2</h1>
+</style></head><body><h1>Frets 2 Keys — app icon variations</h1>
 <p class="lede">Each shown large, then at home-screen (60), Spotlight (40) and Settings (20) sizes on light and dark wallpaper.</p>
 {"".join(parts)}</body></html>'''
 (here / "gallery.html").write_text(html)
