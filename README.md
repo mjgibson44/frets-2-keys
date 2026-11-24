@@ -8,8 +8,11 @@ A visual tool for translating chords between piano and stringed instruments like
 - **Visual Translation** - See the same notes highlighted across both instruments
 - **Audio Playback** - Hear notes as you click, play chords, or loop through saved progressions
 - **Chord Recognition** - Automatically identifies chord names from selected notes
-- **Save & Organize Chords** - Save up to 20 chords, drag to reorder, cycle through with arrow keys
-- **Key Highlighting** - Select a major/minor key to see which notes belong to it
+- **Chord Sets & Sections** - Group saved chords into named sets, split a set into sections like a verse and chorus, drag chords between them, and loop one section or the whole set
+- **Chord Bank** - Pick common chords (21 types on any root, or the chords in a key) instead of building them note by note
+- **Scales** - Choose any of 15 scales and modes (Dorian, pentatonics, blues, harmonic minor…) as the key, or save them in a set
+- **Degrees and Intervals** - Label notes by name, by scale degree in the key (1 2 ♭3…), or by interval from the chord's root (R 3 5 ♭7…); press N to switch
+- **Tempo and Sounds** - Set the tempo (60–180 BPM) and pick from seven synthesized sounds; notes flash as they play, and while looping the next chord fades in before each change
 - **Customizable Tuning** - Configure string count (4-8), tuning, and capo position
 - **Instrument Presets** - Guitar, bass, ukulele, mandolin, banjo tunings built-in
 - **Multiple Fretboards** - Display up to 2 guitar fretboards with different tunings
@@ -50,13 +53,6 @@ A native SwiftUI version of Frets 2 Keys lives in [`apple/`](apple). One multipl
 
 The native app also adds:
 
-- **Chord sets**: named groups of saved chords you can switch between, rename, duplicate and delete. Existing saved chords become "Set 1".
-- **Chord bank**: pick common chords (21 types on any root) instead of building them note by note.
-- **Scales**: choose any of 15 scales and modes (Dorian, pentatonics, blues, harmonic minor…) as the key, or save them in a set. Tapping a saved scale highlights it on the instruments, so you can see a chord against it.
-- **Degrees and intervals**: label notes by name, by scale degree in the key (1 2 ♭3…), or by interval from the selected chord's root (R 3 5 ♭7…). Press N to switch.
-- **Show next chord**: while looping, the instruments show the next chord's notes in a lighter color over each chord's last two beats.
-- **Tempo and sounds**: set the tempo (60–180 BPM) and pick from seven synthesized sounds; notes flash as they play.
-- **Sections**: split a set into sections like a verse and chorus. Drag chords between sections, reorder sections, and loop one section or the whole set.
 - **iCloud sync**: chord sets sync between your iPhone, iPad and Mac through iCloud key-value storage. Each set merges independently, with the newest edit winning.
 - **iPhone landscape**: turn the phone sideways to see just the guitar or just the piano, enlarged.
 

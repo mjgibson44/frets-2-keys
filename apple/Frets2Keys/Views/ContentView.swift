@@ -45,20 +45,20 @@ struct ContentView: View {
             let width = proxy.size.width
             let padding: CGFloat = Device.isPhone ? 16 : (width >= 600 ? 32 : 24)
 
-            // Top bar and chord panel stay put; the instruments scroll between them.
+            // The instrument cards fill the space between the top bar and the chord panel, which
+            // is divided off by a hairline. When they need more room than there is, they scroll.
             VStack(spacing: 0) {
                 HeaderView(instrumentChoice: phoneInstrumentChoice, instrumentOptions: instrumentOptions)
                     .padding(.horizontal, padding)
                     .padding(.top, Device.isPhone ? 4 : 16)
                     .padding(.bottom, 8)
-                    .centered()
 
                 if Device.isPhone {
                     instrumentPages(padding: padding)
                         .environment(\.nextChordHint, nextChordHint)
                 } else {
                     ScrollView(.vertical) {
-                        VStack(spacing: 16) {
+                        VStack(spacing: Self.instrumentSpacing) {
                             fretboards(width: width)
                                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fretboardsHeight = $0 }
                             if model.state.showPiano {
@@ -68,21 +68,15 @@ struct ContentView: View {
                         .environment(\.nextChordHint, nextChordHint)
                         .padding(.horizontal, padding)
                         .padding(.vertical, Self.instrumentsVerticalPadding)
-                        .centered()
+                        // Centered in the space when they don't fill it.
+                        .frame(minHeight: instrumentsAreaHeight)
                     }
+                    .scrollBounceBehavior(.basedOnSize)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { instrumentsAreaHeight = $0 }
                 }
 
-                // Floating glass cards: the selected chord (when there is one) above the chord set.
-                VStack(spacing: 8) {
-                    chordLimitWarning
-                    ChordPanel()
-                }
-                .padding(.horizontal, Device.isPhone ? 10 : padding)
-                .padding(.top, 8)
-                .padding(.bottom, Device.isPhone ? 2 : 12)
-                .centered()
-                .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
+                SectionDivider()
+                chordPanel(padding: padding)
             }
             .environment(\.layoutWidth, width)
         }
@@ -186,6 +180,17 @@ struct ContentView: View {
         }
     }
 
+    /// The selected chord above the chord set, with the same inset as the top bar.
+    private func chordPanel(padding: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            chordLimitWarning
+                .padding(.horizontal, padding)
+                .padding(.top, 8)
+            ChordPanel(padding: padding)
+        }
+        .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
+    }
+
     @ViewBuilder
     private var chordLimitWarning: some View {
         if model.showChordLimitWarning {
@@ -251,8 +256,9 @@ struct ContentView: View {
         }
     }
 
-    // iPad and Mac: measured so the piano can grow into spare room, up to a guitar's height.
-    private static let instrumentsVerticalPadding: CGFloat = 8
+    private static let instrumentSpacing: CGFloat = 16
+    private static let instrumentsVerticalPadding: CGFloat = 16
+    /// iPad and Mac: the space between the top bar and the chord panel, and the guitars in it.
     @State private var instrumentsAreaHeight: CGFloat = 0
     @State private var fretboardsHeight: CGFloat = 0
     @State private var fretboardCardHeight: CGFloat = 0
@@ -260,7 +266,7 @@ struct ContentView: View {
     /// As tall as a guitar card, or whatever's left below the guitars if that's less.
     private var pianoTargetHeight: CGFloat? {
         guard !model.state.fretboards.isEmpty, fretboardCardHeight > 0 else { return nil }
-        let spare = instrumentsAreaHeight - 2 * Self.instrumentsVerticalPadding - fretboardsHeight - 16
+        let spare = instrumentsAreaHeight - 2 * Self.instrumentsVerticalPadding - Self.instrumentSpacing - fretboardsHeight
         return min(fretboardCardHeight, spare)
     }
 
@@ -276,7 +282,8 @@ struct ContentView: View {
         let boards = model.state.fretboards
         if !boards.isEmpty {
             // Side by side when there's room, like the web app; stacked on narrow screens.
-            let layout = width >= 900 ? AnyLayout(HStackLayout(spacing: 16)) : AnyLayout(VStackLayout(spacing: 16))
+            let sideBySide = width >= 900
+            let layout = sideBySide ? AnyLayout(HStackLayout(spacing: Self.instrumentSpacing)) : AnyLayout(VStackLayout(spacing: Self.instrumentSpacing))
             layout {
                 ForEach(Array(boards.enumerated()), id: \.element.id) { index, board in
                     FretboardView(fretboard: board, title: "Guitar \(index + 1)")

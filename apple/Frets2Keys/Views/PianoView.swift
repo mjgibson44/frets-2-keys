@@ -14,7 +14,8 @@ struct PianoView: View {
     private var whiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
     private var blackKeyWidth: CGFloat { isNarrow ? 27 : 32 }
 
-    /// iPad and Mac: how tall the card may grow, to line up with the guitars when there's room.
+
+    /// iPad and Mac: how tall the card may grow, to match the guitars when there's room.
     /// It never shrinks below its usual size.
     var targetHeight: CGFloat?
 
@@ -23,19 +24,18 @@ struct PianoView: View {
         let notes = model.state.pianoNotes
         let whiteNotes = notes.filter { !$0.isBlackKey }
         let context = model.state.noteLabelContext
-        let inset: CGFloat = fillHeight != nil ? 12 : (wide ? 24 : 16)
         let standardWhiteHeight: CGFloat = wide ? 144 : 112
         let whiteHeight: CGFloat = if let fillHeight {
             // Filling a height (iPhone) makes the keys as tall as the space allows.
-            min(max(fillHeight - 2 * inset, 112), 300)
+            min(max(fillHeight, 112), 300)
         } else if let targetHeight {
-            max(targetHeight - 2 * inset, standardWhiteHeight)
+            max(targetHeight, standardWhiteHeight)
         } else {
             standardWhiteHeight
         }
         let blackHeight: CGFloat = fillHeight == nil && whiteHeight == standardWhiteHeight ? (wide ? 80 : 56) : (whiteHeight * 0.56).rounded()
 
-        Card(padding: EdgeInsets(top: inset, leading: inset, bottom: inset, trailing: inset)) {
+        InstrumentCard {
             ScrollView(.horizontal, showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
@@ -73,29 +73,33 @@ struct PianoView: View {
 
     private func whiteKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
         let appearance = appearance(for: note, context: context)
-        let shape = UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
         return Button {
             model.toggle(note)
         } label: {
             VStack {
                 Spacer(minLength: 0)
-                if appearance.showsLabel {
-                    keyLabel(appearance, plainTextColor: theme.pianoPlainText)
-                }
+                keySpot(note, appearance, context: context, size: whiteKeyWidth - 8, cornerRadius: 10, plainTextColor: theme.pianoPlainText)
             }
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
             .frame(width: whiteKeyWidth, height: height)
-            .noteFlash(isSounding(note))
-            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
         }
-        .buttonStyle(keyButtonStyle(appearance, normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
-        .clipShape(shape)
-        // A filled key gets an edge in the card's color, separating it from a filled neighbor.
-        .overlay(shape.strokeBorder(appearance.isSelected ? theme.cardBackground : theme.whiteKeyBorder, lineWidth: 1))
+        .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
+        // One line between neighboring keys. The keyboard's top and bottom edges are left to the
+        // card's border, so they aren't doubled up.
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(theme.whiteKeyBorder).frame(width: 1)
+        }
         .help(note.description)
         .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
+
+    /// A black key is its fill inside a 1pt ring in the white keys' line color. The ring sits
+    /// behind the fill rather than being stroked over it, so a colored key's rounded corners don't
+    /// pick up a muddy blend of the two.
+    private static let blackKeyEdge: CGFloat = 1
+    private static let blackKeyOuterShape = UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
+    private static let blackKeyInnerShape = UnevenRoundedRectangle(bottomLeadingRadius: 3, bottomTrailingRadius: 3)
 
     private func blackKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
         let appearance = appearance(for: note, context: context)
@@ -104,46 +108,41 @@ struct PianoView: View {
         } label: {
             VStack {
                 Spacer(minLength: 0)
-                if appearance.showsLabel {
-                    keyLabel(appearance, plainTextColor: theme.blackKeyPlainText)
-                }
+                keySpot(note, appearance, context: context, size: blackKeyWidth - 2 * Self.blackKeyEdge - 4, cornerRadius: 8, plainTextColor: theme.blackKeyPlainText)
             }
-            .padding(.bottom, 4)
-            .frame(width: blackKeyWidth, height: height)
-            .noteFlash(isSounding(note))
-            .nextChordFill(hint.isPreviewed(note, isSelected: appearance.isSelected), hint: hint, color: previewColor(note, context: context), inset: 0)
+            .padding(.bottom, 3)
+            .frame(width: blackKeyWidth - 2 * Self.blackKeyEdge, height: height - Self.blackKeyEdge)
         }
-        .buttonStyle(keyButtonStyle(appearance, normal: theme.blackKey, highlighted: theme.blackKeyHover))
-        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4))
-        // Sets the key apart from the white keys around it, which matters when both are filled.
-        // Its top edge sits just above the keyboard, where the scroll view clips it off.
-        .overlay {
-            UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
-                .strokeBorder(theme.cardBackground, lineWidth: 1.5)
-                .padding(.top, -2)
-        }
+        .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover))
+        .clipShape(Self.blackKeyInnerShape)
+        .padding([.leading, .trailing, .bottom], Self.blackKeyEdge)
+        .background(Self.blackKeyOuterShape.fill(theme.whiteKeyBorder))
         .help(note.description)
         .accessibilityLabel(context.accessibilityName(for: note))
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 
-    /// A selected key is filled with its note's color, so its label needs no square of its own.
-    @ViewBuilder
-    private func keyLabel(_ appearance: NoteAppearance, plainTextColor: Color) -> some View {
-        if appearance.isSelected {
-            NoteLabel(name: appearance.label, weight: .medium)
-                .foregroundStyle(.white)
-                .frame(width: 20, height: 20)
-        } else {
-            NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
+    /// The rounded square near the bottom of a key, like a fret's: filled with the note's color
+    /// when selected, otherwise holding the note's badge. The playback flash and next-chord fill
+    /// light up the same square.
+    private func keySpot(_ note: Note, _ appearance: NoteAppearance, context: NoteLabelContext, size: CGFloat, cornerRadius: CGFloat, plainTextColor: Color) -> some View {
+        Group {
+            if case .selected(let role) = appearance.style {
+                NoteLabel(name: appearance.label, weight: .medium)
+                    .foregroundStyle(.white)
+                    .frame(width: size, height: size)
+                    .noteFlash(isSounding(note), cornerRadius: cornerRadius)
+                    .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: cornerRadius))
+            } else {
+                ZStack {
+                    if appearance.showsLabel {
+                        NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
+                    }
+                }
+                .frame(width: size, height: size)
+                .noteFlash(isSounding(note), cornerRadius: cornerRadius)
+                .nextChordFill(hint.isPreviewed(note, isSelected: false), hint: hint, color: previewColor(note, context: context), inset: 0, cornerRadius: cornerRadius)
+            }
         }
-    }
-
-    private func keyButtonStyle(_ appearance: NoteAppearance, normal: Color, highlighted: Color) -> HighlightButtonStyle {
-        guard case .selected(let role) = appearance.style else {
-            return HighlightButtonStyle(normal: normal, highlighted: highlighted, cornerRadius: 4)
-        }
-        let solid = NotePalette.solid(for: role)
-        return HighlightButtonStyle(normal: solid, highlighted: solid.opacity(0.85), cornerRadius: 4)
     }
 }

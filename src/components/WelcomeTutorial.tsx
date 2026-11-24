@@ -72,7 +72,7 @@ export default function WelcomeTutorial({
               Keys
             </h3>
             <p className={`text-sm leading-relaxed ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
-              You can choose to select a major/minor key from the menu in the top left to have notes highlighted for that selected key. You can also choose how those notes will be displayed by going to the settings. You can hide notes outside of the key. You can also select "No key" and it will show all the notes without any highlighting.
+              You can choose to select a major/minor key from the menu in the top left to have notes highlighted for that selected key. You can also choose how those notes will be displayed by going to the settings. You can hide notes outside of the key. You can also select &ldquo;No key&rdquo; and it will show all the notes without any highlighting.
             </p>
           </div>
 
