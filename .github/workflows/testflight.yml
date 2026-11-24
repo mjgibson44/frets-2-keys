@@ -8,7 +8,11 @@ name: TestFlight
 #   ASC_KEY_ID         the key's ID
 #   ASC_ISSUER_ID      the issuer ID shown above the keys table
 #   ASC_KEY_P8_BASE64  the downloaded AuthKey_<id>.p8, base64-encoded
-# Signing is cloud-managed: Xcode creates the certificate and profiles with the key.
+# Signing is automatic, using the key. Export signs with Apple's cloud-managed
+# distribution certificate, which is reused. Archive is different: the runner starts
+# with no signing identity, so Xcode creates a new Apple Development certificate on
+# every job. The job revokes that certificate when it ends, because the account only
+# allows a few and Archive fails once they are used up.
 
 on:
   workflow_dispatch:
@@ -54,12 +58,16 @@ jobs:
             echo "KEY_PATH=$KEY_PATH"
             echo "ARCHIVE_PATH=$RUNNER_TEMP/Frets2Keys.xcarchive"
             echo "EXPORT_PATH=$RUNNER_TEMP/export"
+            echo "CERT_SNAPSHOT=$RUNNER_TEMP/certificates-before.json"
             # Offset leaves room for builds uploaded by hand from Xcode.
             echo "BUILD_NUMBER=$(( GITHUB_RUN_NUMBER + 100 ))"
           } >> "$GITHUB_ENV"
 
       - name: Check API key
         run: python3 .github/scripts/check_asc_key.py
+
+      - name: Record existing certificates
+        run: python3 .github/scripts/asc_certificates.py snapshot
 
       - name: Archive
         run: |
@@ -106,6 +114,12 @@ jobs:
           xcrun altool --upload-app -f "$PACKAGE" -t "$TYPE" \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
           echo "Uploaded ${{ matrix.platform }} build $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+
+      # Revokes only the development certificate that Archive created on this runner:
+      # new since the snapshot, and with its private key in this runner's keychain.
+      - name: Revoke this job's certificate
+        if: always()
+        run: python3 .github/scripts/asc_certificates.py revoke
 
       - name: Remove API key
         if: always()

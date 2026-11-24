@@ -2,7 +2,9 @@
 
 Prints only shapes and Apple's response, never the secret values.
 """
-import base64, json, os, re, subprocess, sys, time, urllib.error, urllib.request
+import os, re, sys, urllib.error, urllib.request
+
+from asc_api import make_token
 
 key_id = os.environ.get("ASC_KEY_ID", "")
 issuer = os.environ.get("ASC_ISSUER_ID", "")
@@ -25,24 +27,7 @@ for p in problems:
 if problems:
     sys.exit(1)
 
-def b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
-
-now = int(time.time())
-header = b64url(json.dumps({"alg": "ES256", "kid": key_id, "typ": "JWT"}).encode())
-payload = b64url(json.dumps({"iss": issuer, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"}).encode())
-signing_input = f"{header}.{payload}".encode()
-der = subprocess.run(["openssl", "dgst", "-sha256", "-sign", key_path], input=signing_input,
-                     capture_output=True, check=True).stdout
-
-# Convert the DER ECDSA signature to the raw r||s form JWT expects.
-def read_int(buf, i):
-    assert buf[i] == 0x02
-    n = buf[i + 1]
-    return int.from_bytes(buf[i + 2:i + 2 + n], "big"), i + 2 + n
-r, i = read_int(der, 2)
-s, _ = read_int(der, i)
-token = f"{header}.{payload}.{b64url(r.to_bytes(32, 'big') + s.to_bytes(32, 'big'))}"
+token = make_token(key_id, issuer, key_path)
 
 req = urllib.request.Request("https://api.appstoreconnect.apple.com/v1/apps?limit=1",
                              headers={"Authorization": f"Bearer {token}"})
