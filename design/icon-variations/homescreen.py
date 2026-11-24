@@ -77,8 +77,12 @@ def phone(name, uri):
 <div class="search"><svg viewBox="0 0 12 12" width="11" height="11"><circle cx="5" cy="5" r="3.6" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M7.8 7.8 L11 11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>Search</div>
 <div class="dock">{dock}</div></div></div><figcaption>{name}</figcaption></figure>'''
 
+# Slug prefixes to show, e.g. `python3 homescreen.py a-refined a3 a4`; everything when none are given.
+SHOW = tuple(sys.argv[1:])
 phones = []
 for s, name, desc, _, _ in gen.build():
+    if SHOW and not s.startswith(SHOW):
+        continue
     uri = "data:image/svg+xml;base64," + base64.b64encode((here / f"{s}.svg").read_bytes()).decode()
     phones.append(phone(name, uri))
 
