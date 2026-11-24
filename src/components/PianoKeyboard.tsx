@@ -1,16 +1,27 @@
 'use client';
 
-import { generatePianoRange, isBlackKey, noteToMidi, midiToNote, MusicalKey, isNoteInKey, getNoteDisplayName, getScaleDegree, getScaleDegreeColor, getOutOfKeyColor, getChromaticNoteColor, parseNoteDisplay } from '@/lib/notes';
-import { SelectedNote } from '@/lib/colors';
+import { generatePianoRange, isBlackKey, noteToMidi, midiToNote } from '@/lib/notes';
+import { NoteLabelContext, getNoteAppearance, getNoteColorRole, getNoteAccessibilityName } from '@/lib/noteLabels';
+import { getRoleSolidClass } from '@/lib/colors';
+import { NoteBadge, NoteLabelText } from './NoteBadge';
+import { NoteSpotOverlays, NextChordHint } from './NoteSpotOverlays';
 
 interface PianoKeyboardProps {
   tuning: string[];
-  selectedNotes: SelectedNote[];
+  selectedNotes: string[];
+  /** Notes playing right now, which flash. */
+  soundingNotes: ReadonlySet<string>;
+  /** While looping, the next chord's notes fade in lightly before the change. */
+  nextChordHint: NextChordHint;
   onNoteSelect: (note: string) => void;
-  selectedKey: MusicalKey | null;
-  keyLabelMode: 'onlyInKey' | 'showAll';
-  noteLabelMode: 'sharpsAndFlats' | 'sharpsOnly';
+  /** How notes are labeled (names, degrees or intervals) and which show, for the key. */
+  labelContext: NoteLabelContext;
   darkMode?: boolean;
+  /** How tall the card may grow, to match the guitars when there's room. It never shrinks below
+   *  its usual size. */
+  targetHeight?: number | null;
+  /** Wide layouts (600px and up) get taller keys. */
+  wide?: boolean;
 }
 
 const END_NOTE = 'E6';
@@ -28,206 +39,112 @@ const BLACK_KEY_AFTER: Record<string, string | null> = {
   'B': null,
 };
 
-export default function PianoKeyboard({ tuning, selectedNotes, onNoteSelect, selectedKey, keyLabelMode, noteLabelMode, darkMode = false }: PianoKeyboardProps) {
-  // Find the lowest note in the tuning
-  const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
-
+export default function PianoKeyboard({ tuning, selectedNotes, soundingNotes, nextChordHint, onNoteSelect, labelContext, darkMode = false, targetHeight, wide = true }: PianoKeyboardProps) {
   // Start from the nearest C below the lowest guitar note for a clean keyboard start
-  const startMidi = Math.floor(lowestGuitarMidi / 12) * 12; // Round down to nearest C
-  const startNote = midiToNote(startMidi);
+  const lowestGuitarMidi = Math.min(...tuning.map(noteToMidi));
+  const startNote = midiToNote(Math.floor(lowestGuitarMidi / 12) * 12);
 
   const allNotes = generatePianoRange(startNote, END_NOTE);
   const whiteNotes = allNotes.filter(note => !isBlackKey(note));
 
-  const getSelectedNote = (note: string): SelectedNote | undefined => {
-    return selectedNotes.find(sn => sn.note === note);
+  const standardWhiteHeight = wide ? 144 : 112;
+  // The card's 1px border sits above and below the keys.
+  const whiteHeight = targetHeight ? Math.max(targetHeight - 2, standardWhiteHeight) : standardWhiteHeight;
+  const blackHeight = whiteHeight === standardWhiteHeight ? (wide ? 80 : 56) : Math.round(whiteHeight * 0.56);
+
+  /** The rounded square near the bottom of a key, like a fret's: filled with the note's color
+   *  when selected, otherwise holding the note's badge. The playback flash and next-chord fill
+   *  light up the same square. */
+  const keySpot = (note: string, size: number, radius: number, plainTextClass: string) => {
+    const selected = selectedNotes.includes(note);
+    const appearance = getNoteAppearance(note, selected, labelContext);
+    const solid = getRoleSolidClass(getNoteColorRole(note, labelContext.key), darkMode);
+    const overlays = (
+      <NoteSpotOverlays
+        size={size}
+        radius={radius}
+        isSounding={soundingNotes.has(note)}
+        preview={!selected && nextChordHint.notes.includes(note) ? { color: solid, hint: nextChordHint } : null}
+        darkMode={darkMode}
+      />
+    );
+    if (selected) {
+      return (
+        <div
+          className={`relative flex items-center justify-center text-white font-medium ${solid}`}
+          style={{ width: size, height: size, borderRadius: radius }}
+        >
+          {overlays}
+          <span className="relative"><NoteLabelText label={appearance.label} /></span>
+        </div>
+      );
+    }
+    return (
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        {overlays}
+        <NoteBadge appearance={appearance} darkMode={darkMode} plainTextClass={plainTextClass} />
+      </div>
+    );
   };
 
-  const getNoteName = (note: string): string => {
-    const match = note.match(/^([A-G]#?)/);
-    return match ? match[1] : '';
-  };
-
-  const getOctave = (note: string): number => {
-    const match = note.match(/(\d+)$/);
-    return match ? parseInt(match[1], 10) : 0;
-  };
+  const keyProps = (note: string) => ({
+    title: note,
+    'aria-label': getNoteAccessibilityName(note, labelContext),
+    'aria-pressed': selectedNotes.includes(note),
+  });
 
   return (
-    <div className={`rounded-lg p-4 min-[600px]:p-[24px] ${
-      darkMode
-        ? 'bg-zinc-800 border border-zinc-700'
-        : 'bg-white border border-[#EDE9E9]'
+    <div className={`rounded-2xl overflow-hidden border ${
+      darkMode ? 'bg-[#1F1F22] border-zinc-700' : 'bg-white border-[#EDE9E9]'
     }`}>
       <div className="overflow-x-auto scrollbar-hide">
-        <div className="relative inline-block">
-        {/* White keys */}
-        <div className="flex">
-          {whiteNotes.map((note, index) => {
-            const selected = getSelectedNote(note);
-            const inKey = isNoteInKey(note, selectedKey);
-            const scaleDegree = getScaleDegree(note, selectedKey);
-            const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
-            const outOfKeyColor = getOutOfKeyColor(note, selectedKey);
-            const chromaticColor = getChromaticNoteColor(note);
-            const isSelected = !!selected;
-
-            // Determine the indicator square styling
-            let indicatorStyle = '';
-            if (isSelected && scaleDegreeColor) {
-              // Selected and in key: use scale degree color at 500 level with white text
-              indicatorStyle = `${scaleDegreeColor.bg500} text-white font-medium`;
-            } else if (isSelected && outOfKeyColor) {
-              // Selected but not in key: use out-of-key color at 500 level with white text
-              indicatorStyle = `${outOfKeyColor.bg500} text-white font-medium`;
-            } else if (isSelected) {
-              // Selected with no key: use chromatic color at 500 level with white text
-              indicatorStyle = `${chromaticColor.bg500} text-white font-medium`;
-            } else if (scaleDegreeColor && selectedKey) {
-              // Not selected but in key: use scale degree color at 100 level with border
-              indicatorStyle = darkMode
-                ? `${scaleDegreeColor.darkBg100} text-zinc-200 border ${scaleDegreeColor.darkBorder}`
-                : `${scaleDegreeColor.bg100} text-zinc-700 border ${scaleDegreeColor.border200}`;
-            } else {
-              // Not selected and not in key: transparent/no color
-              indicatorStyle = darkMode
-                ? 'text-zinc-300'
-                : 'text-zinc-600';
-            }
-
-            const showIndicator = isSelected || (scaleDegreeColor && selectedKey);
-
-            return (
+        <div className="relative inline-block align-top">
+          {/* White keys */}
+          <div className="flex">
+            {whiteNotes.map(note => (
               <button
                 key={note}
                 onClick={() => onNoteSelect(note)}
-                className={`
-                  h-28 min-[600px]:h-36 rounded-b
-                  flex flex-col items-center justify-end pb-2
-                  text-xs transition-colors
-                  ${darkMode
-                    ? 'bg-zinc-800 hover:bg-zinc-700 border border-zinc-600'
-                    : 'bg-white hover:bg-zinc-100 border border-[#EDE9E9]'
-                  }
-                `}
-                style={{ width: `${WHITE_KEY_WIDTH}px` }}
+                {...keyProps(note)}
+                className={`relative flex-shrink-0 flex flex-col items-center justify-end pb-1 text-xs transition-colors ${
+                  darkMode ? 'bg-zinc-800 hover:bg-zinc-700' : 'bg-white hover:bg-zinc-100'
+                }`}
+                style={{ width: WHITE_KEY_WIDTH, height: whiteHeight }}
               >
-                {keyLabelMode === 'onlyInKey' && !inKey && !isSelected ? null : (
-                  <div className="w-7 h-7 flex items-center justify-center">
-                    <div
-                      className={`
-                        ${isSelected ? 'w-7 h-7' : 'w-5 h-5'} flex items-center justify-center rounded
-                        ${showIndicator ? indicatorStyle : (darkMode ? 'text-zinc-300' : 'text-zinc-600')}
-                        ${keyLabelMode === 'showAll' && !inKey && !isSelected ? 'opacity-30' : ''}
-                      `}
-                    >
-                      {(() => {
-                        const displayName = noteLabelMode === 'sharpsOnly' ? note.replace(/\d+$/, '') : getNoteDisplayName(note, selectedKey);
-                        const { letter, accidental } = parseNoteDisplay(displayName);
-                        return (
-                          <span className="flex items-start leading-none">
-                            {letter}
-                            {accidental && <span className="text-[8px] leading-none">{accidental}</span>}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
+                {keySpot(note, WHITE_KEY_WIDTH - 8, 10, darkMode ? 'text-zinc-300' : 'text-zinc-600')}
+                {/* One line between neighboring keys. The keyboard's top and bottom edges are left
+                    to the card's border, so they aren't doubled up. */}
+                <span aria-hidden className={`absolute right-0 top-0 bottom-0 w-px ${darkMode ? 'bg-zinc-600' : 'bg-[#EDE9E9]'}`} />
+              </button>
+            ))}
+          </div>
+
+          {/* Black keys */}
+          {whiteNotes.map((whiteNote, index) => {
+            const blackKeyName = BLACK_KEY_AFTER[whiteNote.replace(/\d+$/, '')];
+            if (!blackKeyName) return null;
+            const blackNote = `${blackKeyName}${whiteNote.match(/(\d+)$/)?.[1] ?? ''}`;
+            if (!allNotes.includes(blackNote)) return null;
+
+            // Right edge of the white key, less half the black key's width.
+            const left = (index + 1) * WHITE_KEY_WIDTH - BLACK_KEY_WIDTH / 2;
+            return (
+              <button
+                key={blackNote}
+                onClick={() => onNoteSelect(blackNote)}
+                {...keyProps(blackNote)}
+                // The same 1px line as between the white keys, down the sides and along the bottom.
+                className={`absolute top-0 z-10 rounded-b border border-t-0 flex flex-col items-center justify-end pb-[3px] text-xs transition-colors ${
+                  darkMode
+                    ? 'bg-[#323236] hover:bg-zinc-700 border-zinc-600'
+                    : 'bg-[#F2EFEE] hover:bg-[#E7E3E1] border-[#EDE9E9]'
+                }`}
+                style={{ left, width: BLACK_KEY_WIDTH, height: blackHeight }}
+              >
+                {keySpot(blackNote, BLACK_KEY_WIDTH - 6, 8, darkMode ? 'text-zinc-400' : 'text-zinc-600')}
               </button>
             );
           })}
-        </div>
-
-        {/* Black keys */}
-        {whiteNotes.map((whiteNote, index) => {
-          const noteName = getNoteName(whiteNote);
-          const octave = getOctave(whiteNote);
-          const blackKeyName = BLACK_KEY_AFTER[noteName];
-
-          if (!blackKeyName) return null;
-
-          const blackNote = `${blackKeyName}${octave}`;
-
-          // Check if this black note exists in our range
-          if (!allNotes.includes(blackNote)) return null;
-
-          const selected = getSelectedNote(blackNote);
-          const inKey = isNoteInKey(blackNote, selectedKey);
-          const scaleDegree = getScaleDegree(blackNote, selectedKey);
-          const scaleDegreeColor = getScaleDegreeColor(scaleDegree);
-          const outOfKeyColor = getOutOfKeyColor(blackNote, selectedKey);
-          const chromaticColor = getChromaticNoteColor(blackNote);
-          const isSelected = !!selected;
-
-          // Determine the indicator square styling
-          let indicatorStyle = '';
-          if (isSelected && scaleDegreeColor) {
-            // Selected and in key: use scale degree color at 500 level with white text
-            indicatorStyle = `${scaleDegreeColor.bg500} text-white font-medium`;
-          } else if (isSelected && outOfKeyColor) {
-            // Selected but not in key: use out-of-key color at 500 level with white text
-            indicatorStyle = `${outOfKeyColor.bg500} text-white font-medium`;
-          } else if (isSelected) {
-            // Selected with no key: use chromatic color at 500 level with white text
-            indicatorStyle = `${chromaticColor.bg500} text-white font-medium`;
-          } else if (scaleDegreeColor && selectedKey) {
-            // Not selected but in key: use scale degree color at 100 level with border
-            indicatorStyle = darkMode
-              ? `${scaleDegreeColor.darkBg100} text-zinc-200 border ${scaleDegreeColor.darkBorder}`
-              : `${scaleDegreeColor.bg100} text-zinc-700 border ${scaleDegreeColor.border200}`;
-          } else {
-            // Not selected and not in key: transparent/no color
-            indicatorStyle = darkMode
-              ? 'text-zinc-400'
-              : 'text-zinc-600';
-          }
-
-          const showIndicator = isSelected || (scaleDegreeColor && selectedKey);
-
-          // Position: right edge of current white key minus half of black key width
-          const leftPosition = (index + 1) * WHITE_KEY_WIDTH - BLACK_KEY_WIDTH / 2;
-
-          return (
-            <button
-              key={blackNote}
-              onClick={() => onNoteSelect(blackNote)}
-              style={{ left: `${leftPosition}px`, width: `${BLACK_KEY_WIDTH}px` }}
-              className={`
-                absolute top-0 h-14 min-[600px]:h-20 rounded-b
-                flex flex-col items-center justify-end pb-1
-                text-xs transition-colors z-10
-                ${darkMode
-                  ? 'bg-zinc-700 hover:bg-zinc-600'
-                  : 'bg-zinc-200 hover:bg-zinc-300'
-                }
-              `}
-            >
-              {keyLabelMode === 'onlyInKey' && !inKey && !isSelected ? null : (
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <div
-                    className={`
-                      ${isSelected ? 'w-6 h-6' : 'w-4 h-4'} flex items-center justify-center rounded
-                      ${showIndicator ? indicatorStyle : (darkMode ? 'text-zinc-400' : 'text-zinc-600')}
-                      ${keyLabelMode === 'showAll' && !inKey && !isSelected ? 'opacity-30' : ''}
-                    `}
-                  >
-                    {(() => {
-                      const displayName = noteLabelMode === 'sharpsOnly' ? blackNote.replace(/\d+$/, '') : getNoteDisplayName(blackNote, selectedKey);
-                      const { letter, accidental } = parseNoteDisplay(displayName);
-                      return (
-                        <span className="flex items-start leading-none">
-                          {letter}
-                          {accidental && <span className="text-[8px] leading-none">{accidental}</span>}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-            </button>
-          );
-        })}
         </div>
       </div>
     </div>

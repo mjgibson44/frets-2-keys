@@ -140,14 +140,14 @@ struct NoteFlash: ViewModifier {
     let isFlashing: Bool
     /// Fret cells shade the same inset rounded square a selected fret is filled with.
     var inset: CGFloat = 0
+    var horizontalInset: CGFloat?
     var cornerRadius: CGFloat = 0
 
     func body(content: Content) -> some View {
         // Behind the content, so the note's label stays crisp on top of the shade.
         content
             .background {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .inset(by: inset)
+                InsetRoundedRectangle(cornerRadius: cornerRadius, dx: horizontalInset ?? inset, dy: inset)
                     .fill(theme.isDark ? Color.white : Color.black)
                     .opacity(isFlashing ? (theme.isDark ? 0.38 : 0.32) : 0)
                     // Instant both ways, so one note's shade doesn't linger into the next.
@@ -159,7 +159,7 @@ struct NoteFlash: ViewModifier {
 }
 
 extension View {
-    func noteFlash(_ isFlashing: Bool, inset: CGFloat = 0, cornerRadius: CGFloat = 0) -> some View {
-        modifier(NoteFlash(isFlashing: isFlashing, inset: inset, cornerRadius: cornerRadius))
+    func noteFlash(_ isFlashing: Bool, inset: CGFloat = 0, horizontalInset: CGFloat? = nil, cornerRadius: CGFloat = 0) -> some View {
+        modifier(NoteFlash(isFlashing: isFlashing, inset: inset, horizontalInset: horizontalInset, cornerRadius: cornerRadius))
     }
 }

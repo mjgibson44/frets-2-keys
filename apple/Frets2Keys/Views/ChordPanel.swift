@@ -1,9 +1,9 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The bottom of the window: two glass cards. The selected chord and its controls sit above the
-/// chord set's saved chords. The selection card always shows (with a hint when nothing is
-/// selected) so the instruments above don't jump.
+/// The bottom of the window: two full-width sections divided by a hairline. The selected chord
+/// and its controls sit above the chord set's saved chords. The selection bar always shows (with a
+/// hint when nothing is selected) so the instruments above don't jump.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -17,17 +17,42 @@ struct ChordPanel: View {
     /// Upright on iPhone, saved chords wrap up to about three rows, then scroll within them.
     private static let phoneChipsMaxHeight: CGFloat = 3 * 37 + 2 * 8
 
-    private var padding: CGFloat { Device.isPhone ? 14 : 16 }
+    /// The inset from the window's edges, lining the contents up with the top bar's.
+    var padding: CGFloat = 16
+
+    @Environment(\.layoutWidth) private var layoutWidth
+
+    /// Wide windows put the selected chord beside the chord set instead of above it, so their
+    /// controls aren't stretched across the whole window.
+    private var isSideBySide: Bool { !Device.isPhone && layoutWidth >= 900 }
 
     var body: some View {
-        GlassCardGroup(spacing: 8) {
-            VStack(spacing: 8) {
+        if isSideBySide {
+            HStack(alignment: .top, spacing: 0) {
+                // The chord on one line, its controls on the next, in the left third.
+                SelectionBar(stacksControls: true)
+                    .padding(.horizontal, padding)
+                    .padding(.vertical, 16)
+                    .frame(width: layoutWidth / 3, alignment: .leading)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                setsCard
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    // A hairline down the full height between the two.
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(theme.sectionDivider).frame(width: 1)
+                    }
+            }
+            // Both sides as tall as the taller one, so the hairline runs the whole height.
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            VStack(spacing: 0) {
                 SelectionBar()
                     .padding(.horizontal, padding)
                     .padding(.vertical, Device.isPhone ? 8 : 10)
-                    .glassCard()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                SectionDivider()
                 setsCard
-                    .glassCard()
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -48,14 +73,29 @@ struct ChordPanel: View {
             .padding(.horizontal, padding)
             .padding(.vertical, 8)
         } else {
+            let sections = model.state.activeSet.sections
+            // An empty set says so on the same row as its menu and buttons.
+            let emptySection = sections.count == 1 && sections[0].chords.isEmpty ? sections[0] : nil
             VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
                 HStack(spacing: 8) {
                     SetMenu()
-                    Spacer(minLength: 0)
+                    if let emptySection {
+                        Text("No saved chords")
+                            .font(.system(size: 14))
+                            .foregroundStyle(theme.mutedText)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
+                            .sectionDropTarget(emptySection.id, model: model)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
                     AddSectionButton()
                     AddChordButton()
                 }
-                if Device.isPhone {
+                if emptySection != nil {
+                    EmptyView()
+                } else if Device.isPhone {
                     // Grows with the set until it hits the cap, then scrolls.
                     let maxHeight = model.state.activeSet.sections.count > 1 ? Self.phoneSectionsMaxHeight : Self.phoneChipsMaxHeight
                     ViewThatFits(in: .vertical) {
@@ -70,42 +110,14 @@ struct ChordPanel: View {
                     SectionsList()
                 }
             }
-            .padding(padding)
+            .padding(.horizontal, padding)
+            .padding(.vertical, Device.isPhone ? 14 : 16)
             .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     /// With sections, a little more room before scrolling, for their headers.
     private static let phoneSectionsMaxHeight: CGFloat = 210
-}
-
-/// Groups glass cards so they blend together and morph as cards appear (iOS 26 and macOS 26).
-struct GlassCardGroup<Content: View>: View {
-    var spacing: CGFloat
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        if #available(iOS 26, macOS 26, *) {
-            GlassEffectContainer(spacing: spacing) { content }
-        } else {
-            content
-        }
-    }
-}
-
-extension View {
-    /// A floating Liquid Glass card, or a frosted material card before iOS 26 / macOS 26.
-    @ViewBuilder
-    func glassCard(cornerRadius: CGFloat = cardCornerRadius) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(iOS 26, macOS 26, *) {
-            frame(maxWidth: .infinity, alignment: .leading)
-                .glassEffect(.regular, in: shape)
-        } else {
-            frame(maxWidth: .infinity, alignment: .leading)
-                .background(.regularMaterial, in: shape)
-        }
-    }
 }
 
 // MARK: - Add chord
@@ -633,9 +645,19 @@ private struct SelectionBar: View {
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    /// The chord on one line and its controls on the next, as on an upright iPhone.
+    var stacksControls = false
 
     var body: some View {
-        if Device.isPhone && verticalSizeClass == .regular {
+        if stacksControls {
+            // Beside the chord set: the chord on one line, its controls grouped at the start of
+            // the next, the first icon lined up with the text above.
+            VStack(alignment: .leading, spacing: 4) {
+                summaryStrip
+                controls(spread: false)
+                    .padding(.leading, -8)
+            }
+        } else if Device.isPhone && verticalSizeClass == .regular {
             // Upright iPhone: the chord on one line, its controls spread across the next.
             VStack(alignment: .leading, spacing: 4) {
                 summaryStrip

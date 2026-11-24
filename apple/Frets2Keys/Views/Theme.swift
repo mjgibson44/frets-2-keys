@@ -96,9 +96,14 @@ enum NotePalette {
 struct Theme {
     let isDark: Bool
 
-    var pageBackground: Color { isDark ? Tailwind.zinc900 : Color(hex: 0xF8F4F4) }
+    /// Behind the top bar and the chord panel, a shade darker than the instruments' surface.
+    var pageBackground: Color { isDark ? Tailwind.zinc900 : Color(hex: 0xF5F3F2) }
+    /// Behind the guitars and piano.
+    var instrumentBackground: Color { isDark ? Color(hex: 0x1F1F22) : .white }
     var cardBackground: Color { isDark ? Tailwind.zinc800 : .white }
     var cardBorder: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xEDE9E9) }
+    /// The hairlines between the page's full-width sections.
+    var sectionDivider: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xE7E2E0) }
     var primaryText: Color { isDark ? Tailwind.zinc100 : Tailwind.zinc900 }
     var secondaryText: Color { isDark ? Tailwind.zinc200 : Tailwind.zinc700 }
     var mutedText: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
@@ -112,7 +117,10 @@ struct Theme {
     var stringLine: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xE1E1E1) }
     var fretDivider: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xF2F2F2) }
     var fretFooterDivider: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xF2F2F2) }
-    var fretFooterBackground: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xF6F6F6) }
+    /// White in light mode, so the fret numbers read as part of the card rather than the page.
+    var fretFooterBackground: Color { isDark ? Tailwind.zinc700 : .white }
+    /// The hairline between the strings and the fret numbers (dark mode's footer is shaded instead).
+    var fretFooterRule: Color { isDark ? .clear : cardBorder }
     var fretNumber: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc500 }
     var fretMarker: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
 
@@ -121,8 +129,8 @@ struct Theme {
     var whiteKeyHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
     var whiteKeyBorder: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xEDE9E9) }
     /// Black keys are only a shade off the white keys, so the colored notes stand out.
-    var blackKey: Color { isDark ? Color(hex: 0x323236) : Color(hex: 0xF0F0F2) }
-    var blackKeyHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc200 }
+    var blackKey: Color { isDark ? Color(hex: 0x323236) : Color(hex: 0xF2EFEE) }
+    var blackKeyHover: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xE7E3E1) }
     var pianoPlainText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
     var blackKeyPlainText: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc600 }
 
@@ -175,26 +183,43 @@ extension EnvironmentValues {
     }
 }
 
-/// Corner radius shared by every card: the instruments and the glass cards below them.
+/// Corner radius shared by the instrument cards and the chord-limit banner.
 let cardCornerRadius: CGFloat = 16
 
-/// A rounded card matching the web app's panels.
-struct Card<Content: View>: View {
+/// A rounded card holding an instrument, which runs right to its edges and is clipped to its corners.
+struct InstrumentCard<Content: View>: View {
     @Environment(\.theme) private var theme
-    var padding: EdgeInsets
     @ViewBuilder var content: Content
 
-    init(padding: EdgeInsets = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16), @ViewBuilder content: () -> Content) {
-        self.padding = padding
-        self.content = content()
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.instrumentBackground)
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(theme.cardBorder, lineWidth: 1))
     }
+}
+
+/// A full-width hairline, between the instruments and the chord panel and within the panel.
+struct SectionDivider: View {
+    @Environment(\.theme) private var theme
 
     var body: some View {
-        content
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous).strokeBorder(theme.cardBorder, lineWidth: 1))
+        Rectangle()
+            .fill(theme.sectionDivider)
+            .frame(height: 1)
+    }
+}
+
+/// A rounded rectangle drawn inside its frame, by `dx` at the sides and `dy` at the top and bottom.
+struct InsetRoundedRectangle: Shape {
+    var cornerRadius: CGFloat
+    var dx: CGFloat = 0
+    var dy: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        RoundedRectangle(cornerRadius: cornerRadius).path(in: rect.insetBy(dx: dx, dy: dy))
     }
 }
 
@@ -203,7 +228,6 @@ struct HighlightButtonStyle: ButtonStyle {
     var normal: Color = .clear
     var highlighted: Color
     var cornerRadius: CGFloat = 0
-
     func makeBody(configuration: Configuration) -> some View {
         HighlightBody(configuration: configuration, normal: normal, highlighted: highlighted, cornerRadius: cornerRadius)
     }

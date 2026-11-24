@@ -1,6 +1,7 @@
 'use client';
 
 import { noteToMidi, midiToNote, TUNINGS, getDefaultTuning, TUNING_PRESETS, findPresetByTuning } from '@/lib/notes';
+import { SOUNDS, SoundId, TEMPO_MIN, TEMPO_MAX } from '@/lib/audio';
 
 interface Fretboard {
   id: string;
@@ -29,6 +30,13 @@ interface SettingsDialogProps {
   onStringCountChange: (fretboardId: string, count: number) => void;
   onResetTuning: (fretboardId: string) => void;
   onOpenTutorial: () => void;
+  onDarkModeChange: (dark: boolean) => void;
+  sound: SoundId;
+  onSoundChange: (sound: SoundId) => void;
+  tempo: number;
+  onTempoChange: (tempo: number) => void;
+  showNextChord: boolean;
+  onShowNextChordChange: (show: boolean) => void;
 }
 
 export default function SettingsDialog({
@@ -52,6 +60,13 @@ export default function SettingsDialog({
   onStringCountChange,
   onResetTuning,
   onOpenTutorial,
+  onDarkModeChange,
+  sound,
+  onSoundChange,
+  tempo,
+  onTempoChange,
+  showNextChord,
+  onShowNextChordChange,
 }: SettingsDialogProps) {
   if (!isOpen) return null;
 
@@ -157,10 +172,32 @@ export default function SettingsDialog({
           View Tutorial
         </button>
 
+        {/* Appearance */}
+        <div className="mb-9">
+          <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
+            Appearance
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {([['Light', false], ['Dark', true]] as const).map(([label, dark]) => (
+              <button
+                key={label}
+                onClick={() => onDarkModeChange(dark)}
+                className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  darkMode === dark
+                    ? darkMode ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-white'
+                    : darkMode ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Play mode toggle */}
         <div className="mb-9">
           <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-zinc-300' : 'text-zinc-600'}`}>
-            Playback Mode
+            Playback
           </label>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-2">
             <button
@@ -192,6 +229,40 @@ export default function SettingsDialog({
               Arpeggio
             </button>
           </div>
+
+          {/* Sound */}
+          <div className={`mt-3 flex items-center justify-between gap-3 py-2 px-3 rounded-lg ${darkMode ? 'bg-zinc-700' : 'bg-zinc-100'}`}>
+            <span className={`text-sm font-medium ${darkMode ? 'text-zinc-200' : 'text-zinc-700'}`}>Sound</span>
+            <select
+              value={sound}
+              onChange={e => onSoundChange(e.target.value as SoundId)}
+              className={`text-sm rounded-md px-2 py-1 outline-none ${darkMode ? 'bg-zinc-800 text-zinc-200' : 'bg-white text-zinc-700 border border-[#EDE9E9]'}`}
+            >
+              {SOUNDS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+
+          {/* Tempo */}
+          <div className={`mt-2 py-2 px-3 rounded-lg ${darkMode ? 'bg-zinc-700' : 'bg-zinc-100'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-medium ${darkMode ? 'text-zinc-200' : 'text-zinc-700'}`}>Tempo</span>
+              <span className={`text-sm tabular-nums ${darkMode ? 'text-zinc-200' : 'text-zinc-700'}`}>
+                {tempo} <span className={darkMode ? 'text-zinc-400' : 'text-zinc-500'}>BPM</span>
+              </span>
+            </div>
+            <input
+              type="range"
+              min={TEMPO_MIN}
+              max={TEMPO_MAX}
+              value={tempo}
+              onChange={e => onTempoChange(Number(e.target.value))}
+              className="mt-2 w-full accent-blue-500"
+              aria-label="Tempo"
+            />
+          </div>
+          <p className={`mt-2 text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+            A looped chord lasts one beat; arpeggios play two notes a beat.
+          </p>
         </div>
 
         {/* Key Labels */}
@@ -308,6 +379,20 @@ export default function SettingsDialog({
               </div>
             </button>
           </div>
+          <button
+            onClick={() => onShowNextChordChange(!showNextChord)}
+            className={`mt-2 w-full flex items-center justify-between py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              darkMode ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-zinc-100 hover:bg-zinc-200'
+            }`}
+          >
+            <span className={darkMode ? 'text-zinc-200' : 'text-zinc-700'}>Show next chord</span>
+            <div className={`w-10 h-6 rounded-full p-1 transition-colors ${showNextChord ? (darkMode ? 'bg-zinc-500' : 'bg-zinc-800') : (darkMode ? 'bg-zinc-600' : 'bg-zinc-300')}`}>
+              <div className={`w-4 h-4 rounded-full bg-white transition-transform ${showNextChord ? 'translate-x-4' : 'translate-x-0'}`} />
+            </div>
+          </button>
+          <p className={`mt-2 text-xs ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+            While looping, the instruments show the next chord&apos;s notes in a lighter color over each chord&apos;s last two beats.
+          </p>
         </div>
 
         {/* Tuning controls for each fretboard */}

@@ -63,9 +63,6 @@ struct HeaderView: View {
                 get: { model.state.selectedKey },
                 set: { model.state.selectedKey = $0 }
             ), showsLabelOptions: true)
-            if layoutWidth >= 700 {
-                NoteLabelPicker()
-            }
             if let instrumentChoice, instrumentOptions.count > 1 {
                 // Takes the space between the key menu and the buttons.
                 InstrumentTabs(selection: instrumentChoice, options: instrumentOptions)
@@ -166,27 +163,6 @@ struct IconButton: View {
     }
 }
 
-/// Notes / Degrees / Intervals, for the top bar on wide screens. (Narrower screens have it in the
-/// key menu.)
-struct NoteLabelPicker: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        Picker("Label Notes With", selection: Binding(
-            get: { model.state.noteLabelContent },
-            set: { model.state.noteLabelContent = $0 }
-        )) {
-            ForEach(NoteLabelContent.allCases) { content in
-                Text(content.title).tag(content)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
-        .help("Label notes with their names, scale degrees, or intervals from the chord's root (N)")
-    }
-}
-
 /// A key menu (No key, 12 major, 12 minor, other scales) showing the chosen key and, on wider
 /// screens, its notes or degrees.
 struct KeyPickerMenu: View {
@@ -202,8 +178,7 @@ struct KeyPickerMenu: View {
     var body: some View {
         let sharpsOnly = model.state.sharpsOnly
         Menu {
-            // Wide screens have this in the top bar instead.
-            if showsLabelOptions && layoutWidth < 700 {
+            if showsLabelOptions {
                 Section("Label Notes With") {
                     Picker("Label Notes With", selection: Binding(
                         get: { model.state.noteLabelContent },
@@ -213,7 +188,13 @@ struct KeyPickerMenu: View {
                             Text(content.title).tag(content)
                         }
                     }
+                    // A Mac menu draws a palette as icons only, so text options there become a
+                    // checkmarked list instead.
+                    #if os(macOS)
+                    .pickerStyle(.inline)
+                    #else
                     .pickerStyle(.palette)
+                    #endif
                 }
             }
             keyToggle(nil, title: "No key")
