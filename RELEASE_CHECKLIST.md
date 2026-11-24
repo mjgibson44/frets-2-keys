@@ -19,6 +19,10 @@ What's left to ship **Frets 2 Keys** (iPhone, iPad and Mac, bundle ID `com.mjgib
 - [x] Add repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8_BASE64`. The key needs the Admin role.
 - [x] Run the TestFlight workflow for iOS and macOS. Both uploads succeeded on 2026-11-24.
 - [ ] Confirm in App Store Connect that both builds finish processing without errors.
+- [ ] Revoke the leftover development certificates so the workflow can run again. In the Apple Developer portal, under Certificates, IDs & Profiles > Certificates, revoke the Development certificates named "Created via API". There should be about seven, one for each earlier job that got past Archive. Leave distribution certificates and any certificate in your own name alone.
+- [ ] Run the workflow once after that and check that its "Revoke this job's certificate" step says it revoked one certificate. This step has not been through a real run yet.
+
+**Certificate limit.** Each workflow job runs on a fresh runner with no signing identity, so Xcode creates a new Apple Development certificate to sign the archive. Apple allows only a few per account, and on 2026-11-24 Archive failed with "Your account has reached the maximum number of certificates". The workflow now records the account's certificates before Archive and revokes the one it created when the job ends (`.github/scripts/asc_certificates.py`). It revokes a certificate only if it is new since that record, is a development certificate, and has its private key on that runner, so it never touches one that you or another job created. If a job is killed before that step runs, its certificate stays on the account and has to be revoked by hand.
 
 ### Testing
 - [ ] Install through TestFlight on a real iPhone, iPad and Mac. Test:
