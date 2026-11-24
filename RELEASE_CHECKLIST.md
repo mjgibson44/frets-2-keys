@@ -5,7 +5,7 @@ What's left to ship **Frets 2 Keys** (iPhone, iPad and Mac, bundle ID `com.mjgib
 ## Already done
 
 - [x] SwiftUI app for iOS 17+, iPadOS 17+ and macOS 14+ (`apple/`). Version is `1.0`, set as `MARKETING_VERSION` in `apple/project.yml`. App Store category is Music.
-- [x] App icon in all sizes (`apple/Frets2Keys/Assets.xcassets/AppIcon.appiconset`).
+- [x] App icon in all sizes (`apple/Frets2Keys/Assets.xcassets/AppIcon.appiconset`), redrawn in November 2026. iPhone and iPad use a square image; the Mac has its own rounded set. The source and export script are in `design/icon-variations/`.
 - [x] Privacy manifest (`apple/Frets2Keys/PrivacyInfo.xcprivacy`).
 - [x] `ExportOptions.plist` and a TestFlight GitHub Actions workflow (`.github/workflows/testflight.yml`). It checks the App Store Connect API key, archives, exports and uploads with `altool`. See "Releasing to TestFlight" in `README.md` for setup.
 - [x] App Store screenshots and app previews in `apple/AppStore/`: iPhone 6.9", iPad 13" and Mac. See `apple/AppStore/README.md` for sizes and how to retake them.
@@ -14,9 +14,11 @@ What's left to ship **Frets 2 Keys** (iPhone, iPad and Mac, bundle ID `com.mjgib
 ## Still to do
 
 ### App Store Connect setup
-- [ ] Create the app record in App Store Connect for iOS and macOS, with bundle ID `com.mjgibson44.frets2keys` and iCloud enabled on the identifier. Not confirmed done.
-- [ ] Add repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8_BASE64`. The key needs the Admin role. Not confirmed done.
-- [ ] Run the TestFlight workflow for iOS and macOS, and confirm both builds process without errors.
+- [x] Create the app record in App Store Connect for iOS and macOS, with bundle ID `com.mjgibson44.frets2keys`. Uploads for both platforms succeeded on 2026-11-24.
+- [ ] Confirm iCloud is enabled on the app identifier.
+- [x] Add repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8_BASE64`. The key needs the Admin role.
+- [x] Run the TestFlight workflow for iOS and macOS. Both uploads succeeded on 2026-11-24.
+- [ ] Confirm in App Store Connect that both builds finish processing without errors.
 
 ### Testing
 - [ ] Install through TestFlight on a real iPhone, iPad and Mac. Test:
