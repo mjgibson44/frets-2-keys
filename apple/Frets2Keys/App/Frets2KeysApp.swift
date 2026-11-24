@@ -13,6 +13,36 @@ struct Frets2KeysApp: App {
             UserDefaults().removePersistentDomain(forName: suite)
             return AppModel(defaults: UserDefaults(suiteName: suite)!, syncWithICloud: false)
         }
+        // App Store screenshots: `-ScreenshotState <base64 JSON>` starts from that saved state, kept
+        // apart from the real one and never synced, so demo content can't reach the user's iCloud.
+        let arguments = ProcessInfo.processInfo.arguments
+        if let flag = arguments.firstIndex(of: "-ScreenshotState"), arguments.indices.contains(flag + 1),
+           let state = Data(base64Encoded: arguments[flag + 1]) {
+            let suite = "Frets2KeysScreenshots"
+            UserDefaults().removePersistentDomain(forName: suite)
+            let defaults = UserDefaults(suiteName: suite)!
+            defaults.set(state, forKey: "frets2keys_appState")
+            let model = AppModel(defaults: defaults, syncWithICloud: false)
+            // `-ScreenshotSelect "F3 A3 C4 E4"` selects a chord (the selection isn't saved), and
+            // `-ScreenshotBank` opens the chord bank.
+            if let select = arguments.firstIndex(of: "-ScreenshotSelect"), arguments.indices.contains(select + 1) {
+                let notes = arguments[select + 1].split(separator: " ").compactMap { Note(parsing: String($0)) }
+                model.state.select(notes: notes)
+                model.state.activeChordID = model.state.savedChords.first { $0.notes == notes }?.id
+            }
+            model.isChordBankPresented = arguments.contains("-ScreenshotBank")
+            #if os(macOS)
+            // A 1440×900 window, which captures at the Mac App Store's 2880×1800. It's brought
+            // forward without taking keyboard focus, so typing elsewhere doesn't reach it.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if let window = NSApp.windows.first(where: { $0.isVisible }) {
+                    window.setFrame(NSRect(x: 80, y: 80, width: 1440, height: 900), display: true)
+                    window.orderFrontRegardless()
+                }
+            }
+            #endif
+            return model
+        }
         #endif
         return AppModel()
     }

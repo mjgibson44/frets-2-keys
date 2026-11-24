@@ -15,6 +15,9 @@ struct NoteLabel: View {
             if let first = name.first, Self.leadingAccidentals.contains(first), name.count > 1 {
                 small(String(first))
                 main(String(name.dropFirst()))
+            } else if name.allSatisfy(\.isNumber) {
+                // A plain number ("11", "13") is one piece, not a letter and an accidental.
+                main(name)
             } else {
                 let parts = splitNoteDisplay(name)
                 main(parts.letter)
