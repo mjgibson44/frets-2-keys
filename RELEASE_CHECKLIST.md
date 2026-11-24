@@ -54,6 +54,6 @@ These need to be written. None exist yet:
 - [ ] Submit iOS and macOS for review, then choose manual or automatic release.
 
 ## Notes for the next session
-- Uncommitted or unverified: nothing outstanding as of this file's creation.
+- Unverified: the certificate cleanup in the TestFlight workflow has not been through a real run, and the old certificates still need revoking. `TESTFLIGHT_HANDOVER.md` has the steps to finish it.
 - Debug builds accept `-ScreenshotState`, `-ScreenshotSelect` and `-ScreenshotBank` launch arguments for retaking screenshots safely. They use a separate store and never touch iCloud.
 - After adding or removing Swift files, run `xcodegen generate` in `apple/`.
