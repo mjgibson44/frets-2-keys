@@ -18,9 +18,9 @@ What's left to ship **Frets 2 Keys** (iPhone, iPad and Mac, bundle ID `com.mjgib
 - [ ] Confirm iCloud is enabled on the app identifier.
 - [x] Add repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8_BASE64`. The key needs the Admin role.
 - [x] Run the TestFlight workflow for iOS and macOS. Both uploads succeeded on 2026-11-24.
-- [ ] Confirm in App Store Connect that both builds finish processing without errors.
-- [ ] Revoke the leftover development certificates so the workflow can run again. In the Apple Developer portal, under Certificates, IDs & Profiles > Certificates, revoke the Development certificates named "Created via API". There should be about seven, one for each earlier job that got past Archive. Leave distribution certificates and any certificate in your own name alone.
-- [ ] Run the workflow once after that and check that its "Revoke this job's certificate" step says it revoked one certificate. This step has not been through a real run yet.
+- [x] Confirm in App Store Connect that both builds finish processing without errors. Build 108 (iOS and macOS, three-strings icon) is attached to both 1.0 versions and in internal TestFlight.
+- [x] Revoke the leftover development certificates so the workflow can run again. On 2026-11-24, 20 "Created via API" development certificates were revoked (some came from the other apps' CI on the same account). Kept: Apple Development (Matthew Gibson), Apple Distribution and Mac Installer Distribution.
+- [x] Run the workflow once after that. Run 45514341511 (iOS, build 109) archived and uploaded, then printed "Created on this runner: 1" and "Revoked DEVELOPMENT certificate BK632MRCJH, created by this job." A `both` run has not been tried yet.
 
 **Certificate limit.** Each workflow job runs on a fresh runner with no signing identity, so Xcode creates a new Apple Development certificate to sign the archive. Apple allows only a few per account, and on 2026-11-24 Archive failed with "Your account has reached the maximum number of certificates". The workflow now records the account's certificates before Archive and revokes the one it created when the job ends (`.github/scripts/asc_certificates.py`). It revokes a certificate only if it is new since that record, is a development certificate, and has its private key on that runner, so it never touches one that you or another job created. If a job is killed before that step runs, its certificate stays on the account and has to be revoked by hand.
 
@@ -54,6 +54,7 @@ These need to be written. None exist yet:
 - [ ] Submit iOS and macOS for review, then choose manual or automatic release.
 
 ## Notes for the next session
-- Unverified: the certificate cleanup in the TestFlight workflow has not been through a real run, and the old certificates still need revoking. `TESTFLIGHT_HANDOVER.md` has the steps to finish it.
+- The certificate cleanup in the TestFlight workflow worked on a real iOS run. A `platform=both` run has only been tested against a fake server; each job should revoke its own certificate. If a job is killed before its revoke step, revoke its "Created via API" certificate by hand.
+- Build 108 was built on Matt's Mac and signed with the existing distribution and installer certificates, using two App Store provisioning profiles created through the API: "Frets 2 Keys App Store (local)" and "Frets 2 Keys Mac App Store (local)".
 - Debug builds accept `-ScreenshotState`, `-ScreenshotSelect` and `-ScreenshotBank` launch arguments for retaking screenshots safely. They use a separate store and never touch iCloud.
 - After adding or removing Swift files, run `xcodegen generate` in `apple/`.
