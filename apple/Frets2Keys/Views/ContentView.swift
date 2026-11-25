@@ -4,6 +4,7 @@ import Frets2KeysCore
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var isFocused: Bool
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var renameText = ""
     @State private var sectionRenameText = ""
     /// The section's current name, shown as the placeholder.
@@ -48,12 +49,15 @@ struct ContentView: View {
             // The instrument cards fill the space between the top bar and the chord panel, which
             // is divided off by a hairline. When they need more room than there is, they scroll.
             VStack(spacing: 0) {
-                HeaderView(instrumentChoice: phoneInstrumentChoice, instrumentOptions: instrumentOptions)
+                HeaderView(instrumentChoice: isUprightPhone ? nil : phoneInstrumentChoice, instrumentOptions: instrumentOptions)
                     .padding(.horizontal, padding)
                     .padding(.top, Device.isPhone ? 4 : 16)
                     .padding(.bottom, 8)
 
-                if Device.isPhone {
+                if isUprightPhone {
+                    stackedInstruments(padding: padding)
+                        .environment(\.nextChordHint, nextChordHint)
+                } else if Device.isPhone {
                     instrumentPages(padding: padding)
                         .environment(\.nextChordHint, nextChordHint)
                 } else {
@@ -223,7 +227,31 @@ struct ContentView: View {
         instrumentOptions.contains(phoneInstrument) ? phoneInstrument : instrumentOptions.first
     }
 
-    /// iPhone: one instrument per page, filling the space between the bars. Swiping up or down
+    /// An upright iPhone shows every instrument at once, stacked; a sideways one pages between them.
+    private var isUprightPhone: Bool { Device.isPhone && verticalSizeClass == .regular }
+
+    /// Upright iPhone: the instruments that are turned on, one above another, sharing the space
+    /// between the bars. A piano gets a little less height than a guitar.
+    private func stackedInstruments(padding: CGFloat) -> some View {
+        let options = instrumentOptions
+        let spacing: CGFloat = 10
+        let weights = options.map { $0 == .piano ? 0.75 : 1.0 }
+        return GeometryReader { area in
+            let available = area.size.height - 16 - spacing * CGFloat(max(options.count - 1, 0))
+            VStack(spacing: spacing) {
+                ForEach(Array(options.enumerated()), id: \.element) { index, option in
+                    let height = max(available * weights[index] / weights.reduce(0, +), 100)
+                    instrumentPage(option)
+                        .environment(\.instrumentFillHeight, height)
+                }
+            }
+            .padding(.horizontal, padding)
+            .padding(.vertical, 8)
+            .frame(maxHeight: .infinity)
+        }
+    }
+
+    /// Sideways iPhone: one instrument per page, filling the space between the bars. Swiping up or down
     /// moves to the next instrument, looping around; the tabs in the top bar follow along.
     private func instrumentPages(padding: CGFloat) -> some View {
         let options = instrumentOptions

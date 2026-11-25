@@ -6,6 +6,7 @@ final class ChordBankTests: XCTestCase {
     func testAddChordFromSidePanel() {
         continueAfterFailure = false
         let app = XCUIApplication()
+        app.launchArguments = ["-UITestFreshState"]
         app.launch()
         XCUIDevice.shared.orientation = .portrait
 
@@ -22,7 +23,10 @@ final class ChordBankTests: XCTestCase {
             try? XCUIScreen.main.screenshot().pngRepresentation
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
         }
-        app.buttons["Add to Set"].tap()
+        // The button names where the chord goes: the set, or its section when it has sections.
+        let add = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Add to ")).firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 3))
+        add.tap()
 
         // The new chord appears in the chord panel.
         XCTAssertTrue(app.buttons["G7"].waitForExistence(timeout: 3) || app.staticTexts["G7"].waitForExistence(timeout: 1))

@@ -78,10 +78,11 @@ struct PianoView: View {
         } label: {
             VStack {
                 Spacer(minLength: 0)
-                keySpot(note, appearance, context: context, size: whiteKeyWidth - 8, cornerRadius: 10, plainTextColor: theme.pianoPlainText)
+                keyLabel(appearance, size: whiteKeyWidth - 8, plainTextColor: theme.pianoPlainText)
             }
             .padding(.bottom, 4)
             .frame(width: whiteKeyWidth, height: height)
+            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context))
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         // One line between neighboring keys. The keyboard's top and bottom edges are left to the
@@ -108,10 +109,11 @@ struct PianoView: View {
         } label: {
             VStack {
                 Spacer(minLength: 0)
-                keySpot(note, appearance, context: context, size: blackKeyWidth - 2 * Self.blackKeyEdge - 4, cornerRadius: 8, plainTextColor: theme.blackKeyPlainText)
+                keyLabel(appearance, size: blackKeyWidth - 2 * Self.blackKeyEdge - 4, plainTextColor: theme.blackKeyPlainText)
             }
             .padding(.bottom, 3)
             .frame(width: blackKeyWidth - 2 * Self.blackKeyEdge, height: height - Self.blackKeyEdge)
+            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context))
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(Self.blackKeyInnerShape)
@@ -122,27 +124,32 @@ struct PianoView: View {
         .accessibilityAddTraits(appearance.isSelected ? .isSelected : [])
     }
 
-    /// The rounded square near the bottom of a key, like a fret's: filled with the note's color
-    /// when selected, otherwise holding the note's badge. The playback flash and next-chord fill
-    /// light up the same square.
-    private func keySpot(_ note: Note, _ appearance: NoteAppearance, context: NoteLabelContext, size: CGFloat, cornerRadius: CGFloat, plainTextColor: Color) -> some View {
-        Group {
-            if case .selected(let role) = appearance.style {
+    /// The note's name near the bottom of a key: white on a selected key, otherwise its badge.
+    @ViewBuilder
+    private func keyLabel(_ appearance: NoteAppearance, size: CGFloat, plainTextColor: Color) -> some View {
+        ZStack {
+            if appearance.isSelected {
                 NoteLabel(name: appearance.label, weight: .medium)
                     .foregroundStyle(.white)
-                    .frame(width: size, height: size)
-                    .noteFlash(isSounding(note), cornerRadius: cornerRadius)
-                    .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: cornerRadius))
-            } else {
-                ZStack {
-                    if appearance.showsLabel {
-                        NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
-                    }
-                }
-                .frame(width: size, height: size)
-                .noteFlash(isSounding(note), cornerRadius: cornerRadius)
-                .nextChordFill(hint.isPreviewed(note, isSelected: false), hint: hint, color: previewColor(note, context: context), inset: 0, cornerRadius: cornerRadius)
+            } else if appearance.showsLabel {
+                NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
             }
         }
+        .frame(width: size, height: size)
+    }
+}
+
+private extension View {
+    /// Fills the whole key: with the note's color when it's selected, a light wash of it when it's
+    /// in the next chord, and a brief shade while it sounds.
+    func keyFill(_ note: Note, _ appearance: NoteAppearance, sounding: Bool, previewed: Bool, hint: NextChordHint, previewColor: Color) -> some View {
+        self
+            .noteFlash(sounding)
+            .background {
+                if case .selected(let role) = appearance.style {
+                    NotePalette.solid(for: role)
+                }
+            }
+            .nextChordFill(!appearance.isSelected && previewed, hint: hint, color: previewColor, inset: 0, cornerRadius: 0)
     }
 }
