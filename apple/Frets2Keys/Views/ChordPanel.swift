@@ -99,9 +99,9 @@ struct ChordPanel: View {
                     // Grows with the set until it hits the cap, then scrolls.
                     let maxHeight = model.state.activeSet.sections.count > 1 ? Self.phoneSectionsMaxHeight : Self.phoneChipsMaxHeight
                     ViewThatFits(in: .vertical) {
-                        SectionsList()
+                        OneSectionList()
                         ScrollView(.vertical) {
-                            SectionsList()
+                            OneSectionList()
                         }
                         .scrollIndicators(.visible)
                     }
@@ -116,8 +116,8 @@ struct ChordPanel: View {
         }
     }
 
-    /// With sections, a little more room before scrolling, for their headers.
-    private static let phoneSectionsMaxHeight: CGFloat = 210
+    /// With sections, room for the one section's header as well as its chords.
+    private static let phoneSectionsMaxHeight: CGFloat = phoneChipsMaxHeight + 36
 }
 
 // MARK: - Add chord
@@ -324,6 +324,37 @@ private struct SectionsList: View {
     }
 }
 
+/// Upright iPhone: one section at a time, to keep the panel short. It follows the chord being
+/// played or picked, and a newly added section.
+private struct OneSectionList: View {
+    @Environment(AppModel.self) private var model
+    /// The section showing on this device (not synced).
+    @AppStorage("phoneSectionID") private var shownID = ""
+
+    var body: some View {
+        let sections = model.state.activeSet.sections
+        Group {
+            if sections.count == 1, let only = sections.first {
+                SectionChips(section: only, layout: .wrapping)
+                    .sectionDropTarget(only.id, model: model)
+            } else {
+                let index = sections.firstIndex { $0.id.uuidString == shownID } ?? 0
+                SectionView(section: sections[index], index: index, count: sections.count) { id in
+                    shownID = id.uuidString
+                }
+            }
+        }
+        .onChange(of: model.state.activeChordID) { _, id in
+            if let id, let section = sections.first(where: { $0.chords.contains { $0.id == id } }) {
+                shownID = section.id.uuidString
+            }
+        }
+        .onChange(of: model.sectionBeingRenamed) { _, id in
+            if let id { shownID = id.uuidString }
+        }
+    }
+}
+
 /// One section: a header (name, loop, add, menu) over its chords.
 private struct SectionView: View {
     @Environment(AppModel.self) private var model
@@ -333,9 +364,12 @@ private struct SectionView: View {
     let section: ChordSection
     let index: Int
     let count: Int
+    /// iPhone, one section at a time: the section's name becomes a menu that switches to another,
+    /// and the section can't be collapsed.
+    var onSwitch: ((UUID) -> Void)?
 
     var body: some View {
-        let isCollapsed = collapsed.contains(section.id)
+        let isCollapsed = onSwitch == nil && collapsed.contains(section.id)
         VStack(alignment: .leading, spacing: 6) {
             header(isCollapsed: isCollapsed)
             if !isCollapsed {
@@ -362,38 +396,10 @@ private struct SectionView: View {
         let isLooping = model.loopingSectionID == section.id
         let chordCount = section.chords.filter { !$0.isScale }.count
         return HStack(spacing: 4) {
-            Button {
-                withAnimation(.snappy(duration: 0.2)) { collapsed.toggle(section.id) }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                        .foregroundStyle(Tailwind.zinc500)
-                        .frame(width: 12)
-                    Text(name)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.secondaryText)
-                        .lineLimit(1)
-                    if isCollapsed || section.chords.isEmpty {
-                        Text("\(section.chords.count)")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(theme.mutedText)
-                    }
-                }
-                .padding(.vertical, 3)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(name), \(section.chords.count) items")
-            .accessibilityHint(isCollapsed ? "Expands the section" : "Collapses the section")
-            // Drag a section by its header to reorder.
-            .draggable(PanelDragItem.section(section.id).payload) {
-                Text(name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(theme.chip, in: RoundedRectangle(cornerRadius: 6))
+            if let onSwitch {
+                switcher(name: name, onSwitch: onSwitch)
+            } else {
+                collapseButton(name: name, isCollapsed: isCollapsed)
             }
 
             Spacer(minLength: 0)
@@ -438,6 +444,76 @@ private struct SectionView: View {
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Move Up") { model.shiftSection(section.id, by: -1) }
         .accessibilityAction(named: "Move Down") { model.shiftSection(section.id, by: 1) }
+    }
+
+    private func collapseButton(name: String, isCollapsed: Bool) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) { collapsed.toggle(section.id) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .rotationEffect(.degrees(isCollapsed ? 0 : 90))
+                    .foregroundStyle(Tailwind.zinc500)
+                    .frame(width: 12)
+                Text(name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.secondaryText)
+                    .lineLimit(1)
+                if isCollapsed || section.chords.isEmpty {
+                    Text("\(section.chords.count)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.mutedText)
+                }
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(name), \(section.chords.count) items")
+        .accessibilityHint(isCollapsed ? "Expands the section" : "Collapses the section")
+        // Drag a section by its header to reorder.
+        .draggable(PanelDragItem.section(section.id).payload) {
+            Text(name)
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(theme.chip, in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    /// The section's name, with a menu of the set's sections to switch to.
+    private func switcher(name: String, onSwitch: @escaping (UUID) -> Void) -> some View {
+        let sections = model.state.activeSet.sections
+        return Menu {
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, other in
+                Toggle(isOn: Binding(get: { other.id == section.id }, set: { if $0 { onSwitch(other.id) } })) {
+                    Text(other.displayName(index: index))
+                    Text(other.chords.count == 1 ? "1 item" : "\(other.chords.count) items")
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.secondaryText)
+                    .lineLimit(1)
+                Text("\(index + 1) of \(count)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(theme.mutedText)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Tailwind.zinc500)
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel("Section: \(name), \(index + 1) of \(count)")
+        .accessibilityHint("Shows another section")
     }
 
     private func smallButton(_ symbol: String, help: String, isEnabled: Bool = true, isActive: Bool = false, action: @escaping () -> Void) -> some View {
@@ -645,7 +721,7 @@ private struct SelectionBar: View {
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    /// The chord on one line and its controls on the next, as on an upright iPhone.
+    /// The chord on one line and its controls on the next.
     var stacksControls = false
 
     var body: some View {
@@ -657,14 +733,8 @@ private struct SelectionBar: View {
                 controls(spread: false)
                     .padding(.leading, -8)
             }
-        } else if Device.isPhone && verticalSizeClass == .regular {
-            // Upright iPhone: the chord on one line, its controls spread across the next.
-            VStack(alignment: .leading, spacing: 4) {
-                summaryStrip
-                controls(spread: true)
-            }
         } else {
-            // One row: a long chord's notes scroll sideways, the controls stay put.
+            // One row: a long chord's notes scroll sideways, the controls stay put at the end.
             HStack(spacing: 8) {
                 summaryStrip
                 controls(spread: false)
