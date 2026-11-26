@@ -196,34 +196,13 @@ public struct AppState: Codable, Equatable, Sendable {
     /// While looping, fades the set's next chord in on the instruments just before the change.
     public var showNextChord = true
     public var darkMode = false
-    /// Songs split into sections (Verse, Chorus…). Off, each song is one list of chords: see
-    /// `setUsesSections(_:)`.
-    public private(set) var usesSections = true
+    /// Songs show their sections (Verse, Chorus…). Off, a song shows as one list of chords, but
+    /// its sections are kept, and come back when this is turned on again.
+    public var usesSections = true
 
     /// A new, empty song: a Verse and a Chorus with sections on, else one list.
     private func newSong(name: String) -> ChordSet {
         usesSections ? ChordSet.newSong(name: name) : ChordSet(name: name)
-    }
-
-    /// Turns sections on or off. Turning them off combines each song's sections into one list of
-    /// chords, in order (their names are dropped).
-    public mutating func setUsesSections(_ on: Bool) {
-        usesSections = on
-        combineSectionsIfOff()
-    }
-
-    /// Whether any song has more than one section (what turning sections off would combine).
-    public var hasSongsWithSections: Bool { chordSets.contains { $0.sections.count > 1 } }
-
-    /// With sections off, combines any song that has several (one synced from a device with them
-    /// on, or from the song bank) into one list.
-    public mutating func combineSectionsIfOff() {
-        guard !usesSections else { return }
-        for index in chordSets.indices where chordSets[index].sections.count > 1 {
-            let sections = chordSets[index].sections
-            chordSets[index].sections = [ChordSection(id: sections[0].id, chords: sections.flatMap(\.chords))]
-            chordSets[index].modifiedAt = Date()
-        }
     }
 
     public init() {
@@ -309,7 +288,6 @@ public struct AppState: Codable, Equatable, Sendable {
     public mutating func addSongFromBank(_ preset: PresetSong) -> UUID {
         let song = preset.makeSong()
         chordSets.append(song)
-        combineSectionsIfOff()
         selectSet(id: song.id)
         return song.id
     }

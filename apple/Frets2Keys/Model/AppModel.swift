@@ -101,7 +101,6 @@ final class AppModel {
                 applyMerged: { [unowned self] library in
                     isApplyingSync = true
                     state.apply(library)
-                    state.combineSectionsIfOff()
                     isApplyingSync = false
                     if !state.canLoop { stopLoop() }
                 }
@@ -181,6 +180,7 @@ final class AppModel {
     /// The section Add buttons add to, when one's been picked (with a section's + or an Add
     /// button's menu) and it's in the current song. Otherwise adding goes to the active section.
     var addTargetSectionID: UUID? {
+        guard state.usesSections else { return state.activeSet.sections.last?.id }
         guard let id = bankTargetSectionID, state.activeSet.sections.contains(where: { $0.id == id }) else { return nil }
         return id
     }
@@ -234,7 +234,7 @@ final class AppModel {
     }
 
     func addScale(_ scale: MusicalKey) {
-        handle(state.addScale(scale, to: bankTargetSectionID))
+        handle(state.addScale(scale, to: addTargetSectionID))
         if state.selectedKey == scale { previewScale(scale) }
     }
 
@@ -296,13 +296,20 @@ final class AppModel {
 
     // MARK: - Sections
 
-    /// Turning sections off combines each song's sections into one list of chords.
+    /// Turning sections off only changes how songs look: each shows as one list of chords.
     func setUsesSections(_ on: Bool) {
         if !on {
             if loopingSectionID != nil { stopLoop() }
             bankTargetSectionID = nil
         }
-        state.setUsesSections(on)
+        state.usesSections = on
+    }
+
+    /// The sections to offer as places to add to: with sections off, just the last one, so a
+    /// song reads as one list and new chords go on its end.
+    var visibleSections: [ChordSection] {
+        let sections = state.activeSet.sections
+        return state.usesSections ? sections : Array(sections.suffix(1))
     }
 
     func addSection() {

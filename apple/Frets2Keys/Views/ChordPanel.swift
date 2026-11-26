@@ -49,7 +49,8 @@ struct ChordPanel: View {
         } else {
             let sections = model.state.activeSet.sections
             // An empty set says so on the same row as its menu and buttons.
-            let emptySection = sections.count == 1 && sections[0].chords.isEmpty ? sections[0] : nil
+            let showsAsOneList = sections.count == 1 || !model.state.usesSections
+            let emptySection = showsAsOneList && sections.allSatisfy(\.chords.isEmpty) ? sections[0] : nil
             VStack(alignment: .leading, spacing: 12) {
                     // The song's name at the top left; its buttons at the right, lined up with the
                     // sections' (play over play, "..." over "...").
@@ -445,11 +446,16 @@ private struct SectionsList: View {
 
     var body: some View {
         let sections = model.state.activeSet.sections
-        if !model.state.usesSections, sections.count == 1, let only = sections.first {
-            // Sections off: the song is just its chords.
-            SectionChips(section: only, layout: .wrapping, showsEmptyText: false)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .sectionDropTarget(only.id, model: model)
+        if !model.state.usesSections, let last = sections.last {
+            // Sections off: every section's chords in one list (the sections are kept, just not
+            // shown). A chord dropped on the list's empty space goes to the end.
+            FlowLayout(spacing: 8) {
+                ForEach(sections) { section in
+                    SectionChips(section: section, layout: .bare)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .sectionDropTarget(last.id, model: model)
         } else {
             // One row per section, even a lone one.
             VStack(alignment: .leading, spacing: 8) {
@@ -756,7 +762,8 @@ private struct SectionsRow: View {
 // MARK: - Saved chord chips
 
 private struct SectionChips: View {
-    enum Layout { case wrapping, row }
+    /// `bare`: just the chips, for a layout around several sections' chips (sections off).
+    enum Layout { case wrapping, row, bare }
 
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -767,7 +774,11 @@ private struct SectionChips: View {
 
     var body: some View {
         let chords = section.chords
-        if chords.isEmpty {
+        if layout == .bare {
+            ForEach(chords) { chord in
+                chip(chord)
+            }
+        } else if chords.isEmpty {
             // A lone empty section says so; an empty one among others just shows its header.
             if showsEmptyText && model.state.activeSet.sections.count == 1 {
                 Text("No saved chords")
@@ -794,7 +805,7 @@ private struct SectionChips: View {
         let role = chord.rootPitchClass.map { NoteAppearance.colorRole(for: Note(midi: 60 + $0), key: state.selectedKey) }
         let title = chord.scale?.shortName(sharpsOnly: state.sharpsOnly) ?? chordDisplayName(chord.name)
         let spokenName = chord.scale.map { "\($0.name(sharpsOnly: state.sharpsOnly)) scale" } ?? chord.name
-        let otherSections = state.activeSet.sections.enumerated().filter { $0.element.id != section.id }
+        let otherSections = state.usesSections ? state.activeSet.sections.enumerated().filter { $0.element.id != section.id } : []
 
         return HStack(spacing: 4) {
             HStack(spacing: 5) {

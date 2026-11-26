@@ -34,7 +34,7 @@ struct ChordBankPicker: View {
     /// The section additions go to, named on the button when the set has sections.
     private var targetSection: ChordSection? {
         let set = model.state.activeSet
-        guard set.sections.count > 1 else { return nil }
+        guard set.sections.count > 1, model.state.usesSections else { return nil }
         let id = model.bankTargetSectionID ?? model.state.activeSectionID
         return set.sections.first { $0.id == id } ?? set.sections.last
     }
@@ -517,7 +517,8 @@ struct AddToSectionButton: View {
     let add: () -> Void
 
     private var target: (section: ChordSection, index: Int)? {
-        let sections = model.state.activeSet.sections
+        // Sections off: one list, so no section to name.
+        let sections = model.visibleSections
         guard sections.count > 1 else { return nil }
         let id = model.addTargetSectionID ?? model.state.activeSectionID
         let index = sections.firstIndex { $0.id == id } ?? sections.count - 1
@@ -525,7 +526,7 @@ struct AddToSectionButton: View {
     }
 
     var body: some View {
-        let sections = model.state.activeSet.sections
+        let sections = model.visibleSections
         let name = target.map { $0.section.displayName(index: $0.index) }
         // Gray while there's nothing to add (no chord picked), else the chord's color.
         let fill = canAdd ? (role.map(theme.noteSolid) ?? theme.primaryButton) : theme.cardButton

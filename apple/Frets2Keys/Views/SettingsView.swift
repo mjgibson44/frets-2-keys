@@ -14,7 +14,6 @@ struct SettingsView: View {
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     @AppStorage("settingsTab") private var tab = Tab.playback
-    @State private var isConfirmingSectionsOff = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -93,23 +92,11 @@ struct SettingsView: View {
                 .buttonStyle(SettingsButtonStyle())
             }
         }
-        SettingsCard(title: "Songs", footer: "Split songs into sections like Verse and Chorus. Turned off, a song is one list of chords.") {
+        SettingsCard(title: "Songs", footer: "Show songs in sections like Verse and Chorus. Turned off, each song shows as one list of chords; its sections come back when you turn this on.") {
             Toggle("Sections", isOn: Binding(
                 get: { model.state.usesSections },
-                set: { on in
-                    if !on && model.state.hasSongsWithSections {
-                        isConfirmingSectionsOff = true
-                    } else {
-                        model.setUsesSections(on)
-                    }
-                }
+                set: { model.setUsesSections($0) }
             ))
-        }
-        .confirmationDialog("Turn off sections?", isPresented: $isConfirmingSectionsOff, titleVisibility: .visible) {
-            Button("Turn Off Sections", role: .destructive) { model.setUsesSections(false) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Each song's sections will be combined into one list of chords, in order. Section names will be removed. This can't be undone.")
         }
         SettingsCard(title: "Sync") {
             Label("Your songs sync through iCloud to your other devices signed in to the same Apple Account.", systemImage: "icloud")
