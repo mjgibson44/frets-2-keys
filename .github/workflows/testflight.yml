@@ -45,6 +45,19 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      # Apple requires the iOS 27 / macOS 27 SDK (Xcode 27) for uploads from
+      # April 2027 and warns now (ITMS-90725). GitHub's macOS images only have
+      # Xcode 26 so far, so stop here rather than ship an old-SDK build. Until the
+      # images catch up, upload from a Mac with Xcode 27.
+      - name: Require Xcode 27 for uploads
+        run: |
+          xcode=$(xcodebuild -version | awk 'NR==1{print $2}')
+          echo "Xcode $xcode"
+          if [ "${xcode%%.*}" -lt 27 ]; then
+            echo "::error::Xcode $xcode is older than 27. Apple wants iOS 27 SDK builds, so this upload stops here. Upload from a Mac with Xcode 27 instead."
+            exit 1
+          fi
+
       - name: Write API key
         env:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
