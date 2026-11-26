@@ -11,8 +11,16 @@ struct PianoView: View {
 
     /// Keys are narrower on an upright iPhone so more of the keyboard fits across the screen.
     private var isNarrow: Bool { Device.isPhone && verticalSizeClass == .regular }
-    private var whiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
-    private var blackKeyWidth: CGFloat { isNarrow ? 27 : 32 }
+    private var baseWhiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
+    /// iPad and Mac: keys widen from their usual width to fill the card exactly, so the keyboard
+    /// ends flush with the card (and with the guitar's, at the shared maximum width).
+    private var whiteKeyWidth: CGFloat {
+        let count = model.state.pianoNotes.filter { !$0.isBlackKey }.count
+        guard !Device.isPhone, count > 0, cardWidth > 0 else { return baseWhiteKeyWidth }
+        return max(baseWhiteKeyWidth, cardWidth / CGFloat(count))
+    }
+    private var blackKeyWidth: CGFloat { (whiteKeyWidth * 0.8).rounded() }
+    @State private var cardWidth: CGFloat = 0
 
 
     /// iPad and Mac: how tall the card may grow, to match the guitars when there's room.
@@ -52,6 +60,7 @@ struct PianoView: View {
                     }
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { cardWidth = $0 }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Piano")
@@ -68,7 +77,7 @@ struct PianoView: View {
 
     /// The light fill marking a key in the next chord.
     private func previewColor(_ note: Note, context: NoteLabelContext) -> Color {
-        NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: context.key))
+        theme.noteSolid(NoteAppearance.colorRole(for: note, key: context.key))
     }
 
     private func whiteKey(_ note: Note, height: CGFloat, context: NoteLabelContext) -> some View {
@@ -82,7 +91,7 @@ struct PianoView: View {
             }
             .padding(.bottom, 4)
             .frame(width: whiteKeyWidth, height: height)
-            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context))
+            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context), theme: theme)
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.whiteKey, highlighted: theme.whiteKeyHover))
         // One line between neighboring keys. The keyboard's top and bottom edges are left to the
@@ -113,7 +122,7 @@ struct PianoView: View {
             }
             .padding(.bottom, 3)
             .frame(width: blackKeyWidth - 2 * Self.blackKeyEdge, height: height - Self.blackKeyEdge)
-            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context))
+            .keyFill(note, appearance, sounding: isSounding(note), previewed: hint.isPreviewed(note, isSelected: false), hint: hint, previewColor: previewColor(note, context: context), theme: theme)
         }
         .buttonStyle(HighlightButtonStyle(normal: theme.blackKey, highlighted: theme.blackKeyHover))
         .clipShape(Self.blackKeyInnerShape)
@@ -128,9 +137,9 @@ struct PianoView: View {
     @ViewBuilder
     private func keyLabel(_ appearance: NoteAppearance, size: CGFloat, plainTextColor: Color) -> some View {
         ZStack {
-            if appearance.isSelected {
+            if case .selected(let role) = appearance.style {
                 NoteLabel(name: appearance.label, weight: .medium)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(theme.noteSolidText(role))
             } else if appearance.showsLabel {
                 NoteBadge(appearance: appearance, size: 20, plainTextColor: plainTextColor)
             }
@@ -142,12 +151,12 @@ struct PianoView: View {
 private extension View {
     /// Fills the whole key: with the note's color when it's selected, a light wash of it when it's
     /// in the next chord, and a brief shade while it sounds.
-    func keyFill(_ note: Note, _ appearance: NoteAppearance, sounding: Bool, previewed: Bool, hint: NextChordHint, previewColor: Color) -> some View {
+    func keyFill(_ note: Note, _ appearance: NoteAppearance, sounding: Bool, previewed: Bool, hint: NextChordHint, previewColor: Color, theme: Theme) -> some View {
         self
             .noteFlash(sounding)
             .background {
                 if case .selected(let role) = appearance.style {
-                    NotePalette.solid(for: role)
+                    theme.noteSolid(role)
                 }
             }
             .nextChordFill(!appearance.isSelected && previewed, hint: hint, color: previewColor, inset: 0, cornerRadius: 0)

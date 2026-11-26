@@ -35,7 +35,7 @@ final class AppModel {
 
     /// The chord after the current one, when Show Next Chord is on (within the looping section).
     var nextChord: SavedChord? {
-        guard state.showNextChord else { return nil }
+        guard state.showNextChord, !isLoopingSelection else { return nil }
         return state.chord(after: state.activeChordID, inSection: loopingSectionID)
     }
 
@@ -45,6 +45,8 @@ final class AppModel {
     @ObservationIgnored private var flashCounts: [Note: Int] = [:]
     /// The section being looped, or nil when the loop covers the whole set (or isn't running).
     private(set) var loopingSectionID: UUID?
+    /// The loop is repeating the selected chord (the top bar's play) rather than playing the song.
+    private(set) var isLoopingSelection = false
     var showChordLimitWarning = false
     var isSettingsPresented = false
     var isTutorialPresented = false
@@ -52,7 +54,10 @@ final class AppModel {
     var showTutorialAfterSettings = false
 
     /// The chord bank side panel. It has no text fields, so keyboard shortcuts keep working while it's open.
-    var isChordBankPresented = false
+    /// The sidebar (set and chord bank): open from the start on iPad and Mac, a sheet on iPhone.
+    var isChordBankPresented = !Device.isPhone
+    /// The song panel along the bottom (iPad and Mac; iPhone always shows it).
+    var isSongPanelPresented = true
     /// The section the chord bank adds to, when it was opened from one; otherwise the active section.
     var bankTargetSectionID: UUID?
     /// The set whose rename prompt is showing.
@@ -86,9 +91,7 @@ final class AppModel {
             state = saved
             lastSavedData = data
         } else {
-            var initial = AppState()
-            initial.darkMode = Self.systemPrefersDark
-            state = initial
+            state = AppState()
         }
 
         if syncWithICloud {
@@ -104,16 +107,6 @@ final class AppModel {
             self.sync = sync
             sync.start()
         }
-    }
-
-    private static var systemPrefersDark: Bool {
-        #if canImport(UIKit)
-        return UITraitCollection.current.userInterfaceStyle == .dark
-        #elseif canImport(AppKit)
-        return NSApplication.shared.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        #else
-        return false
-        #endif
     }
 
     private func persistIfChanged() {
@@ -146,8 +139,17 @@ final class AppModel {
 
     // MARK: - Saved chords
 
+    /// Saves the selection as a new chord: into the section the chord bank was opened for while
+    /// it's open, otherwise the active section.
     func saveAsNewChord() {
-        handle(state.saveAsNewChord())
+        handle(state.saveAsNewChord(in: addTargetSectionID))
+    }
+
+    /// The section Add buttons add to, when one's been picked (with a section's + or an Add
+    /// button's menu) and it's in the current song. Otherwise adding goes to the active section.
+    var addTargetSectionID: UUID? {
+        guard let id = bankTargetSectionID, state.activeSet.sections.contains(where: { $0.id == id }) else { return nil }
+        return id
     }
 
     // MARK: - Chord bank
@@ -162,13 +164,26 @@ final class AppModel {
         sound(notes, mode: state.playMode)
     }
 
-    func addBankChord(_ notes: [Note]) {
-        handle(state.addChord(notes: notes, to: bankTargetSectionID))
+    /// Picking a root or type in the chord bank: selects the chord on the instruments, so it shows
+    /// in its notes' colors and stays, and strums it.
+    func pickBankChord(_ notes: [Note]) {
+        state.select(notes: notes)
+        sound(notes, mode: .chord)
     }
 
-    /// Opens the chord bank, adding to `section` (or the active section).
+    /// Copies a popular song's progression into the library and switches to it.
+    func addSongFromBank(_ preset: PresetSong) {
+        stopLoop()
+        state.addSongFromBank(preset)
+    }
+
+    func addBankChord(_ notes: [Note]) {
+        handle(state.addChord(notes: notes, to: addTargetSectionID))
+    }
+
+    /// Opens the chord bank; with `section`, Add buttons add there from now on.
     func openChordBank(section: UUID? = nil) {
-        bankTargetSectionID = section
+        if let section { bankTargetSectionID = section }
         isChordBankPresented = true
     }
 
@@ -287,10 +302,33 @@ final class AppModel {
         }
     }
 
-    private func startLoop(section: UUID? = nil) {
+    /// The song's play button: plays the whole song on a loop, or stops it. Switches over from a
+    /// section that's looping.
+    func toggleSongLoop() {
+        if isLooping && loopingSectionID == nil && !isLoopingSelection {
+            stopLoop()
+        } else {
+            if isLooping { stopLoop() }
+            if state.canLoop { startLoop() }
+        }
+    }
+
+    /// The top bar's play: repeats the selected chord until pressed again. Separate from the
+    /// song's play, which plays the song.
+    func toggleSelectionLoop() {
+        if isLoopingSelection {
+            stopLoop()
+        } else {
+            if isLooping { stopLoop() }
+            if state.hasSelection { startLoop(selectionOnly: true) }
+        }
+    }
+
+    private func startLoop(section: UUID? = nil, selectionOnly: Bool = false) {
         isLooping = true
         loopingSectionID = section
-        var sequencer = LoopSequencer(startingFrom: state, sectionID: section)
+        isLoopingSelection = selectionOnly
+        var sequencer = LoopSequencer(startingFrom: state, sectionID: section, repeatsSelection: selectionOnly)
         loopTask = Task { [weak self] in
             // Beats are booked on the audio clock a moment ahead, so they land exactly one interval
             // apart even when the task wakes late.
@@ -426,10 +464,10 @@ final class AppModel {
         loopTask = nil
         isLooping = false
         loopingSectionID = nil
+        isLoopingSelection = false
         isPreviewingNext = false
     }
 
     // MARK: - Appearance
 
-    func toggleDarkMode() { state.darkMode.toggle() }
 }

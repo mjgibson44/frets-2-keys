@@ -9,8 +9,11 @@ enum ActionIcon {
     static let transposeUp = "arrow.up"
     static let transposeDown = "arrow.down"
     static let play = "play.fill"
+    static let stop = "stop.fill"
     static let loop = "repeat"
     static let settings = "gearshape.fill"
+    static let sidebar = "sidebar.right"
+    static let songPanel = "rectangle.bottomthird.inset.filled"
 }
 
 /// Which instrument an iPhone shows (it shows one at a time).
@@ -46,8 +49,8 @@ enum InstrumentChoice: String, CaseIterable, Identifiable {
     }
 }
 
-/// Top bar: key picker on the left, playback and settings on the right.
-/// Selection controls live in the chord panel.
+/// Top bar (iPhone): key picker on the left, play and settings on the right. iPad and Mac have no
+/// top bar: the selected chord and `WindowButtonsCard` sit above the instruments instead.
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.layoutWidth) private var layoutWidth
@@ -62,7 +65,7 @@ struct HeaderView: View {
             KeyPickerMenu(selection: Binding(
                 get: { model.state.selectedKey },
                 set: { model.state.selectedKey = $0 }
-            ), showsLabelOptions: true)
+            ))
             if let instrumentChoice, instrumentOptions.count > 1 {
                 // Takes the space between the key menu and the buttons.
                 InstrumentTabs(selection: instrumentChoice, options: instrumentOptions)
@@ -71,17 +74,15 @@ struct HeaderView: View {
                 Spacer(minLength: 0)
             }
             HStack(spacing: 0) {
-                IconButton(symbol: ActionIcon.play, help: "Play all selected notes (Enter)", size: size, isEnabled: state.hasSelection) {
-                    model.play()
-                }
+                // One play button: plays on a loop until pressed again.
                 IconButton(
-                    symbol: ActionIcon.loop,
-                    help: model.isLooping ? "Stop loop (Space)" : "Loop playback (Space)",
+                    symbol: model.isLoopingSelection ? ActionIcon.stop : ActionIcon.play,
+                    help: model.isLoopingSelection ? "Stop (Space)" : "Play this chord on repeat (Space)",
                     size: size,
-                    isEnabled: state.canLoop || model.isLooping,
-                    isActive: model.isLooping
+                    isEnabled: state.hasSelection || model.isLoopingSelection,
+                    isActive: model.isLoopingSelection
                 ) {
-                    model.toggleLoop()
+                    model.toggleSelectionLoop()
                 }
                 IconButton(symbol: ActionIcon.settings, help: "Settings", size: size) {
                     model.isSettingsPresented = true
@@ -91,9 +92,105 @@ struct HeaderView: View {
     }
 }
 
+/// iPad and Mac: the song panel, chord bank and settings buttons, at the right end of the top bar.
+struct WindowButtons: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @Environment(\.isCompactLayout) private var isCompact
+
+    var body: some View {
+        if isCompact {
+            phoneMenu
+        } else {
+            buttons
+        }
+    }
+
+    /// Narrow windows and iPhone: the three folded into one menu to save room in the top bar.
+    private var phoneMenu: some View {
+        Menu {
+            Toggle(isOn: Binding(
+                get: { model.isSongPanelPresented },
+                set: { on in withAnimation { model.isSongPanelPresented = on } }
+            )) {
+                Label("Song", systemImage: ActionIcon.songPanel)
+            }
+            Toggle(isOn: Binding(
+                get: { model.isChordBankPresented },
+                set: { on in withAnimation { if on { model.openChordBank() } else { model.isChordBankPresented = false } } }
+            )) {
+                Label("Chord Bank", systemImage: ActionIcon.sidebar)
+            }
+            Divider()
+            // Which instruments show.
+            Toggle("Guitar 1", isOn: Binding(
+                get: { model.state.fretboards.count >= 1 },
+                set: { on in withAnimation { model.state.setFretboardCount(on ? max(1, model.state.fretboards.count) : 0) } }
+            ))
+            Toggle("Guitar 2", isOn: Binding(
+                get: { model.state.fretboards.count == 2 },
+                set: { on in withAnimation { model.state.setFretboardCount(on ? 2 : 1) } }
+            ))
+            Toggle("Piano", isOn: Binding(
+                get: { model.state.showPiano },
+                set: { on in withAnimation { model.state.showPiano = on } }
+            ))
+            Divider()
+            Button("Settings…", systemImage: ActionIcon.settings) {
+                model.isSettingsPresented = true
+            }
+        } label: {
+            // Sized like the top bar's other icon buttons.
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(theme.icon)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+                .iconHoverFill()
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // Level with the first line's buttons, which sit centered in a slightly taller row.
+        .padding(.top, 2)
+        .accessibilityLabel("View and settings")
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 2) {
+                IconButton(
+                    symbol: ActionIcon.songPanel,
+                    help: model.isSongPanelPresented ? "Hide song (⌘J)" : "Show song (⌘J)",
+                    size: 32,
+                    isOn: model.isSongPanelPresented
+                ) {
+                    withAnimation { model.isSongPanelPresented.toggle() }
+                }
+                IconButton(
+                    symbol: ActionIcon.sidebar,
+                    help: model.isChordBankPresented ? "Hide chord bank (⌘B)" : "Show chord bank (⌘B)",
+                    size: 32,
+                    isOn: model.isChordBankPresented
+                ) {
+                    withAnimation {
+                        if model.isChordBankPresented {
+                            model.isChordBankPresented = false
+                        } else {
+                            model.openChordBank()
+                        }
+                    }
+                }
+                IconButton(symbol: ActionIcon.settings, help: "Settings", size: 32) {
+                    model.isSettingsPresented = true
+                }
+        }
+    }
+}
+
 /// Tabs for the instruments that are turned on, with full names when they fit ("Guitar 1"), or
 /// short ones ("G1", "G2", "PN") when space is tight.
-private struct InstrumentTabs: View {
+struct InstrumentTabs: View {
     @Binding var selection: InstrumentChoice
     let options: [InstrumentChoice]
 
@@ -141,25 +238,27 @@ struct IconButton: View {
     var size: CGFloat = 32
     var isEnabled = true
     var isActive = false
+    /// A toggle that's on (an open sidebar): a steady hover-colored fill and a brighter icon.
+    var isOn = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(isActive ? .white : (isEnabled ? theme.icon : theme.iconDisabled))
+                .foregroundStyle(isActive ? .white : (isOn ? theme.primaryText : (isEnabled ? theme.icon : theme.iconDisabled)))
                 .frame(width: fillsWidth ? nil : size, height: size)
                 .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
         .buttonStyle(HighlightButtonStyle(
-            normal: isActive ? Tailwind.green500 : .clear,
-            highlighted: isActive ? Color(hex: 0x16A34A) : theme.hover,
+            normal: isActive ? Tailwind.green500 : (isOn ? theme.hover : .clear),
+            highlighted: isActive ? Color(hex: 0x16A34A) : (isOn ? theme.chipHover : theme.hover),
             cornerRadius: 8
         ))
         .disabled(!isEnabled)
         .help(help)
         .accessibilityLabel(help)
-        .accessibilityAddTraits(isActive ? .isSelected : [])
+        .accessibilityAddTraits(isActive || isOn ? .isSelected : [])
     }
 }
 
@@ -169,34 +268,16 @@ struct KeyPickerMenu: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
+    @Environment(\.isCompactLayout) private var isCompact
     @Binding var selection: MusicalKey?
     var showsScale = true
-    /// Adds the Notes / Degrees / Intervals choice (the app's own key menu).
-    var showsLabelOptions = false
+    /// A treble clef before the name (the instruments' key, in the selected chord's card).
+    var showsClef = false
     @State private var isHovered = false
 
     var body: some View {
         let sharpsOnly = model.state.sharpsOnly
         Menu {
-            if showsLabelOptions {
-                Section("Label Notes With") {
-                    Picker("Label Notes With", selection: Binding(
-                        get: { model.state.noteLabelContent },
-                        set: { model.state.noteLabelContent = $0 }
-                    )) {
-                        ForEach(NoteLabelContent.allCases) { content in
-                            Text(content.title).tag(content)
-                        }
-                    }
-                    // A Mac menu draws a palette as icons only, so text options there become a
-                    // checkmarked list instead.
-                    #if os(macOS)
-                    .pickerStyle(.inline)
-                    #else
-                    .pickerStyle(.palette)
-                    #endif
-                }
-            }
             keyToggle(nil, title: "No key")
             Menu("More Scales") {
                 ForEach(ScaleType.Family.allCases, id: \.self) { family in
@@ -224,15 +305,19 @@ struct KeyPickerMenu: View {
             }
         } label: {
             HStack(spacing: 8) {
+                if showsClef {
+                    Text(verbatim: "𝄞")
+                        .font(.system(size: 20))
+                        .foregroundStyle(theme.icon)
+                        .accessibilityHidden(true)
+                }
                 // Narrow screens use short names ("A min. pent.") so the top bar fits.
-                Text(selection.map { layoutWidth >= 600 ? $0.name(sharpsOnly: sharpsOnly) : $0.shortName(sharpsOnly: sharpsOnly) } ?? "No key")
-                    .font(.system(size: 14, weight: .medium))
+                noteText(selection.map { label(for: $0, sharpsOnly: sharpsOnly) } ?? "No key", size: 14, weight: .medium)
                     .foregroundStyle(theme.secondaryText)
                     .lineLimit(1)
                 if showsScale, let key = selection, layoutWidth >= 600 {
-                    let showsDegrees = showsLabelOptions && model.state.noteLabelContent == .degrees
-                    Text((showsDegrees ? key.degreeLabels : key.noteNames(sharpsOnly: sharpsOnly)).joined(separator: " "))
-                        .font(.system(size: 12))
+                    let showsDegrees = model.state.noteLabelContent == .degrees
+                    noteText((showsDegrees ? key.degreeLabels : key.noteNames(sharpsOnly: sharpsOnly)).joined(separator: " "), size: 12)
                         .foregroundStyle(Tailwind.zinc500)
                         .lineLimit(1)
                 }
@@ -257,6 +342,18 @@ struct KeyPickerMenu: View {
         .hoverEffect(.highlight)
         #endif
         .accessibilityLabel("Key: \(selection?.name(sharpsOnly: sharpsOnly) ?? "No key")")
+    }
+
+    /// The key's name in the menu's label: in full ("F major"); compact, as a chord symbol ("F",
+    /// "Fm") for major and minor keys, else the short name ("A min. pent.").
+    private func label(for key: MusicalKey, sharpsOnly: Bool) -> String {
+        guard isCompact || layoutWidth < 600 else { return key.name(sharpsOnly: sharpsOnly) }
+        let root = displayName(for: Note(midi: 60 + key.root), key: key, sharpsOnly: sharpsOnly)
+        switch key.type {
+        case .major: return root
+        case .minor: return root + "m"
+        default: return key.shortName(sharpsOnly: sharpsOnly)
+        }
     }
 
     /// A menu item with a checkmark when it's the current key.

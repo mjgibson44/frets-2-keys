@@ -39,6 +39,35 @@ struct NoteLabel: View {
     }
 }
 
+/// A chord name as shown: a plain major triad drops its "maj" ("Dmaj" → "D", "Dmaj/F#" → "D/F#"),
+/// while "maj7", "maj9" and so on keep it, since D7 and Dmaj7 are different chords.
+func chordDisplayName(_ name: String) -> String {
+    name.replacingOccurrences(of: #"maj(?=$|[/*\s(])"#, with: "", options: .regularExpression)
+}
+
+/// Text with each accidental (♯, ♭, #, or a "b" right after a note letter) drawn small and raised,
+/// like the instruments' note labels: "F#m7", "B♭ major", "m7♭5". It's a plain `Text`, so line
+/// limits and colors apply as usual; the size and weight are set here rather than with `.font`.
+func noteText(_ string: String, size: CGFloat, weight: Font.Weight = .regular) -> Text {
+    var segments: [(text: String, isAccidental: Bool)] = []
+    var previous: Character?
+    for character in string {
+        let isAccidental = "♯♭𝄪𝄫#".contains(character)
+            || (character == "b" && previous.map { "ABCDEFG".contains($0) } == true)
+        if let last = segments.last, last.isAccidental == isAccidental {
+            segments[segments.count - 1].text.append(character)
+        } else {
+            segments.append((String(character), isAccidental))
+        }
+        previous = character
+    }
+    return segments.reduce(Text(verbatim: "")) { text, segment in
+        segment.isAccidental
+            ? text + Text(verbatim: segment.text).font(.system(size: (size * 0.62).rounded(), weight: weight)).baselineOffset(size * 0.38)
+            : text + Text(verbatim: segment.text).font(.system(size: size, weight: weight))
+    }
+}
+
 extension NoteLabelContext {
     /// Spoken name for a note: "Bb3", plus its degree or interval when those are showing.
     func accessibilityName(for note: Note) -> String {
@@ -63,26 +92,26 @@ struct NoteBadge: View {
             .frame(width: size, height: size)
             .background(background, in: RoundedRectangle(cornerRadius: 4))
             .overlay {
-                // A soft edge, lighter than the full scale-degree border.
-                if case .inKey(let degree) = appearance.style {
+                // A soft edge, lighter than the full scale-degree border. Dark mode shows just the tint.
+                if case .inKey(let degree) = appearance.style, !theme.isDark {
                     RoundedRectangle(cornerRadius: 4)
                         .strokeBorder(ScaleDegreePalette.all[degree].border(dark: theme.isDark).opacity(0.4), lineWidth: 1)
                 }
             }
-            .opacity(appearance.isDimmed ? 0.3 : 1)
+            .opacity(appearance.isDimmed ? (theme.isDark ? 0.18 : 0.3) : 1)
     }
 
     private var foreground: Color {
         switch appearance.style {
-        case .selected: return .white
-        case .inKey: return theme.isDark ? Tailwind.zinc200 : Tailwind.zinc700
+        case .selected(let role): return theme.noteSolidText(role)
+        case .inKey(let degree): return theme.isDark ? ScaleDegreePalette.all[degree].darkText : Tailwind.zinc700
         case .plain: return plainTextColor ?? theme.plainNoteText
         }
     }
 
     private var background: Color {
         switch appearance.style {
-        case .selected(let role): return NotePalette.solid(for: role)
+        case .selected(let role): return theme.noteSolid(role)
         case .inKey(let degree): return ScaleDegreePalette.all[degree].tint(dark: theme.isDark)
         case .plain: return .clear
         }
@@ -97,6 +126,7 @@ struct NoteTileStyle: ViewModifier {
     let role: NoteColorRole?
     let isSelected: Bool
     var selectedColor: Color = .accentColor
+    var selectedTextColor: Color = .white
     /// Tiles in a grid stretch to their column; chips keep their natural width.
     var fillsWidth = true
     var minHeight: CGFloat = 0
@@ -110,7 +140,7 @@ struct NoteTileStyle: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius)
         content
-            .foregroundStyle(isSelected ? .white : theme.secondaryText)
+            .foregroundStyle(foreground)
             .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: minHeight)
             .background(fill, in: shape)
             .overlay {
@@ -121,8 +151,16 @@ struct NoteTileStyle: ViewModifier {
             .contentShape(shape)
     }
 
+    /// Selected: the same text as a selected note (or `selectedTextColor` for a neutral tile).
+    /// Unselected and colored, dark mode tints the text like the instruments' notes.
+    private var foreground: Color {
+        if isSelected { return role.map(theme.noteSolidText) ?? selectedTextColor }
+        if theme.isDark, let role { return theme.noteSolidText(role) }
+        return theme.secondaryText
+    }
+
     private var fill: Color {
-        if isSelected { return role.map(NotePalette.solid(for:)) ?? selectedColor }
+        if isSelected { return role.map(theme.noteSolid) ?? selectedColor }
         return role.map { NotePalette.tint(for: $0, dark: theme.isDark) } ?? neutralFill ?? theme.chip
     }
 
@@ -130,14 +168,14 @@ struct NoteTileStyle: ViewModifier {
         if role != nil && !showsColorBorder { return .clear }
         switch role {
         case .scaleDegree(let degree)?: return ScaleDegreePalette.all[degree].border(dark: theme.isDark)
-        case let role?: return NotePalette.solid(for: role).opacity(theme.isDark ? 0.7 : 0.55)
+        case let role?: return theme.noteSolid(role).opacity(theme.isDark ? 0.7 : 0.55)
         case nil: return neutralBorder
         }
     }
 }
 
 /// While a note sounds during playback, its fret or piano key briefly shades: darker in light mode,
-/// lighter in dark mode. It snaps on and off. Apply it inside any fill it should shade.
+/// slightly lighter in dark mode. It snaps on and off. Apply it inside any fill it should shade.
 struct NoteFlash: ViewModifier {
     @Environment(\.theme) private var theme
     let isFlashing: Bool
@@ -152,7 +190,7 @@ struct NoteFlash: ViewModifier {
             .background {
                 InsetRoundedRectangle(cornerRadius: cornerRadius, dx: horizontalInset ?? inset, dy: inset)
                     .fill(theme.isDark ? Color.white : Color.black)
-                    .opacity(isFlashing ? (theme.isDark ? 0.38 : 0.32) : 0)
+                    .opacity(isFlashing ? (theme.isDark ? 0.15 : 0.32) : 0)
                     // Instant both ways, so one note's shade doesn't linger into the next.
                     .transaction { $0.animation = nil }
                     .allowsHitTesting(false)

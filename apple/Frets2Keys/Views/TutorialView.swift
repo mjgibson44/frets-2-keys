@@ -9,8 +9,7 @@ struct TutorialView: View {
         (ActionIcon.saveNew, "Save as a new chord."),
         (ActionIcon.update, "Update a previously saved chord."),
         (ActionIcon.transposeUp, "Transpose notes up/down."),
-        (ActionIcon.play, "Play the chord once."),
-        (ActionIcon.loop, "Play chords continuously in a loop."),
+        (ActionIcon.play, "Play the song (or a section) on a loop; press again to stop."),
     ]
 
     private let shortcuts: [(action: String, keys: String)] = [
@@ -72,19 +71,19 @@ struct TutorialView: View {
                             .bodyStyle()
                     }
 
-                    section("Chord Sets") {
-                        Text("Saved chords belong to a chord set, such as a song or a practice routine. Use the set menu at the top of the chord panel to switch sets, or to create, rename, duplicate and delete them.")
+                    section("Songs") {
+                        Text("Saved chords belong to a song. Use the song menu at the top of the chord panel to switch songs, or to create, rename, duplicate and delete them.")
                             .bodyStyle()
-                        Text("Split a set into sections, like a verse and chorus, with the Add Section button. Drag chords between sections, drag a section's name to reorder it, or use the section's menu. Looping plays through the whole set, section by section, and each section can loop on its own.")
+                        Text("A new song starts with a Verse and a Chorus; add more sections with the Add Section button. Drag chords between sections, drag a section's name to reorder it, or use the section's menu. Looping plays through the whole song, section by section, and each section can loop on its own.")
                             .bodyStyle()
                         Text("While looping, the instruments show the next chord's notes in a lighter color over each chord's last two beats. You can turn this off with Show next chord in Settings.")
                             .bodyStyle()
-                        Text("Your chord sets sync through iCloud to your other devices signed in to the same Apple Account.")
+                        Text("Your songs sync through iCloud to your other devices signed in to the same Apple Account.")
                             .bodyStyle()
                     }
 
                     section("Chord Bank") {
-                        Text("Tap Add Chord to pick from common chords by root and type. You'll hear each one as you choose; then add it to the current set, or just select it to see it on the instruments. The Scales tab works the same way for scales: a saved scale shows on the instruments when you tap it, so you can see a chord against it.")
+                        Text("Tap Add Chord to pick from common chords by root and type. You'll hear each one as you choose; then add it to the current song, or just select it to see it on the instruments. The Scales tab works the same way for scales: a saved scale shows on the instruments when you tap it, so you can see a chord against it.")
                             .bodyStyle()
                     }
 

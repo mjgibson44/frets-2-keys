@@ -94,6 +94,11 @@ public struct ChordSet: Codable, Hashable, Identifiable, Sendable {
         self.init(id: id, name: name, sections: [ChordSection(chords: chords)], createdAt: createdAt, modifiedAt: modifiedAt)
     }
 
+    /// A new, empty song: a Verse and a Chorus to fill in.
+    public static func newSong(name: String) -> ChordSet {
+        ChordSet(name: name, sections: [ChordSection(name: "Verse"), ChordSection(name: "Chorus")])
+    }
+
     public init(id: UUID = UUID(), name: String, sections: [ChordSection], createdAt: Date = Date(), modifiedAt: Date? = nil) {
         self.id = id
         self.name = name
@@ -193,7 +198,7 @@ public struct AppState: Codable, Equatable, Sendable {
     public var darkMode = false
 
     public init() {
-        let set = ChordSet(name: Self.defaultSetName(number: 1))
+        let set = ChordSet.newSong(name: Self.defaultSetName(number: 1))
         chordSets = [set]
         activeSetID = set.id
     }
@@ -220,13 +225,14 @@ public struct AppState: Codable, Equatable, Sendable {
         chordSets[index] = set
     }
 
-    static func defaultSetName(number: Int) -> String { "Set \(number)" }
+    /// Sets are called songs in the app: "Song 1", "Song 2"...
+    static func defaultSetName(number: Int) -> String { "Song \(number)" }
 
-    /// "Set N" with N one higher than any existing default-named set.
+    /// "Song N" with N one higher than any existing default-named song.
     public var nextDefaultSetName: String {
         let numbers = chordSets.compactMap { set -> Int? in
-            guard set.name.hasPrefix("Set ") else { return nil }
-            return Int(set.name.dropFirst(4))
+            guard set.name.hasPrefix("Song ") else { return nil }
+            return Int(set.name.dropFirst(5))
         }
         return Self.defaultSetName(number: (numbers.max() ?? 0) + 1)
     }
@@ -234,7 +240,7 @@ public struct AppState: Codable, Equatable, Sendable {
     /// Creates an empty set with a default name and switches to it.
     @discardableResult
     public mutating func createSet() -> UUID {
-        let set = ChordSet(name: nextDefaultSetName)
+        let set = ChordSet.newSong(name: nextDefaultSetName)
         chordSets.append(set)
         selectSet(id: set.id)
         return set.id
@@ -269,6 +275,15 @@ public struct AppState: Codable, Equatable, Sendable {
         return copy.id
     }
 
+    /// Copies a song from the song bank into the library and switches to it.
+    @discardableResult
+    public mutating func addSongFromBank(_ preset: PresetSong) -> UUID {
+        let song = preset.makeSong()
+        chordSets.append(song)
+        selectSet(id: song.id)
+        return song.id
+    }
+
     /// Deletes a set. If it was active, the next set (or the previous one) becomes active;
     /// deleting the last remaining set leaves a fresh empty one.
     public mutating func deleteSet(id: UUID) {
@@ -276,7 +291,7 @@ public struct AppState: Codable, Equatable, Sendable {
         chordSets.remove(at: index)
         deletedSetIDs[id] = Date()
         if chordSets.isEmpty {
-            let set = ChordSet(name: Self.defaultSetName(number: 1))
+            let set = ChordSet.newSong(name: Self.defaultSetName(number: 1))
             chordSets = [set]
         }
         if id == activeSetID {
@@ -398,6 +413,8 @@ public struct AppState: Codable, Equatable, Sendable {
     /// The section new chords go into: the active chord's, otherwise the last one.
     public var activeSectionID: UUID {
         if let activeChordID, let section = activeSet.section(containing: activeChordID) { return section.id }
+        // An empty song starts filling from its first section (the Verse); otherwise the last.
+        if activeSet.sections.allSatisfy({ $0.chords.isEmpty }) { return activeSet.sections[0].id }
         return activeSet.sections[activeSet.sections.count - 1].id
     }
 
@@ -710,8 +727,12 @@ public struct LoopSequencer: Sendable {
     /// Beats (counting the one just played) until the next chord, or nil when it won't change.
     public private(set) var beatsUntilChange: Int?
 
-    public init(startingFrom state: AppState, sectionID: UUID? = nil) {
+    /// Repeats whatever's selected, beat after beat, rather than walking the song's chords.
+    public let repeatsSelection: Bool
+
+    public init(startingFrom state: AppState, sectionID: UUID? = nil, repeatsSelection: Bool = false) {
         self.sectionID = sectionID
+        self.repeatsSelection = repeatsSelection
         let chords = Self.chords(in: state, sectionID: sectionID)
         if chords.count > 1, let active = chords.firstIndex(where: { $0.id == state.activeChordID }) {
             chordIndex = active
@@ -728,6 +749,11 @@ public struct LoopSequencer: Sendable {
     /// Advances the loop, updating the selection when cycling saved chords.
     /// Returns the notes to play, or `nil` when there's nothing left and the loop should stop.
     public mutating func nextBeat(_ state: inout AppState) -> [Note]? {
+        if repeatsSelection {
+            changesOnNextBeat = false
+            beatsUntilChange = nil
+            return state.selectedNotes.isEmpty ? nil : state.selectedNotes
+        }
         let chords = Self.chords(in: state, sectionID: sectionID)
         let notes: [Note]
         if chords.count > 1 {
