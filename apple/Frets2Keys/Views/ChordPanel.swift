@@ -403,8 +403,10 @@ struct SetActions: View {
         Button("Rename…", systemImage: "pencil") { model.setBeingRenamed = active }
         Button("Duplicate", systemImage: "plus.square.on.square") { model.duplicateSet(active) }
         Button("Delete…", systemImage: "trash", role: .destructive) { model.setPendingDeletion = active }
-        Divider()
-        Button("Add Section", systemImage: "rectangle.stack.badge.plus") { model.addSection() }
+        if model.state.usesSections {
+            Divider()
+            Button("Add Section", systemImage: "rectangle.stack.badge.plus") { model.addSection() }
+        }
     }
 }
 
@@ -443,10 +445,17 @@ private struct SectionsList: View {
 
     var body: some View {
         let sections = model.state.activeSet.sections
-        // One row per section, even a lone one.
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                SectionView(section: section, index: index, count: sections.count)
+        if !model.state.usesSections, sections.count == 1, let only = sections.first {
+            // Sections off: the song is just its chords.
+            SectionChips(section: only, layout: .wrapping, showsEmptyText: false)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .sectionDropTarget(only.id, model: model)
+        } else {
+            // One row per section, even a lone one.
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    SectionView(section: section, index: index, count: sections.count)
+                }
             }
         }
     }

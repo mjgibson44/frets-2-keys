@@ -101,6 +101,7 @@ final class AppModel {
                 applyMerged: { [unowned self] library in
                     isApplyingSync = true
                     state.apply(library)
+                    state.combineSectionsIfOff()
                     isApplyingSync = false
                     if !state.canLoop { stopLoop() }
                 }
@@ -294,6 +295,15 @@ final class AppModel {
     }
 
     // MARK: - Sections
+
+    /// Turning sections off combines each song's sections into one list of chords.
+    func setUsesSections(_ on: Bool) {
+        if !on {
+            if loopingSectionID != nil { stopLoop() }
+            bankTargetSectionID = nil
+        }
+        state.setUsesSections(on)
+    }
 
     func addSection() {
         let id = state.addSection()

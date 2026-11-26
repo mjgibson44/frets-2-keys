@@ -196,6 +196,35 @@ public struct AppState: Codable, Equatable, Sendable {
     /// While looping, fades the set's next chord in on the instruments just before the change.
     public var showNextChord = true
     public var darkMode = false
+    /// Songs split into sections (Verse, Chorus…). Off, each song is one list of chords: see
+    /// `setUsesSections(_:)`.
+    public private(set) var usesSections = true
+
+    /// A new, empty song: a Verse and a Chorus with sections on, else one list.
+    private func newSong(name: String) -> ChordSet {
+        usesSections ? ChordSet.newSong(name: name) : ChordSet(name: name)
+    }
+
+    /// Turns sections on or off. Turning them off combines each song's sections into one list of
+    /// chords, in order (their names are dropped).
+    public mutating func setUsesSections(_ on: Bool) {
+        usesSections = on
+        combineSectionsIfOff()
+    }
+
+    /// Whether any song has more than one section (what turning sections off would combine).
+    public var hasSongsWithSections: Bool { chordSets.contains { $0.sections.count > 1 } }
+
+    /// With sections off, combines any song that has several (one synced from a device with them
+    /// on, or from the song bank) into one list.
+    public mutating func combineSectionsIfOff() {
+        guard !usesSections else { return }
+        for index in chordSets.indices where chordSets[index].sections.count > 1 {
+            let sections = chordSets[index].sections
+            chordSets[index].sections = [ChordSection(id: sections[0].id, chords: sections.flatMap(\.chords))]
+            chordSets[index].modifiedAt = Date()
+        }
+    }
 
     public init() {
         let set = ChordSet.newSong(name: Self.defaultSetName(number: 1))
@@ -240,7 +269,7 @@ public struct AppState: Codable, Equatable, Sendable {
     /// Creates an empty set with a default name and switches to it.
     @discardableResult
     public mutating func createSet() -> UUID {
-        let set = ChordSet.newSong(name: nextDefaultSetName)
+        let set = newSong(name: nextDefaultSetName)
         chordSets.append(set)
         selectSet(id: set.id)
         return set.id
@@ -280,6 +309,7 @@ public struct AppState: Codable, Equatable, Sendable {
     public mutating func addSongFromBank(_ preset: PresetSong) -> UUID {
         let song = preset.makeSong()
         chordSets.append(song)
+        combineSectionsIfOff()
         selectSet(id: song.id)
         return song.id
     }
@@ -291,7 +321,7 @@ public struct AppState: Codable, Equatable, Sendable {
         chordSets.remove(at: index)
         deletedSetIDs[id] = Date()
         if chordSets.isEmpty {
-            let set = ChordSet.newSong(name: Self.defaultSetName(number: 1))
+            let set = newSong(name: Self.defaultSetName(number: 1))
             chordSets = [set]
         }
         if id == activeSetID {
@@ -659,7 +689,7 @@ public struct AppState: Codable, Equatable, Sendable {
     // MARK: - Persistence
 
     private enum CodingKeys: String, CodingKey {
-        case fretboards, chordSets, activeSetID, deletedSetIDs, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, noteLabelContent, tempo, instrument, darkMode
+        case fretboards, chordSets, activeSetID, deletedSetIDs, playMode, showPiano, selectedKey, keyLabelMode, noteLabelMode, noteLabelContent, tempo, instrument, darkMode, usesSections
         /// Stored under a new name since it became on by default.
         case showNextChord = "showsNextChord"
         /// Before chord sets existed, saved chords were stored directly.
@@ -693,6 +723,7 @@ public struct AppState: Codable, Equatable, Sendable {
         instrument = (try? container.decodeIfPresent(SynthInstrument.self, forKey: .instrument)) ?? .classic
         showNextChord = try container.decodeIfPresent(Bool.self, forKey: .showNextChord) ?? true
         darkMode = try container.decodeIfPresent(Bool.self, forKey: .darkMode) ?? false
+        usesSections = try container.decodeIfPresent(Bool.self, forKey: .usesSections) ?? true
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -711,6 +742,7 @@ public struct AppState: Codable, Equatable, Sendable {
         try container.encode(instrument, forKey: .instrument)
         try container.encode(showNextChord, forKey: .showNextChord)
         try container.encode(darkMode, forKey: .darkMode)
+        try container.encode(usesSections, forKey: .usesSections)
     }
 
     /// The persisted portion of the state, for change detection.

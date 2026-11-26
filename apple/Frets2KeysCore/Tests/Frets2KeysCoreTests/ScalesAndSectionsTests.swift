@@ -430,4 +430,33 @@ final class NextChordTests: XCTestCase {
         // The earlier off-by-default setting is ignored.
         XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: Data(#"{"showNextChord":false}"#.utf8)).showNextChord)
     }
+
+    func testTurningSectionsOffCombinesSongs() throws {
+        var state = AppState()
+        XCTAssertTrue(state.usesSections)
+        XCTAssertEqual(state.activeSet.sections.count, 2)
+        let verse = state.activeSet.sections[0].id
+        let chorus = state.activeSet.sections[1].id
+        _ = state.addChord(notes: ["C4", "E4", "G4"], to: chorus)
+        _ = state.addChord(notes: ["A3", "C4", "E4"], to: verse)
+
+        state.setUsesSections(false)
+        XCTAssertEqual(state.activeSet.sections.count, 1)
+        XCTAssertEqual(state.activeSet.sections[0].chords.count, 2)
+        // Verse's chord first, then Chorus's.
+        XCTAssertEqual(state.activeSet.sections[0].chords.first?.notes.first, "A3")
+
+        // New songs have no sections while off; turning back on keeps songs as they are.
+        state.createSet()
+        XCTAssertEqual(state.activeSet.sections.count, 1)
+        state.setUsesSections(true)
+        XCTAssertEqual(state.activeSet.sections.count, 1)
+        state.createSet()
+        XCTAssertEqual(state.activeSet.sections.count, 2)
+
+        // The setting is saved.
+        state.setUsesSections(false)
+        let decoded = try JSONDecoder().decode(AppState.self, from: XCTUnwrap(state.persistedData))
+        XCTAssertFalse(decoded.usesSections)
+    }
 }
