@@ -1,60 +1,32 @@
 import SwiftUI
 import Frets2KeysCore
 
-/// The bottom of the window: two full-width sections divided by a hairline. The selected chord
-/// and its controls sit above the chord set's saved chords. The selection bar always shows (with a
-/// hint when nothing is selected) so the instruments above don't jump.
+/// The song along the bottom of the window. On iPhone the selected chord and its controls sit
+/// above it, divided by a hairline; iPad and Mac give the selection its own card above the
+/// instruments, and the song panel can be turned off.
 struct ChordPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// A sideways iPhone has little height, so the saved chords share one scrolling row.
-    private var usesSingleRow: Bool {
-        Device.isPhone && verticalSizeClass == .compact
-    }
+    private var usesSingleRow: Bool { false }
 
     /// Upright on iPhone, saved chords wrap up to about three rows, then scroll within them.
-    private static let phoneChipsMaxHeight: CGFloat = 3 * 37 + 2 * 8
+    private static let phoneChipsMaxHeight: CGFloat = 3 * 27 + 2 * 6
 
     /// The inset from the window's edges, lining the contents up with the top bar's.
     var padding: CGFloat = 16
-
-    @Environment(\.layoutWidth) private var layoutWidth
-
-    /// Wide windows put the selected chord beside the chord set instead of above it, so their
-    /// controls aren't stretched across the whole window.
-    private var isSideBySide: Bool { !Device.isPhone && layoutWidth >= 900 }
+    /// In the sidebar above the chord bank: just the set, with no Add Chord (the bank is right there).
+    var inSidebar = false
+    /// Grows to fit every section rather than scrolling within its own cap (when an outer area
+    /// scrolls instead).
+    var unboundedHeight = false
 
     var body: some View {
-        if isSideBySide {
-            HStack(alignment: .top, spacing: 0) {
-                // The chord on one line, its controls on the next, in the left third.
-                SelectionBar(stacksControls: true)
-                    .padding(.horizontal, padding)
-                    .padding(.vertical, 16)
-                    .frame(width: layoutWidth / 3, alignment: .leading)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                setsCard
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    // A hairline down the full height between the two.
-                    .overlay(alignment: .leading) {
-                        Rectangle().fill(theme.sectionDivider).frame(width: 1)
-                    }
-            }
-            // Both sides as tall as the taller one, so the hairline runs the whole height.
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            VStack(spacing: 0) {
-                SelectionBar()
-                    .padding(.horizontal, padding)
-                    .padding(.vertical, Device.isPhone ? 8 : 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                SectionDivider()
-                setsCard
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
+        // The selection has its own card in the top bar.
+        setsCard
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The set menu, Add Chord and the set's sections, sized to its content.
@@ -64,6 +36,8 @@ struct ChordPanel: View {
             // One row: set menu, saved chords scrolling sideways, then Add.
             HStack(spacing: 8) {
                 SetMenu()
+                SongPlayButton()
+                SongActionsMenu()
                 ScrollView(.horizontal, showsIndicators: false) {
                     SectionsRow()
                         .padding(.vertical, 2)
@@ -76,45 +50,52 @@ struct ChordPanel: View {
             let sections = model.state.activeSet.sections
             // An empty set says so on the same row as its menu and buttons.
             let emptySection = sections.count == 1 && sections[0].chords.isEmpty ? sections[0] : nil
-            VStack(alignment: .leading, spacing: Device.isPhone ? 10 : 12) {
-                HStack(spacing: 8) {
-                    SetMenu()
-                    if let emptySection {
-                        Text("No saved chords")
-                            .font(.system(size: 14))
-                            .foregroundStyle(theme.mutedText)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                            .sectionDropTarget(emptySection.id, model: model)
-                    } else {
+            VStack(alignment: .leading, spacing: 12) {
+                    // The song's name at the top left; its buttons at the right, lined up with the
+                    // sections' (play over play, "..." over "...").
+                    HStack(alignment: .center, spacing: 12) {
+                        SetMenu()
+                        if emptySection != nil {
+                            Text("No saved chords")
+                                .font(.system(size: 13))
+                                .foregroundStyle(theme.mutedText)
+                                .lineLimit(1)
+                        }
                         Spacer(minLength: 0)
+                        HStack(spacing: 4) {
+                            // Where a section has its + (iPhone sections have no play, so the
+                            // song's play sits over their + instead).
+                            if SectionView.showsPlay {
+                                Color.clear.frame(width: 28, height: 1)
+                            }
+                            SongPlayButton()
+                            SongActionsMenu()
+                        }
+                        .frame(width: SectionView.buttonsWidth, alignment: .leading)
                     }
-                    AddSectionButton()
-                    AddChordButton()
-                }
                 if emptySection != nil {
                     EmptyView()
-                } else if Device.isPhone {
-                    // Grows with the set until it hits the cap, then scrolls.
-                    let maxHeight = model.state.activeSet.sections.count > 1 ? Self.phoneSectionsMaxHeight : Self.phoneChipsMaxHeight
-                    ViewThatFits(in: .vertical) {
-                        OneSectionList()
-                        ScrollView(.vertical) {
-                            OneSectionList()
-                        }
-                        .scrollIndicators(.visible)
-                    }
-                    .frame(maxHeight: maxHeight)
-                } else {
+                } else if unboundedHeight {
                     SectionsList()
+                } else {
+                    // Grows with the song, then scrolls, so the instruments keep their room.
+                    ViewThatFits(in: .vertical) {
+                        SectionsList()
+                        ScrollView(.vertical) {
+                            SectionsList()
+                        }
+                    }
+                    .frame(maxHeight: Self.songMaxHeight)
                 }
             }
             .padding(.horizontal, padding)
-            .padding(.vertical, Device.isPhone ? 14 : 16)
+            .padding(.vertical, inSidebar ? 0 : (Device.isPhone ? 12 : 16))
             .fixedSize(horizontal: false, vertical: true)
         }
     }
+
+    /// iPad and Mac: about five sections' rows before the song scrolls.
+    private static let songMaxHeight: CGFloat = 220
 
     /// With sections, room for the one section's header as well as its chords.
     private static let phoneSectionsMaxHeight: CGFloat = phoneChipsMaxHeight + 36
@@ -148,11 +129,10 @@ private struct AddChordButton: View {
                 .frame(minWidth: compact ? 36 : nil, minHeight: compact ? 36 : nil)
         }
         .buttonStyle(HighlightButtonStyle(
-            normal: model.isChordBankPresented ? theme.chipActive : theme.pageChip,
-            highlighted: theme.chipHover,
+            normal: model.isChordBankPresented ? theme.chipActive : .clear,
+            highlighted: theme.hover,
             cornerRadius: 6
         ))
-        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(theme.pageChipBorder, lineWidth: 1))
         .help("Choose a chord or scale from the chord bank")
         // The compact (icon-only) style still needs a spoken name.
         .accessibilityLabel("Add Chord")
@@ -172,51 +152,20 @@ private struct AddChordLabelStyle: LabelStyle {
     }
 }
 
-/// Adds a section to the set (and asks for its name).
-private struct AddSectionButton: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.theme) private var theme
-
-    var body: some View {
-        Button {
-            withAnimation(.snappy) { model.addSection() }
-        } label: {
-            Image(systemName: "rectangle.stack.badge.plus")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(theme.secondaryText)
-                .frame(width: 30, height: 27)
-        }
-        .buttonStyle(HighlightButtonStyle(normal: theme.pageChip, highlighted: theme.chipHover, cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(theme.pageChipBorder, lineWidth: 1))
-        .help("Add a section, like a verse or chorus")
-        .accessibilityLabel("Add Section")
-    }
-}
-
 // MARK: - Set menu
 
-/// Shows the active set's name; the menu switches between sets and manages them.
+/// The active song's name; it opens a searchable list that switches songs. Managing songs is in
+/// `SongActionsMenu`.
 struct SetMenu: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @State private var isHovered = false
+    @State private var isOpen = false
 
     var body: some View {
         let state = model.state
-        Menu {
-            Section("Chord Sets") {
-                ForEach(state.chordSets) { set in
-                    Toggle(isOn: Binding(
-                        get: { set.id == model.state.activeSetID },
-                        set: { if $0 { model.selectSet(set.id) } }
-                    )) {
-                        Text(set.name)
-                        Text(set.chords.count == 1 ? "1 item" : "\(set.chords.count) items")
-                    }
-                }
-            }
-            Divider()
-            SetActions(model: model)
+        Button {
+            isOpen.toggle()
         } label: {
             HStack(spacing: 6) {
                 Text(state.activeSet.name)
@@ -229,12 +178,10 @@ struct SetMenu: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(isHovered ? theme.hover : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .background(isHovered || isOpen ? theme.hover : .clear, in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
-        .menuStyle(.button)
         .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .fixedSize()
         #if os(macOS)
         .onHover { isHovered = $0 }
@@ -242,17 +189,217 @@ struct SetMenu: View {
         .hoverEffect(.highlight)
         #endif
         .padding(.leading, -8)
-        .accessibilityLabel("Chord set: \(state.activeSet.name)")
+        // A popover on iPad and Mac; on iPhone a card up from the bottom of the screen.
+        .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+            SongSearchList { isOpen = false }
+                .environment(\.theme, theme)
+                .presentationCompactAdaptation(.sheet)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(theme.pageBackground)
+                .preferredColorScheme(.dark)
+        }
+        .help("Switch songs")
+        .accessibilityLabel("Song: \(state.activeSet.name)")
+        .accessibilityHint("Shows the songs to switch to")
     }
 }
 
-/// New / rename / duplicate / delete, shared by the set menu and the Mac menu bar.
+/// A search field over your songs and the song bank; picking one of yours (or pressing Return for
+/// the first match) switches to it, and picking a bank song adds a copy of it.
+private struct SongSearchList: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @State private var query = ""
+    @FocusState private var isSearchFocused: Bool
+    let onPick: () -> Void
+
+    private var matches: [ChordSet] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return model.state.chordSets }
+        return model.state.chordSets.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    private var bankMatches: [PresetSong] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return SongBank.songs }
+        return SongBank.songs.filter {
+            $0.title.localizedCaseInsensitiveContains(trimmed) || $0.artist.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    /// iPhone shows the list as a full-width card from the bottom of the screen.
+    private var isSheet: Bool { Device.isPhone }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isSheet {
+                Text("Songs")
+                    .font(.headline)
+                    .padding(.bottom, 4)
+            }
+            TextField("Search songs", text: $query)
+                .textFieldStyle(.roundedBorder)
+                .focused($isSearchFocused)
+                .onSubmit {
+                    if let first = matches.first {
+                        pick(first)
+                    } else if let first = bankMatches.first {
+                        model.addSongFromBank(first)
+                        onPick()
+                    }
+                }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    if matches.isEmpty && bankMatches.isEmpty {
+                        Text("No songs match")
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.mutedText)
+                            .padding(8)
+                    }
+                    ForEach(matches) { song in
+                        row(song)
+                    }
+                    if !bankMatches.isEmpty {
+                        // Popular songs to start from: picking one adds a copy to your songs.
+                        Text("Song Bank")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(theme.mutedText)
+                            .padding(.horizontal, 8)
+                            .padding(.top, matches.isEmpty ? 0 : 10)
+                            .padding(.bottom, 2)
+                        ForEach(bankMatches) { preset in
+                            bankRow(preset)
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: isSheet ? .infinity : 360)
+            .fixedSize(horizontal: false, vertical: !isSheet)
+        }
+        .padding(isSheet ? 20 : 10)
+        .frame(width: isSheet ? nil : 300)
+        .frame(maxWidth: isSheet ? .infinity : nil, maxHeight: isSheet ? .infinity : nil, alignment: .top)
+        // The keyboard would cover half the card on iPhone, so the search waits for a tap there.
+        .onAppear { if !isSheet { isSearchFocused = true } }
+    }
+
+    private func row(_ song: ChordSet) -> some View {
+        let isActive = song.id == model.state.activeSetID
+        return Button {
+            pick(song)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .opacity(isActive ? 1 : 0)
+                Text(song.name)
+                    .font(.system(size: 13, weight: isActive ? .semibold : .regular))
+                    .foregroundStyle(theme.primaryText)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text(song.chords.count == 1 ? "1 item" : "\(song.chords.count) items")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.mutedText)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+        }
+        .buttonStyle(HighlightButtonStyle(highlighted: theme.hover, cornerRadius: 6))
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
+    private func bankRow(_ preset: PresetSong) -> some View {
+        Button {
+            model.addSongFromBank(preset)
+            onPick()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.icon)
+                Text(preset.title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme.primaryText)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text(preset.artist)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.mutedText)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+        }
+        .buttonStyle(HighlightButtonStyle(highlighted: theme.hover, cornerRadius: 6))
+        .help("Add a copy of \(preset.title) to your songs")
+    }
+
+    private func pick(_ song: ChordSet) {
+        model.selectSet(song.id)
+        onPick()
+    }
+}
+
+/// Plays the whole song on a loop, or stops it. Green while the song is playing.
+private struct SongPlayButton: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        let isPlaying = model.isLooping && model.loopingSectionID == nil && !model.isLoopingSelection
+        let isEnabled = model.state.canLoop || isPlaying
+        Button {
+            model.toggleSongLoop()
+        } label: {
+            Image(systemName: isPlaying ? ActionIcon.stop : ActionIcon.play)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isPlaying ? .white : (isEnabled ? theme.icon : theme.iconDisabled))
+                .frame(width: 28, height: 27)
+        }
+        .buttonStyle(HighlightButtonStyle(
+            normal: isPlaying ? Tailwind.green500 : .clear,
+            highlighted: isPlaying ? Color(hex: 0x16A34A) : theme.hover,
+            cornerRadius: 8
+        ))
+        .disabled(!isEnabled)
+        .help(isPlaying ? "Stop the song" : "Play the song")
+        .accessibilityLabel(isPlaying ? "Stop the song" : "Play the song")
+    }
+}
+
+/// The "..." beside the song: new, rename, duplicate, delete and add a section.
+struct SongActionsMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Menu {
+            SetActions(model: model)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.icon)
+                .frame(width: 28, height: 27)
+                .contentShape(Rectangle())
+                .iconHoverFill()
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Song options")
+        .accessibilityLabel("Song options")
+    }
+}
+
+/// New / rename / duplicate / delete, shared by the song menu and the Mac menu bar.
 struct SetActions: View {
     let model: AppModel
 
     var body: some View {
         let active = model.state.activeSetID
-        Button("New Set", systemImage: "plus") { model.createSet() }
+        Button("New Song", systemImage: "plus") { model.createSet() }
         Button("Rename…", systemImage: "pencil") { model.setBeingRenamed = active }
         Button("Duplicate", systemImage: "plus.square.on.square") { model.duplicateSet(active) }
         Button("Delete…", systemImage: "trash", role: .destructive) { model.setPendingDeletion = active }
@@ -289,21 +436,6 @@ enum PanelDragItem {
     }
 }
 
-/// Which sections are collapsed on this device (not synced), as comma-separated IDs.
-private struct CollapsedSections: DynamicProperty {
-    @AppStorage("collapsedSections") private var stored = ""
-
-    private var ids: Set<String> { Set(stored.split(separator: ",").map(String.init)) }
-
-    func contains(_ id: UUID) -> Bool { ids.contains(id.uuidString) }
-
-    func toggle(_ id: UUID) {
-        var ids = ids
-        if ids.contains(id.uuidString) { ids.remove(id.uuidString) } else { ids.insert(id.uuidString) }
-        stored = ids.sorted().joined(separator: ",")
-    }
-}
-
 /// The set's sections, one under another. A set with a single section shows just its chords, as
 /// before sections existed.
 private struct SectionsList: View {
@@ -311,14 +443,10 @@ private struct SectionsList: View {
 
     var body: some View {
         let sections = model.state.activeSet.sections
-        if sections.count == 1, let only = sections.first {
-            SectionChips(section: only, layout: .wrapping)
-                .sectionDropTarget(only.id, model: model)
-        } else {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                    SectionView(section: section, index: index, count: sections.count)
-                }
+        // One row per section, even a lone one.
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                SectionView(section: section, index: index, count: sections.count)
             }
         }
     }
@@ -355,33 +483,73 @@ private struct OneSectionList: View {
     }
 }
 
-/// One section: a header (name, loop, add, menu) over its chords.
+/// One section: a header (name, loop, menu) over its chords.
 private struct SectionView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @State private var isDropTarget = false
-    private let collapsed = CollapsedSections()
+    @State private var isHovered = false
+    @Environment(\.isCompactLayout) private var isCompact
     let section: ChordSection
     let index: Int
     let count: Int
-    /// iPhone, one section at a time: the section's name becomes a menu that switches to another,
-    /// and the section can't be collapsed.
+    /// iPhone, one section at a time: the section's name becomes a menu that switches to another.
     var onSwitch: ((UUID) -> Void)?
 
+    /// The song panel's columns (iPad and Mac): names, chords, then buttons (+, play, menu) at the right.
+    /// iPhone has no per-section play button, and a narrower name column.
+    static let showsPlay = !Device.isPhone
+    static let nameWidth: CGFloat = Device.isPhone ? 72 : 96
+    static let buttonsWidth: CGFloat = showsPlay ? 3 * 28 + 2 * 4 : 2 * 28 + 4
+
+    /// iPad and Mac lay a section out as one row: name, its chords, then its buttons.
+    private var isRow: Bool { onSwitch == nil }
+
     var body: some View {
-        let isCollapsed = onSwitch == nil && collapsed.contains(section.id)
-        VStack(alignment: .leading, spacing: 6) {
-            header(isCollapsed: isCollapsed)
-            if !isCollapsed {
-                SectionChips(section: section, layout: .wrapping)
+        Group {
+            if isRow && isCompact && !Device.isPhone {
+                // Narrow windows: the name and buttons on one line, the chords underneath.
+                // (iPhone keeps one row: name, chords, buttons.)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 12) {
+                        title(name: section.displayName(index: index))
+                        Spacer(minLength: 0)
+                        buttons
+                            .frame(width: Self.buttonsWidth, alignment: .leading)
+                    }
+                    SectionChips(section: section, layout: .wrapping, showsEmptyText: false)
+                }
+            } else if isRow {
+                HStack(alignment: .top, spacing: 12) {
+                    title(name: section.displayName(index: index))
+                        .frame(width: Self.nameWidth, alignment: .leading)
+                        .padding(.top, 4)
+                    SectionChips(section: section, layout: .wrapping, showsEmptyText: false)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 1)
+                    buttons
+                        .frame(width: Self.buttonsWidth, alignment: .leading)
+                }
+                .accessibilityElement(children: .contain)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    header
+                    SectionChips(section: section, layout: .wrapping)
+                }
             }
         }
         .padding(6)
         .background {
             if isDropTarget {
                 RoundedRectangle(cornerRadius: 8).fill(Tailwind.blue500.opacity(0.08))
+            } else if isHovered {
+                // Hovering anywhere on a section shades the whole row.
+                RoundedRectangle(cornerRadius: 8).fill(theme.cardButton)
             }
         }
+        #if os(macOS)
+        .onHover { isHovered = $0 }
+        #endif
         .overlay {
             if isDropTarget {
                 RoundedRectangle(cornerRadius: 8).strokeBorder(Tailwind.blue500.opacity(0.6), lineWidth: 1.5)
@@ -391,34 +559,49 @@ private struct SectionView: View {
         .sectionDropTarget(section.id, model: model, isTargeted: $isDropTarget)
     }
 
-    private func header(isCollapsed: Bool) -> some View {
+    private var header: some View {
         let name = section.displayName(index: index)
-        let isLooping = model.loopingSectionID == section.id
-        let chordCount = section.chords.filter { !$0.isScale }.count
         return HStack(spacing: 4) {
             if let onSwitch {
                 switcher(name: name, onSwitch: onSwitch)
             } else {
-                collapseButton(name: name, isCollapsed: isCollapsed)
+                title(name: name)
             }
 
             Spacer(minLength: 0)
 
-            smallButton(
-                isLooping ? "stop.fill" : ActionIcon.loop,
-                help: isLooping ? "Stop looping \(name)" : "Loop \(name)",
-                isEnabled: chordCount > 0 || isLooping,
-                isActive: isLooping
-            ) {
-                model.toggleLoop(section: section.id)
+            buttons
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(named: "Move Up") { model.shiftSection(section.id, by: -1) }
+        .accessibilityAction(named: "Move Down") { model.shiftSection(section.id, by: 1) }
+    }
+
+    /// The chord bank's target (iPad and Mac), play, and the section's menu.
+    private var buttons: some View {
+        let name = section.displayName(index: index)
+        let isLooping = model.loopingSectionID == section.id
+        let chordCount = section.chords.filter { !$0.isScale }.count
+        return HStack(spacing: 4) {
+            if isRow {
+                smallButton("plus", help: "Add chords from the chord bank to \(name)") {
+                    withAnimation { model.openChordBank(section: section.id) }
+                }
             }
-            smallButton("plus", help: "Add a chord or scale to \(name)") {
-                withAnimation { model.openChordBank(section: section.id) }
+            if Self.showsPlay {
+                smallButton(
+                    isLooping ? ActionIcon.stop : ActionIcon.play,
+                    help: isLooping ? "Stop \(name)" : "Play \(name)",
+                    isEnabled: chordCount > 0 || isLooping,
+                    isActive: isLooping
+                ) {
+                    model.toggleLoop(section: section.id)
+                }
             }
             Menu {
                 Button("Rename…", systemImage: "pencil") { model.sectionBeingRenamed = section.id }
                 Button("Add Chord or Scale", systemImage: "plus") { model.openChordBank(section: section.id) }
-                Button(isLooping ? "Stop Loop" : "Loop Section", systemImage: ActionIcon.loop) { model.toggleLoop(section: section.id) }
+                Button(isLooping ? "Stop" : "Play Section", systemImage: isLooping ? ActionIcon.stop : ActionIcon.play) { model.toggleLoop(section: section.id) }
                     .disabled(chordCount == 0 && !isLooping)
                 Divider()
                 Button("Move Up", systemImage: "arrow.up") { withAnimation(.snappy) { model.shiftSection(section.id, by: -1) } }
@@ -429,10 +612,11 @@ private struct SectionView: View {
                 Button("Delete Section…", systemImage: "trash", role: .destructive) { model.requestDeleteSection(section.id) }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.icon)
-                    .frame(width: 26, height: 24)
+                    .frame(width: 28, height: 27)
                     .contentShape(Rectangle())
+                    .iconHoverFill()
             }
             .menuStyle(.button)
             .buttonStyle(.plain)
@@ -441,37 +625,20 @@ private struct SectionView: View {
             .help("Section options")
             .accessibilityLabel("\(name) options")
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityAction(named: "Move Up") { model.shiftSection(section.id, by: -1) }
-        .accessibilityAction(named: "Move Down") { model.shiftSection(section.id, by: 1) }
     }
 
-    private func collapseButton(name: String, isCollapsed: Bool) -> some View {
-        Button {
-            withAnimation(.snappy(duration: 0.2)) { collapsed.toggle(section.id) }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                    .foregroundStyle(Tailwind.zinc500)
-                    .frame(width: 12)
-                Text(name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.secondaryText)
-                    .lineLimit(1)
-                if isCollapsed || section.chords.isEmpty {
-                    Text("\(section.chords.count)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(theme.mutedText)
-                }
-            }
-            .padding(.vertical, 3)
-            .contentShape(Rectangle())
+    /// The section's name.
+    private func title(name: String) -> some View {
+        HStack(spacing: 6) {
+            Text(name)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(theme.mutedText)
+                .lineLimit(1)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(name), \(section.chords.count) items")
-        .accessibilityHint(isCollapsed ? "Expands the section" : "Collapses the section")
         // Drag a section by its header to reorder.
         .draggable(PanelDragItem.section(section.id).payload) {
             Text(name)
@@ -516,17 +683,17 @@ private struct SectionView: View {
         .accessibilityHint("Shows another section")
     }
 
-    private func smallButton(_ symbol: String, help: String, isEnabled: Bool = true, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+    private func smallButton(_ symbol: String, help: String, isEnabled: Bool = true, isActive: Bool = false, isOn: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(isActive ? .white : (isEnabled ? theme.icon : theme.iconDisabled))
-                .frame(width: 26, height: 24)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isActive ? .white : (isOn ? theme.primaryText : (isEnabled ? theme.icon : theme.iconDisabled)))
+                .frame(width: 28, height: 27)
         }
         .buttonStyle(HighlightButtonStyle(
-            normal: isActive ? Tailwind.green500 : .clear,
-            highlighted: isActive ? Color(hex: 0x16A34A) : theme.hover,
-            cornerRadius: 6
+            normal: isActive ? Tailwind.green500 : (isOn ? theme.hover : .clear),
+            highlighted: isActive ? Color(hex: 0x16A34A) : (isOn ? theme.chipHover : theme.hover),
+            cornerRadius: 8
         ))
         .disabled(!isEnabled)
         .help(help)
@@ -592,14 +759,13 @@ private struct SectionChips: View {
     var body: some View {
         let chords = section.chords
         if chords.isEmpty {
-            if showsEmptyText {
-                let isOnly = model.state.activeSet.sections.count == 1
-                Text(isOnly ? "No saved chords" : "Drag chords here, or tap +")
-                    .font(.system(size: isOnly ? 14 : 13))
+            // A lone empty section says so; an empty one among others just shows its header.
+            if showsEmptyText && model.state.activeSet.sections.count == 1 {
+                Text("No saved chords")
+                    .font(.system(size: 14))
                     .foregroundStyle(theme.mutedText)
-                    .frame(maxWidth: layout == .wrapping ? .infinity : nil, alignment: layout == .wrapping && isOnly ? .center : .leading)
+                    .frame(maxWidth: layout == .wrapping ? .infinity : nil, alignment: layout == .wrapping ? .center : .leading)
                     .padding(.vertical, 4)
-                    .padding(.leading, isOnly ? 0 : 18)
             }
         } else {
             let container = layout == .row ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(FlowLayout(spacing: 8))
@@ -617,19 +783,18 @@ private struct SectionChips: View {
         let isDropTarget = chord.id == dropTargetID
         // Colored by the chord's root, like that note on the instruments (for the app's key).
         let role = chord.rootPitchClass.map { NoteAppearance.colorRole(for: Note(midi: 60 + $0), key: state.selectedKey) }
-        let title = chord.scale?.shortName(sharpsOnly: state.sharpsOnly) ?? chord.name
+        let title = chord.scale?.shortName(sharpsOnly: state.sharpsOnly) ?? chordDisplayName(chord.name)
         let spokenName = chord.scale.map { "\($0.name(sharpsOnly: state.sharpsOnly)) scale" } ?? chord.name
         let otherSections = state.activeSet.sections.enumerated().filter { $0.element.id != section.id }
 
-        return HStack(spacing: 8) {
+        return HStack(spacing: 4) {
             HStack(spacing: 5) {
                 if chord.isScale {
                     Image(systemName: "stairs")
                         .font(.system(size: 11, weight: .semibold))
                         .opacity(0.8)
                 }
-                Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                noteText(title, size: 13, weight: .medium)
                     .lineLimit(1)
                     .fixedSize()
             }
@@ -637,16 +802,17 @@ private struct SectionChips: View {
                 model.deleteChord(chord.id)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(isActive ? .white.opacity(0.85) : theme.icon)
-                    .frame(width: 20, height: 20)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(isActive ? (role.map(theme.noteSolidText) ?? .white).opacity(0.85) : theme.icon)
+                    .frame(width: 16, height: 16)
             }
-            .buttonStyle(HighlightButtonStyle(highlighted: (isActive ? Color.white : theme.icon).opacity(0.2), cornerRadius: 4))
+            .buttonStyle(HighlightButtonStyle(highlighted: isActive ? (role.map(theme.noteSolidText) ?? .white).opacity(0.2) : theme.hover, cornerRadius: 4))
             .help(chord.isScale ? "Delete scale" : "Delete chord")
             .accessibilityLabel("Delete \(spokenName)")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.leading, 9)
+        .padding(.trailing, 5)
+        .padding(.vertical, 5)
         .modifier(NoteTileStyle(
             role: role,
             isSelected: isActive,
@@ -664,10 +830,9 @@ private struct SectionChips: View {
         }
         .contentShape(RoundedRectangle(cornerRadius: 4))
         .onTapGesture { model.selectChord(chord.id) }
-        .help(chord.isScale ? "Show \(spokenName) on the instruments" : chord.name)
+        .help(chord.isScale ? "Show \(spokenName) on the instruments" : chordDisplayName(chord.name))
         .draggable(PanelDragItem.chord(chord.id).payload) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
+            noteText(title, size: 14, weight: .medium)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(theme.chip, in: RoundedRectangle(cornerRadius: 4))
@@ -715,23 +880,58 @@ private struct SectionChips: View {
 
 // MARK: - Selection bar
 
+/// The selected chord and its actions, in the top bar (iPad and Mac).
+struct SelectionCard: View {
+    var body: some View {
+        SelectionBar(textControls: true)
+    }
+}
+
 /// The current selection (chord name and notes) with the actions that apply to it.
 private struct SelectionBar: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.isCompactLayout) private var isCompact
     @Environment(\.theme) private var theme
     @Environment(\.layoutWidth) private var layoutWidth
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    /// The chord on one line and its controls on the next.
-    var stacksControls = false
+    /// Labeled buttons instead of icons, for the roomier card on iPad and Mac.
+    var textControls = false
 
     var body: some View {
-        if stacksControls {
-            // Beside the chord set: the chord on one line, its controls grouped at the start of
-            // the next, the first icon lined up with the text above.
-            VStack(alignment: .leading, spacing: 4) {
-                summaryStrip
-                controls(spread: false)
-                    .padding(.leading, -8)
+        if textControls {
+            // The key, the chord, its icon buttons, then Add to ▾.
+            let state = model.state
+            let role = state.chordRootPitchClass.map { NoteAppearance.colorRole(for: Note(midi: 60 + $0), key: state.selectedKey) }
+            // The instruments' key (the chord bank has its own).
+            let keyMenu = KeyPickerMenu(selection: Binding(
+                get: { model.state.selectedKey },
+                set: { model.state.selectedKey = $0 }
+            ), showsScale: false, showsClef: true)
+            .padding(.leading, -8)
+            let add = AddToSectionButton(role: role, canAdd: state.canSaveAsNew, shortcut: "A") {
+                model.saveAsNewChord()
+            }
+            .fixedSize()
+            // A plain bar (no card or dividers).
+            if isCompact {
+                // Narrow windows and iPhone: the key and controls on one line, the chord beneath.
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 10) {
+                        keyMenu
+                        Spacer(minLength: 0)
+                        iconControls
+                        add
+                    }
+                    summaryStrip
+                        .padding(.bottom, 4)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    keyMenu
+                    summaryStrip
+                    iconControls
+                    add
+                }
             }
         } else {
             // One row: a long chord's notes scroll sideways, the controls stay put at the end.
@@ -744,43 +944,60 @@ private struct SelectionBar: View {
 
     private static let summaryHeight: CGFloat = 24
 
+    /// The chord and as many of its notes as fit (at most 8), then "+X" for the rest.
     private var summaryStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            summary
-                .padding(.vertical, 2)
-                // Same height with or without a selection, so the card never resizes.
-                .frame(minHeight: Self.summaryHeight)
+        ViewThatFits(in: .horizontal) {
+            summary(maxNotes: 8)
+            summary(maxNotes: 7)
+            summary(maxNotes: 6)
+            summary(maxNotes: 5)
+            summary(maxNotes: 4)
+            summary(maxNotes: 3)
+            summary(maxNotes: 2)
+            summary(maxNotes: 1)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .padding(.vertical, 2)
+        // Same height with or without a selection, so the card never resizes.
+        .frame(minHeight: Self.summaryHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
     }
 
     @ViewBuilder
-    private var summary: some View {
+    private func summary(maxNotes: Int) -> some View {
         let state = model.state
         if state.hasSelection {
             HStack(spacing: 8) {
                 if let chordName = state.chordName {
-                    Text(chordName)
-                        .font(.system(size: 14, weight: .semibold))
+                    noteText(chordDisplayName(chordName), size: 14, weight: .semibold)
                         .foregroundStyle(theme.secondaryText)
                         .lineLimit(1)
                         .fixedSize()
                         .accessibilityLabel("Chord: \(chordName)")
                 }
                 let context = state.noteLabelContext
+                let notes = state.selectedNotes
+                let hidden = max(0, notes.count - maxNotes)
                 HStack(spacing: 4) {
-                    ForEach(state.selectedNotes, id: \.self) { note in
+                    ForEach(notes.prefix(maxNotes), id: \.self) { note in
                         // The web app shows sharp names here regardless of key; degrees and
                         // intervals match the instruments.
-                        Text(state.noteLabelContent == .names ? note.name : context.label(for: note))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white)
+                        noteText(state.noteLabelContent == .names ? note.name : context.label(for: note), size: 12, weight: .medium)
+                            .foregroundStyle(theme.noteSolidText(NoteAppearance.colorRole(for: note, key: state.selectedKey)))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                             .background(
-                                NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: state.selectedKey)),
+                                theme.noteSolid(NoteAppearance.colorRole(for: note, key: state.selectedKey)),
                                 in: RoundedRectangle(cornerRadius: 4)
                             )
+                    }
+                    if hidden > 0 {
+                        Text("+\(hidden)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(theme.secondaryText)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(theme.cardButtonHover, in: RoundedRectangle(cornerRadius: 4))
                     }
                 }
                 .fixedSize()
@@ -788,12 +1005,11 @@ private struct SelectionBar: View {
                 .accessibilityLabel("Selected notes: " + state.selectedNotes.map(\.description).joined(separator: ", "))
             }
         } else {
-            // Short on phones so the hint and controls share one row.
-            Text(layoutWidth >= 600 || verticalSizeClass == .regular ? "Tap notes to build a chord" : "Select notes")
+            // Short in narrow layouts; it truncates rather than pushing the bar wider.
+            Text(isCompact ? "Tap notes" : "Tap notes to build a chord")
                 .font(.system(size: 13))
                 .foregroundStyle(theme.mutedText)
                 .lineLimit(1)
-                .fixedSize()
         }
     }
 
@@ -821,4 +1037,34 @@ private struct SelectionBar: View {
         .environment(\.iconButtonFillsWidth, spread)
         .fixedSize(horizontal: !spread, vertical: true)
     }
+
+    /// Play, clear and transpose, as icon buttons. (Updating a saved chord is on the S key and the
+    /// Chord menu.)
+    private var iconControls: some View {
+        let state = model.state
+        return HStack(spacing: 0) {
+            // Plays on a loop until pressed again, green while playing.
+            // Repeats just this chord (the song's play button plays the song).
+            IconButton(
+                symbol: model.isLoopingSelection ? ActionIcon.stop : ActionIcon.play,
+                help: model.isLoopingSelection ? "Stop (Space)" : "Play this chord on repeat (Space)",
+                size: 30,
+                isEnabled: state.hasSelection || model.isLoopingSelection,
+                isActive: model.isLoopingSelection
+            ) {
+                model.toggleSelectionLoop()
+            }
+            IconButton(symbol: ActionIcon.clear, help: "Clear selection (Delete)", size: 30, isEnabled: state.hasSelection) {
+                model.clearSelection()
+            }
+            IconButton(symbol: ActionIcon.transposeUp, help: "Transpose up 1 semitone (+)", size: 30, isEnabled: state.hasSelection) {
+                model.transpose(by: 1)
+            }
+            IconButton(symbol: ActionIcon.transposeDown, help: "Transpose down 1 semitone (-)", size: 30, isEnabled: state.hasSelection) {
+                model.transpose(by: -1)
+            }
+        }
+        .fixedSize()
+    }
 }
+

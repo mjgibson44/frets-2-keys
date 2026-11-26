@@ -13,6 +13,30 @@ extension Color {
     }
 }
 
+extension Color {
+    /// This color with its saturation and brightness scaled, keeping its hue.
+    func adjusted(saturation: Double, brightness: Double) -> Color {
+        let c = resolve(in: EnvironmentValues())
+        let r = Double(c.red), g = Double(c.green), b = Double(c.blue)
+        let maxC = max(r, g, b), minC = min(r, g, b), delta = maxC - minC
+        var hue = 0.0
+        if delta > 0 {
+            if maxC == r { hue = ((g - b) / delta).truncatingRemainder(dividingBy: 6) }
+            else if maxC == g { hue = (b - r) / delta + 2 }
+            else { hue = (r - g) / delta + 4 }
+            hue /= 6
+            if hue < 0 { hue += 1 }
+        }
+        let sat = maxC == 0 ? 0 : delta / maxC
+        return Color(
+            hue: hue,
+            saturation: min(1, sat * saturation),
+            brightness: min(1, maxC * brightness),
+            opacity: Double(c.opacity)
+        )
+    }
+}
+
 /// Tailwind shades used by the web app.
 enum Tailwind {
     static let zinc100 = Color(hex: 0xF4F4F5)
@@ -37,19 +61,21 @@ struct ScaleDegreePalette {
     let lightBorder: Color
     let dark900: Color
     let darkBorder: Color
+    /// Text on the dark-mode tint: a light shade (Tailwind 300) of the same hue.
+    let darkText: Color
 
-    func tint(dark: Bool) -> Color { dark ? dark900.opacity(0.4) : light100 }
+    func tint(dark: Bool) -> Color { dark ? dark900.opacity(0.3) : light100 }
     func border(dark: Bool) -> Color { dark ? darkBorder : lightBorder }
 
     static let all: [ScaleDegreePalette] = [
         // red, orange, yellow, green, cyan, blue, purple
-        .init(light100: Color(hex: 0xFEE2E2), solid: Color(hex: 0xEF4444), lightBorder: Color(hex: 0xF87171), dark900: Color(hex: 0x7F1D1D), darkBorder: Color(hex: 0xB91C1C)),
-        .init(light100: Color(hex: 0xFFEDD5), solid: Color(hex: 0xEA580C), lightBorder: Color(hex: 0xFB923C), dark900: Color(hex: 0x7C2D12), darkBorder: Color(hex: 0xC2410C)),
-        .init(light100: Color(hex: 0xFEF9C3), solid: Color(hex: 0xCA8A04), lightBorder: Color(hex: 0xFACC15), dark900: Color(hex: 0x713F12), darkBorder: Color(hex: 0xA16207)),
-        .init(light100: Color(hex: 0xDCFCE7), solid: Color(hex: 0x16A34A), lightBorder: Color(hex: 0x4ADE80), dark900: Color(hex: 0x14532D), darkBorder: Color(hex: 0x15803D)),
-        .init(light100: Color(hex: 0xCFFAFE), solid: Color(hex: 0x0891B2), lightBorder: Color(hex: 0x22D3EE), dark900: Color(hex: 0x164E63), darkBorder: Color(hex: 0x0E7490)),
-        .init(light100: Color(hex: 0xDBEAFE), solid: Color(hex: 0x3B82F6), lightBorder: Color(hex: 0x60A5FA), dark900: Color(hex: 0x1E3A8A), darkBorder: Color(hex: 0x1D4ED8)),
-        .init(light100: Color(hex: 0xF3E8FF), solid: Color(hex: 0xA855F7), lightBorder: Color(hex: 0xC084FC), dark900: Color(hex: 0x581C87), darkBorder: Color(hex: 0x7E22CE)),
+        .init(light100: Color(hex: 0xFEE2E2), solid: Color(hex: 0xEF4444), lightBorder: Color(hex: 0xF87171), dark900: Color(hex: 0x7F1D1D), darkBorder: Color(hex: 0xB91C1C), darkText: Color(hex: 0xFCA5A5)),
+        .init(light100: Color(hex: 0xFFEDD5), solid: Color(hex: 0xEA580C), lightBorder: Color(hex: 0xFB923C), dark900: Color(hex: 0x7C2D12), darkBorder: Color(hex: 0xC2410C), darkText: Color(hex: 0xFDBA74)),
+        .init(light100: Color(hex: 0xFEF9C3), solid: Color(hex: 0xCA8A04), lightBorder: Color(hex: 0xFACC15), dark900: Color(hex: 0x713F12), darkBorder: Color(hex: 0xA16207), darkText: Color(hex: 0xFDE047)),
+        .init(light100: Color(hex: 0xDCFCE7), solid: Color(hex: 0x16A34A), lightBorder: Color(hex: 0x4ADE80), dark900: Color(hex: 0x14532D), darkBorder: Color(hex: 0x15803D), darkText: Color(hex: 0x86EFAC)),
+        .init(light100: Color(hex: 0xCFFAFE), solid: Color(hex: 0x0891B2), lightBorder: Color(hex: 0x22D3EE), dark900: Color(hex: 0x164E63), darkBorder: Color(hex: 0x0E7490), darkText: Color(hex: 0x67E8F9)),
+        .init(light100: Color(hex: 0xDBEAFE), solid: Color(hex: 0x3B82F6), lightBorder: Color(hex: 0x60A5FA), dark900: Color(hex: 0x1E3A8A), darkBorder: Color(hex: 0x1D4ED8), darkText: Color(hex: 0x93C5FD)),
+        .init(light100: Color(hex: 0xF3E8FF), solid: Color(hex: 0xA855F7), lightBorder: Color(hex: 0xC084FC), dark900: Color(hex: 0x581C87), darkBorder: Color(hex: 0x7E22CE), darkText: Color(hex: 0xD8B4FE)),
     ]
 }
 
@@ -88,76 +114,113 @@ enum NotePalette {
     /// version of the solid color.
     static func tint(for role: NoteColorRole, dark: Bool) -> Color {
         if case .scaleDegree(let degree) = role { return ScaleDegreePalette.all[degree].tint(dark: dark) }
-        return solid(for: role).opacity(dark ? 0.22 : 0.12)
+        return solid(for: role).opacity(dark ? 0.16 : 0.12)
     }
 }
 
-/// Surface and text colors for light and dark mode.
+/// Surface and text colors (the app is dark only).
 struct Theme {
+    /// Always true: the app only has a dark appearance. Kept so views can still ask.
     let isDark: Bool
 
+    /// Dark mode's one line color: a faint lift of whatever it sits on, so the lines that
+    /// separate cards, sections, frets and keys stay equally faint on the page and in the cards.
+    private static let darkHairline = Color.white.opacity(0.045)
+
+    /// A note's solid color, for selected notes. Dark mode mutes it: less saturated and a
+    /// little darker, so it doesn't glare off the dark surfaces.
+    func noteSolid(_ role: NoteColorRole) -> Color {
+        let solid = NotePalette.solid(for: role)
+        return solid.adjusted(saturation: 0.85, brightness: 0.55)
+    }
+
+    /// Text on a selected note: white in light mode. Dark mode uses the same pastel as an
+    /// unselected in-key note's text (other notes get a pastel worked out the same way).
+    func noteSolidText(_ role: NoteColorRole) -> Color {
+        if case .scaleDegree(let degree) = role { return ScaleDegreePalette.all[degree].darkText }
+        return NotePalette.solid(for: role).adjusted(saturation: 0.55, brightness: 1.05)
+    }
+
     /// Behind the top bar and the chord panel, a shade darker than the instruments' surface.
-    var pageBackground: Color { isDark ? Tailwind.zinc900 : Color(hex: 0xF5F3F2) }
-    /// Behind the guitars and piano.
-    var instrumentBackground: Color { isDark ? Color(hex: 0x1F1F22) : .white }
-    var cardBackground: Color { isDark ? Tailwind.zinc800 : .white }
-    var cardBorder: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xEDE9E9) }
+    var pageBackground: Color { Tailwind.zinc900 }
+    /// Behind the guitars and piano, a step lighter than the page so the cards stand off it.
+    var instrumentBackground: Color { Color(hex: 0x222225) }
+    var cardBackground: Color { Tailwind.zinc800 }
+    var cardBorder: Color { Self.darkHairline }
     /// The hairlines between the page's full-width sections.
-    var sectionDivider: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xE7E2E0) }
-    var primaryText: Color { isDark ? Tailwind.zinc100 : Tailwind.zinc900 }
-    var secondaryText: Color { isDark ? Tailwind.zinc200 : Tailwind.zinc700 }
-    var mutedText: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
-    var icon: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc500 }
-    var iconDisabled: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc300 }
-    var hover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc200 }
-    var subtleHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
-    var plainNoteText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc700 }
+    var sectionDivider: Color { Self.darkHairline }
+    var primaryText: Color { Tailwind.zinc100 }
+    var secondaryText: Color { Tailwind.zinc200 }
+    var mutedText: Color { Tailwind.zinc500 }
+    var icon: Color { Tailwind.zinc400 }
+    var iconDisabled: Color { Tailwind.zinc600 }
+    var hover: Color { Tailwind.zinc700 }
+    var subtleHover: Color { Tailwind.zinc700 }
+    var plainNoteText: Color { Tailwind.zinc300 }
 
     // Fretboard
-    var stringLine: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xE1E1E1) }
-    var fretDivider: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xF2F2F2) }
-    var fretFooterDivider: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xF2F2F2) }
-    /// White in light mode, so the fret numbers read as part of the card rather than the page.
-    var fretFooterBackground: Color { isDark ? Tailwind.zinc700 : .white }
-    /// The hairline between the strings and the fret numbers (dark mode's footer is shaded instead).
-    var fretFooterRule: Color { isDark ? .clear : cardBorder }
-    var fretNumber: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc500 }
-    var fretMarker: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
+    var stringLine: Color { Color(hex: 0x333338) }
+    /// Dark mode draws the fretboard as a grid of cells, like the piano's keys: no string lines,
+    /// solid page-colored gaps between cells, and selected notes filling their whole cell.
+    var fretboardGrid: Bool { true }
+    var fretDivider: Color { pageBackground }
+    var fretFooterDivider: Color { pageBackground }
+    /// The same as the rest of the fretboard, so the fret numbers read as part of the card.
+    var fretFooterBackground: Color { instrumentBackground }
+    /// The hairline between the strings and the fret numbers.
+    var fretFooterRule: Color { pageBackground }
+    /// The nut (or the capo, when one is on): a lighter line than the fret gaps.
+    var nutLine: Color { Tailwind.zinc600 }
+    var fretNumber: Color { Tailwind.zinc400 }
+    var fretMarker: Color { Tailwind.zinc500 }
 
     // Piano
-    var whiteKey: Color { isDark ? Tailwind.zinc800 : .white }
-    var whiteKeyHover: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
-    var whiteKeyBorder: Color { isDark ? Tailwind.zinc600 : Color(hex: 0xEDE9E9) }
+    /// The piano's surface, so in dark mode the white keys are the page color.
+    var whiteKey: Color { instrumentBackground }
+    var whiteKeyHover: Color { Color(hex: 0x2E2E32) }
+    /// Dark mode draws the gaps between keys in the page color, solid, so neighboring selected
+    /// keys stay apart instead of blurring together.
+    var whiteKeyBorder: Color { pageBackground }
     /// Black keys are only a shade off the white keys, so the colored notes stand out.
-    var blackKey: Color { isDark ? Color(hex: 0x323236) : Color(hex: 0xF2EFEE) }
-    var blackKeyHover: Color { isDark ? Tailwind.zinc700 : Color(hex: 0xE7E3E1) }
-    var pianoPlainText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
-    var blackKeyPlainText: Color { isDark ? Tailwind.zinc400 : Tailwind.zinc600 }
+    var blackKey: Color { Color(hex: 0x2B2B2F) }
+    var blackKeyHover: Color { Tailwind.zinc700 }
+    var pianoPlainText: Color { Tailwind.zinc300 }
+    var blackKeyPlainText: Color { Tailwind.zinc400 }
 
     // Chips and controls
-    var chip: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc100 }
+    /// Buttons sitting on a card (the selected chord's actions).
+    var cardButton: Color { Color.white.opacity(0.06) }
+    var cardButtonHover: Color { Color.white.opacity(0.11) }
+    /// The main action button (the chord bank's Add): blue, muted in dark mode like the notes.
+    var primaryButton: Color { Tailwind.blue500.adjusted(saturation: 0.85, brightness: 0.7) }
+    var primaryButtonHover: Color { Tailwind.blue500.adjusted(saturation: 0.85, brightness: 0.8) }
+    var chip: Color { Tailwind.zinc700 }
     /// Chips sitting directly on the page background (the bottom panel): white in light mode,
     /// outlined so they stand out from the page.
-    var pageChip: Color { isDark ? Tailwind.zinc700 : .white }
-    var pageChipBorder: Color { isDark ? .clear : cardBorder }
-    var chipHover: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc200 }
-    var chipActive: Color { isDark ? Tailwind.zinc600 : Tailwind.zinc200 }
-    var chipActiveRing: Color { isDark ? Tailwind.zinc500 : Tailwind.zinc400 }
-    var overflowChip: Color { isDark ? Tailwind.zinc700 : Tailwind.zinc200 }
-    var overflowChipText: Color { isDark ? Tailwind.zinc300 : Tailwind.zinc600 }
+    var pageChip: Color { Tailwind.zinc700 }
+    var pageChipBorder: Color { .clear }
+    var chipHover: Color { Tailwind.zinc600 }
+    var chipActive: Color { Tailwind.zinc600 }
+    var chipActiveRing: Color { Tailwind.zinc500 }
+    var overflowChip: Color { Tailwind.zinc700 }
+    var overflowChipText: Color { Tailwind.zinc300 }
 
     // Warning banner
-    var warningBackground: Color { isDark ? Color(hex: 0x78350F, opacity: 0.5) : Color(hex: 0xFFFBEB) }
-    var warningBorder: Color { isDark ? Color(hex: 0xB45309) : Color(hex: 0xFDE68A) }
-    var warningText: Color { isDark ? Color(hex: 0xFDE68A) : Color(hex: 0x92400E) }
+    var warningBackground: Color { Color(hex: 0x78350F, opacity: 0.5) }
+    var warningBorder: Color { Color(hex: 0xB45309) }
+    var warningText: Color { Color(hex: 0xFDE68A) }
 }
 
 private struct ThemeKey: EnvironmentKey {
-    static let defaultValue = Theme(isDark: false)
+    static let defaultValue = Theme(isDark: true)
 }
 
 private struct LayoutWidthKey: EnvironmentKey {
     static let defaultValue: CGFloat = 1000
+}
+
+private struct CompactLayoutKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 private struct InstrumentFillHeightKey: EnvironmentKey {
@@ -168,6 +231,13 @@ extension EnvironmentValues {
     var theme: Theme {
         get { self[ThemeKey.self] }
         set { self[ThemeKey.self] = newValue }
+    }
+
+    /// A narrow window (or iPhone): short key names, Add as a menu, sections' chords under their
+    /// names, and the song and chord bank stacked.
+    var isCompactLayout: Bool {
+        get { self[CompactLayoutKey.self] }
+        set { self[CompactLayoutKey.self] = newValue }
     }
 
     /// When set, instruments stretch to fill this height (iPhone landscape).
@@ -220,6 +290,30 @@ struct InsetRoundedRectangle: Shape {
 
     func path(in rect: CGRect) -> Path {
         RoundedRectangle(cornerRadius: cornerRadius).path(in: rect.insetBy(dx: dx, dy: dy))
+    }
+}
+
+/// The icon buttons' hover fill (`theme.hover`, like the top bar's buttons) for things that aren't
+/// `Button`s, such as a `Menu`'s label.
+struct IconHoverFill: ViewModifier {
+    @Environment(\.theme) private var theme
+    var cornerRadius: CGFloat = 8
+    @State private var isHovered = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(isHovered ? theme.hover : .clear, in: RoundedRectangle(cornerRadius: cornerRadius))
+            #if os(macOS)
+            .onHover { isHovered = $0 }
+            #else
+            .hoverEffect(.highlight)
+            #endif
+    }
+}
+
+extension View {
+    func iconHoverFill(cornerRadius: CGFloat = 8) -> some View {
+        modifier(IconHoverFill(cornerRadius: cornerRadius))
     }
 }
 

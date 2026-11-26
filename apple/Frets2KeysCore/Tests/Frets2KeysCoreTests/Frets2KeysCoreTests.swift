@@ -512,7 +512,7 @@ final class ChordSetTests: XCTestCase {
     func testStartsWithOneEmptySet() {
         let state = AppState()
         XCTAssertEqual(state.chordSets.count, 1)
-        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertEqual(state.activeSet.name, "Song 1")
         XCTAssertTrue(state.savedChords.isEmpty)
     }
 
@@ -521,7 +521,7 @@ final class ChordSetTests: XCTestCase {
         saveChord(["C4", "E4", "G4"], in: &state)
         let first = state.activeSetID
         state.createSet()
-        XCTAssertEqual(state.activeSet.name, "Set 2")
+        XCTAssertEqual(state.activeSet.name, "Song 2")
         XCTAssertTrue(state.savedChords.isEmpty)
         XCTAssertNil(state.activeChordID)
         saveChord(["A3", "C4", "E4"], in: &state)
@@ -548,13 +548,13 @@ final class ChordSetTests: XCTestCase {
         var state = AppState()
         state.createSet()
         state.createSet()
-        XCTAssertEqual(state.chordSets.map(\.name), ["Set 1", "Set 2", "Set 3"])
+        XCTAssertEqual(state.chordSets.map(\.name), ["Song 1", "Song 2", "Song 3"])
         state.deleteSet(id: state.chordSets[1].id)
         state.createSet()
-        XCTAssertEqual(state.chordSets.map(\.name), ["Set 1", "Set 3", "Set 4"])
+        XCTAssertEqual(state.chordSets.map(\.name), ["Song 1", "Song 3", "Song 4"])
         state.renameSet(id: state.chordSets[0].id, to: "Verse")
         state.renameSet(id: state.chordSets[1].id, to: "   ")
-        XCTAssertEqual(state.chordSets.map(\.name), ["Verse", "Set 3", "Set 4"])
+        XCTAssertEqual(state.chordSets.map(\.name), ["Verse", "Song 3", "Song 4"])
     }
 
     func testDuplicate() {
@@ -582,7 +582,7 @@ final class ChordSetTests: XCTestCase {
         XCTAssertEqual(state.activeSetID, one)
         state.deleteSet(id: one)
         XCTAssertEqual(state.chordSets.count, 1)
-        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertEqual(state.activeSet.name, "Song 1")
         XCTAssertNotEqual(state.activeSetID, one)
     }
 
@@ -593,7 +593,7 @@ final class ChordSetTests: XCTestCase {
         """
         let state = try JSONDecoder().decode(AppState.self, from: Data(legacy.utf8))
         XCTAssertEqual(state.chordSets.count, 1)
-        XCTAssertEqual(state.activeSet.name, "Set 1")
+        XCTAssertEqual(state.activeSet.name, "Song 1")
         XCTAssertEqual(state.savedChords.map(\.name), ["Cmaj"])
         XCTAssertTrue(state.darkMode)
     }

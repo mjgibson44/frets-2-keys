@@ -85,8 +85,10 @@ struct AppCommands: Commands {
             Button("Play") { model.play() }
                 .plainKeyShortcut(.return)
                 .disabled(!enabled || !state.hasSelection)
-            Button(model.isLooping ? "Stop Loop" : "Loop") { model.toggleLoop() }
+            Button(model.isLoopingSelection ? "Stop Repeating" : "Repeat Chord") { model.toggleSelectionLoop() }
                 .plainKeyShortcut(.space)
+                .disabled(!enabled || !(state.hasSelection || model.isLoopingSelection))
+            Button(model.isLooping && model.loopingSectionID == nil && !model.isLoopingSelection ? "Stop Song" : "Play Song") { model.toggleSongLoop() }
                 .disabled(!enabled || !(state.canLoop || model.isLooping))
             Divider()
             Button("Save as New Chord") { model.saveAsNewChord() }
@@ -115,6 +117,11 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("b", modifiers: .command)
             .disabled(!enabled)
+            Button(model.isSongPanelPresented ? "Hide Song" : "Show Song") {
+                model.isSongPanelPresented.toggle()
+            }
+            .keyboardShortcut("j", modifiers: .command)
+            .disabled(!enabled)
             Divider()
             Button("Previous Saved Chord") { model.selectPreviousChord() }
                 .plainKeyShortcut(.leftArrow)
@@ -135,7 +142,7 @@ struct AppCommands: Commands {
                 .plainKeyShortcut("n")
                 .disabled(!enabled)
         }
-        CommandMenu("Sets") {
+        CommandMenu("Songs") {
             let state = model.state
             let enabled = !model.isSheetPresented
             ForEach(state.chordSets) { set in
@@ -147,10 +154,6 @@ struct AppCommands: Commands {
             Divider()
             SetActions(model: model)
                 .disabled(!enabled)
-        }
-        CommandGroup(after: .toolbar) {
-            Button(model.state.darkMode ? "Light Mode" : "Dark Mode") { model.toggleDarkMode() }
-                .keyboardShortcut("d", modifiers: [.command, .shift])
         }
     }
 }

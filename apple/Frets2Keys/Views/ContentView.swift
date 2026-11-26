@@ -5,6 +5,9 @@ struct ContentView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var isFocused: Bool
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @State private var renameText = ""
     @State private var sectionRenameText = ""
     /// The section's current name, shown as the placeholder.
@@ -34,60 +37,137 @@ struct ContentView: View {
     }
 
     private var deleteTitle: String {
-        let name = model.state.chordSets.first { $0.id == model.setPendingDeletion }?.name ?? "Set"
+        let name = model.state.chordSets.first { $0.id == model.setPendingDeletion }?.name ?? "Song"
         return "Delete \u{201C}\(name)\u{201D}?"
     }
 
     var body: some View {
         @Bindable var model = model
-        let theme = Theme(isDark: model.state.darkMode)
+        // The app is dark only.
+        let theme = Theme(isDark: true)
 
         GeometryReader { proxy in
-            let width = proxy.size.width
-            let padding: CGFloat = Device.isPhone ? 16 : (width >= 600 ? 32 : 24)
+            let fullWidth = proxy.size.width
+            let width = fullWidth
+            // Narrow windows (and iPhone) use the compact versions of the bars and panels.
+            let isNarrow = fullWidth < Self.compactWidth
+            let showsBank = sidebarIsInline && model.isChordBankPresented
+            // Beside the song, the bank takes half of a wide window, else its own width.
+            let bankColumnWidth = showsSongPanel && fullWidth >= Self.halfAndHalfWidth ? (fullWidth - 1) / 2 : Self.bankWidth
+            let padding: CGFloat = Device.isPhone ? 16 : (fullWidth >= 600 ? 32 : 24)
 
-            // The instrument cards fill the space between the top bar and the chord panel, which
-            // is divided off by a hairline. When they need more room than there is, they scroll.
+            // A fixed top bar across the full width (the selected chord, then the window's
+            // buttons); the instruments; and along the bottom the song with the chord bank, side by
+            // side on wide windows and stacked on narrow ones and iPhone.
             VStack(spacing: 0) {
-                HeaderView(instrumentChoice: isUprightPhone ? nil : phoneInstrumentChoice, instrumentOptions: instrumentOptions)
-                    .padding(.horizontal, padding)
-                    .padding(.top, Device.isPhone ? 4 : 16)
-                    .padding(.bottom, 8)
+                // Top-aligned, so in the two-line (narrow) bar the menu sits level with the first
+                // line's buttons.
+                HStack(alignment: .top, spacing: 12) {
+                    SelectionCard()
+                        .frame(maxWidth: Self.selectionMaxWidth)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // A sideways iPhone shows one instrument at a time, picked here.
+                    if let choice = phoneInstrumentChoice, !isUprightPhone, instrumentOptions.count > 1 {
+                        InstrumentTabs(selection: choice, options: instrumentOptions)
+                    }
+                    WindowButtons()
+                }
+                // The same side insets as the content below, and even space above and below.
+                .padding(.horizontal, padding)
+                .padding(.vertical, Device.isPhone ? 6 : 16)
+                .environment(\.layoutWidth, fullWidth)
+                SectionDivider()
 
-                if isUprightPhone {
-                    stackedInstruments(padding: padding)
-                        .environment(\.nextChordHint, nextChordHint)
-                } else if Device.isPhone {
-                    instrumentPages(padding: padding)
-                        .environment(\.nextChordHint, nextChordHint)
-                } else {
-                    ScrollView(.vertical) {
-                        VStack(spacing: Self.instrumentSpacing) {
-                            fretboards(width: width)
-                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fretboardsHeight = $0 }
-                            if model.state.showPiano {
-                                PianoView(targetHeight: pianoTargetHeight)
+                VStack(spacing: 0) {
+                        if isUprightPhone {
+                            stackedInstruments(padding: padding)
+                                .environment(\.nextChordHint, nextChordHint)
+                        } else if Device.isPhone {
+                            instrumentPages(padding: padding)
+                                .environment(\.nextChordHint, nextChordHint)
+                        } else {
+                            // When the instruments need more room than there is, they scroll.
+                            ScrollView(.vertical) {
+                                VStack(spacing: Self.instrumentSpacing) {
+                                    fretboards(width: width)
+                                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fretboardsHeight = $0 }
+                                    if model.state.showPiano {
+                                        PianoView(targetHeight: pianoTargetHeight)
+                                    }
+                                }
+                                .environment(\.nextChordHint, nextChordHint)
+                                // As wide as the guitar's full neck at most; the piano's keys widen
+                                // to end at the same edge.
+                                .frame(maxWidth: FretboardView.fullWidth, alignment: .leading)
+                                // Centered once they're at that width.
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.horizontal, padding)
+                                .padding(.vertical, Self.instrumentsVerticalPadding)
+                                // Centered in the space when they don't fill it.
+                                .frame(minHeight: instrumentsAreaHeight)
+                            }
+                            .scrollBounceBehavior(.basedOnSize)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { instrumentsAreaHeight = $0 }
+                        }
+
+                    }
+                .environment(\.layoutWidth, width)
+                .frame(maxHeight: .infinity)
+
+                if Device.isPhone || isNarrow {
+                    // Narrow: the song and the chord bank stacked, sharing one area that scrolls
+                    // once it would take more than half the window.
+                    if showsSongPanel || showsBank {
+                        SectionDivider()
+                        let stack = VStack(spacing: 0) {
+                            if showsSongPanel {
+                                chordPanel(padding: padding, unboundedHeight: true)
+                            }
+                            if showsSongPanel && showsBank {
+                                SectionDivider()
+                            }
+                            if showsBank {
+                                ChordBankPicker(inBottomPanel: true, padding: padding)
                             }
                         }
-                        .environment(\.nextChordHint, nextChordHint)
-                        .padding(.horizontal, padding)
-                        .padding(.vertical, Self.instrumentsVerticalPadding)
-                        // Centered in the space when they don't fill it.
-                        .frame(minHeight: instrumentsAreaHeight)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stackedBottomHeight = $0 }
+                        ScrollView(.vertical) { stack }
+                            .scrollBounceBehavior(.basedOnSize)
+                            .frame(height: min(stackedBottomHeight, proxy.size.height * 0.5))
                     }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { instrumentsAreaHeight = $0 }
+                } else {
+                    if showsSongPanel || showsBank {
+                        SectionDivider()
+                    }
+                    HStack(alignment: .top, spacing: 0) {
+                        if showsSongPanel {
+                            chordPanel(padding: padding)
+                                .frame(maxWidth: .infinity)
+                                .environment(\.layoutWidth, fullWidth - (showsBank ? bankColumnWidth + 1 : 0))
+                        }
+                        if showsBank {
+                            if showsSongPanel {
+                                Rectangle().fill(theme.sectionDivider).frame(width: 1)
+                            }
+                            ChordBankPicker(inBottomPanel: true, padding: padding)
+                                .environment(\.layoutWidth, 400)
+                                // Its own width even alone (song panel off), on the left.
+                                .frame(width: bankColumnWidth)
+                                .frame(maxWidth: showsSongPanel ? nil : .infinity, alignment: .leading)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-
-                SectionDivider()
-                chordPanel(padding: padding)
             }
-            .environment(\.layoutWidth, width)
         }
         .background(theme.pageBackground.ignoresSafeArea())
         .foregroundStyle(theme.primaryText)
         .environment(\.theme, theme)
-        .preferredColorScheme(model.state.darkMode ? .dark : .light)
+        .environment(\.isCompactLayout, Device.isPhone || windowWidth < Self.compactWidth)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { windowWidth = $0 }
+        .preferredColorScheme(.dark)
         #if os(macOS)
         // On iOS the menu commands handle hardware keyboards; a focusable root view there would
         // summon the software keyboard.
@@ -107,11 +187,16 @@ struct ContentView: View {
             .accessibilityHidden(true)
         }
         #endif
-        .inspector(isPresented: $model.isChordBankPresented) {
+        // Only as a sheet (iPhone, narrow iPad windows); otherwise the sidebar is laid out inline,
+        // under the top bar.
+        .inspector(isPresented: Binding(
+            get: { model.isChordBankPresented && !sidebarIsInline },
+            set: { model.isChordBankPresented = $0 }
+        )) {
             ChordBankPicker()
                 .environment(\.theme, theme)
                 .environment(\.layoutWidth, 400)
-                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $model.isSettingsPresented, onDismiss: {
             if model.showTutorialAfterSettings {
@@ -121,14 +206,14 @@ struct ContentView: View {
         }) {
             SettingsView()
                 .environment(\.theme, theme)
-                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $model.isTutorialPresented) {
             TutorialView()
                 .environment(\.theme, theme)
-                .preferredColorScheme(model.state.darkMode ? .dark : .light)
+                .preferredColorScheme(.dark)
         }
-        .alert("Rename Set", isPresented: renameBinding) {
+        .alert("Rename Song", isPresented: renameBinding) {
             TextField("Name", text: $renameText)
             Button("Cancel", role: .cancel) {}
             Button("Rename") {
@@ -185,15 +270,41 @@ struct ContentView: View {
     }
 
     /// The selected chord above the chord set, with the same inset as the top bar.
-    private func chordPanel(padding: CGFloat) -> some View {
+    private func chordPanel(padding: CGFloat, unboundedHeight: Bool = false) -> some View {
         VStack(spacing: 0) {
             chordLimitWarning
                 .padding(.horizontal, padding)
                 .padding(.top, 8)
-            ChordPanel(padding: padding)
+            if showsSongPanel {
+                ChordPanel(padding: padding, unboundedHeight: unboundedHeight)
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: model.showChordLimitWarning)
     }
+
+    /// iPad and Mac lay the sidebar out beside the instruments; iPhone (and a narrow iPad window)
+    /// shows it as a sheet.
+    private var sidebarIsInline: Bool {
+        // The chord bank is laid out in the window everywhere now (beside or under the song).
+        true
+    }
+
+    /// The selected chord's card in the top bar stops growing here on wide windows.
+    private static let selectionMaxWidth: CGFloat = 720
+
+    /// The chord bank's column beside the song.
+    private static let bankWidth: CGFloat = 440
+    /// Below this window width, the compact layout (and on iPhone always).
+    private static let compactWidth: CGFloat = 900
+    @State private var windowWidth: CGFloat = 1200
+    /// The stacked song and chord bank's natural height, so their area hugs it until it's capped.
+    @State private var stackedBottomHeight: CGFloat = 0
+
+    /// From this window width, the song and the chord bank split the bottom half and half.
+    private static let halfAndHalfWidth: CGFloat = 1100
+
+    /// The song along the bottom: always on iPhone, toggled on iPad and Mac.
+    private var showsSongPanel: Bool { model.isSongPanelPresented }
 
     @ViewBuilder
     private var chordLimitWarning: some View {
@@ -237,7 +348,7 @@ struct ContentView: View {
         let spacing: CGFloat = 10
         let weights = options.map { $0 == .piano ? 0.75 : 1.0 }
         return GeometryReader { area in
-            let available = area.size.height - 16 - spacing * CGFloat(max(options.count - 1, 0))
+            let available = area.size.height - 2 * Self.phoneInstrumentsVerticalPadding - spacing * CGFloat(max(options.count - 1, 0))
             VStack(spacing: spacing) {
                 ForEach(Array(options.enumerated()), id: \.element) { index, option in
                     let height = max(available * weights[index] / weights.reduce(0, +), 100)
@@ -246,7 +357,7 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, padding)
-            .padding(.vertical, 8)
+            .padding(.vertical, Self.phoneInstrumentsVerticalPadding)
             .frame(maxHeight: .infinity)
         }
     }
@@ -285,7 +396,10 @@ struct ContentView: View {
     }
 
     private static let instrumentSpacing: CGFloat = 16
-    private static let instrumentsVerticalPadding: CGFloat = 16
+    /// Above and below the instruments, about the space the song and chord bank leave at their tops.
+    private static let instrumentsVerticalPadding: CGFloat = 24
+    /// Upright iPhone: above and below the instruments, matching the song's and chord bank's.
+    private static let phoneInstrumentsVerticalPadding: CGFloat = 16
     /// iPad and Mac: the space between the top bar and the chord panel, and the guitars in it.
     @State private var instrumentsAreaHeight: CGFloat = 0
     @State private var fretboardsHeight: CGFloat = 0
@@ -365,7 +479,7 @@ enum Shortcut: CaseIterable {
         case .transposeUp: model.transpose(by: 1)
         case .transposeDown: model.transpose(by: -1)
         case .play: model.play()
-        case .loop: model.toggleLoop()
+        case .loop: model.toggleSelectionLoop()
         case .previous: model.selectPreviousChord()
         case .next: model.selectNextChord()
         case .cycleLabels: model.cycleNoteLabels()
@@ -380,7 +494,7 @@ struct ChordLimitWarning: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-            Text("This set is full (\(AppState.maxSavedChords) chords and scales). Delete some to save new ones.")
+            Text("This song is full (\(AppState.maxSavedChords) chords and scales). Delete some to save new ones.")
                 .font(.system(size: 14))
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {

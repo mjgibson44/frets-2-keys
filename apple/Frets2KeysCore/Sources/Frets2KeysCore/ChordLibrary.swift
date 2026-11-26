@@ -19,7 +19,9 @@ public struct ChordLibrary: Codable, Equatable, Sendable {
     /// Syncing replaces this starter set rather than adding it next to the user's real sets.
     public var isUntouchedStarter: Bool {
         guard deletedSetIDs.isEmpty, sets.count == 1, let set = sets.first else { return false }
-        return set.chords.isEmpty && set.name == AppState.defaultSetName(number: 1) && set.modifiedAt == set.createdAt
+        // "Set 1" is the starter's name from before sets were called songs.
+        let starterNames = [AppState.defaultSetName(number: 1), "Set 1"]
+        return set.chords.isEmpty && starterNames.contains(set.name) && set.modifiedAt == set.createdAt
     }
 
     /// Merges an iCloud copy into the local library. An untouched starter set on either side is
@@ -69,7 +71,7 @@ extension AppState {
     public mutating func apply(_ library: ChordLibrary) {
         deletedSetIDs = library.deletedSetIDs
         if library.sets.isEmpty {
-            let set = ChordSet(name: Self.defaultSetName(number: 1))
+            let set = ChordSet.newSong(name: Self.defaultSetName(number: 1))
             replaceChordSets([set])
         } else {
             replaceChordSets(library.sets)

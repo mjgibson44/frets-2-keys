@@ -13,9 +13,14 @@ struct FretboardView: View {
 
     /// Fret width: narrower on an upright iPhone so more frets fit across the screen.
     private var cellWidth: CGFloat {
-        Device.isPhone && verticalSizeClass == .regular ? 44 : 56
+        guard Device.isPhone else { return 56 }
+        return verticalSizeClass == .regular ? 40 : 50
     }
     private static let standardCellHeight: CGFloat = 40
+
+    /// The whole neck at the usual (iPad and Mac) fret width: every fret plus the nut's column.
+    /// The instruments stop growing here, so the guitar shows all its frets and nothing more.
+    static let fullWidth: CGFloat = CGFloat(Tunings.fretCount + 1) * 56 + nutWidth
     private static let footerRowHeight: CGFloat = 24
 
     /// A short space to fill (an iPhone held sideways): no fret-marker row, and note badges
@@ -25,16 +30,17 @@ struct FretboardView: View {
     private var footerRowHeight: CGFloat { isCompact ? 20 : Self.footerRowHeight }
 
     /// Space above the top string and below the bottom one.
-    private var stringsPadding: CGFloat { isCompact ? 3 : 8 }
+    private var stringsPadding: CGFloat { theme.fretboardGrid ? 0 : (isCompact ? 3 : 8) }
 
     /// A selected fret's fill is a rounded square, centered in its cell and at least this far
     /// inside its shorter side, so neighboring fills stay apart. The playback flash and next-chord
     /// fills use the same square; hovering shades the whole cell.
     private var fillMinimumInset: CGFloat { isCompact ? 2 : 6 }
     private var fillSide: CGFloat { min(cellWidth, cellHeight) - 2 * fillMinimumInset }
-    private var fillInset: CGFloat { (cellHeight - fillSide) / 2 }
-    private var fillHorizontalInset: CGFloat { (cellWidth - fillSide) / 2 }
-    private var fillCornerRadius: CGFloat { isCompact ? 5 : 10 }
+    /// In the grid (dark mode), fills take the whole cell instead.
+    private var fillInset: CGFloat { theme.fretboardGrid ? 0 : (cellHeight - fillSide) / 2 }
+    private var fillHorizontalInset: CGFloat { theme.fretboardGrid ? 0 : (cellWidth - fillSide) / 2 }
+    private var fillCornerRadius: CGFloat { theme.fretboardGrid ? 0 : (isCompact ? 5 : 10) }
 
     private var footerRowCount: CGFloat {
         let capoRow: CGFloat = model.state.anyCapoActive ? 1 : 0
@@ -54,7 +60,7 @@ struct FretboardView: View {
     var body: some View {
         let context = model.state.noteLabelContext
         InstrumentCard {
-            // The open strings and nut stay put while the frets scroll beside them.
+            // The open strings stay put while the frets scroll beside them.
             HStack(spacing: 0) {
                 neck(frets: 0..<1, context: context)
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -76,25 +82,37 @@ struct FretboardView: View {
                     HStack(spacing: 0) {
                         ForEach(frets, id: \.self) { fret in
                             fretCell(openNote: openNote, stringNumber: fretboard.tuning.count - stringIndex, fret: fret, context: context)
+                            nut(after: fret, height: cellHeight)
+                        }
+                    }
+                    // The grid's gaps between strings (the last string's is the footer's rule).
+                    .overlay(alignment: .bottom) {
+                        if theme.fretboardGrid && stringIndex != 0 {
+                            Rectangle().fill(theme.fretDivider).frame(height: 1).allowsHitTesting(false)
                         }
                     }
                 }
             }
             // Room above the top string and below the bottom one, so the outer strings' frets
-            // aren't crowded against the card's edge. The fret lines run on through it.
+            // aren't crowded against the card's edge. The fret lines run on through it, drawn once
+            // over the whole area so the translucent lines don't double up anywhere.
             .padding(.vertical, stringsPadding)
-            .background {
+            .overlay {
                 HStack(spacing: 0) {
                     ForEach(frets, id: \.self) { fret in
                         Color.clear
                             .frame(width: cellWidth)
                             .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretDivider) }
+                        if fret == fretboard.capo {
+                            Color.clear.frame(width: Self.nutWidth)
+                        }
                     }
                 }
+                .allowsHitTesting(false)
             }
             VStack(spacing: 0) {
                 footerRow(frets: frets) { fret in
-                    Text(fret == 0 ? "" : "\(fret)")
+                    Text("\(fret)")
                         .font(.system(size: 12))
                         .foregroundStyle(theme.fretNumber)
                 }
@@ -122,6 +140,21 @@ struct FretboardView: View {
                 }
             }
         }
+        // The nut, drawn once down the whole neck over the room the rows leave for it, so no
+        // string or footer gap breaks it.
+        .overlay(alignment: .topLeading) {
+            if frets.contains(fretboard.capo) {
+                // A fret gap either side of the 2pt line.
+                HStack(spacing: 0) {
+                    Rectangle().fill(theme.fretDivider).frame(width: 1)
+                    Rectangle().fill(theme.nutLine).frame(width: 2)
+                    Rectangle().fill(theme.fretDivider).frame(width: 1)
+                }
+                    .frame(width: Self.nutWidth)
+                    .offset(x: CGFloat(fretboard.capo - frets.lowerBound + 1) * cellWidth)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 
     @ViewBuilder
@@ -140,12 +173,11 @@ struct FretboardView: View {
                 .frame(width: cellWidth, height: cellHeight)
                 // A selected fret shades inside its fill; others shade the cell behind the badge.
                 .noteFlash(isSounding && !appearance.isSelected, inset: fillInset, horizontalInset: fillHorizontalInset, cornerRadius: fillCornerRadius)
-                .nextChordFill(isPreviewed, hint: hint, color: NotePalette.solid(for: NoteAppearance.colorRole(for: note, key: context.key)), inset: fillInset, horizontalInset: fillHorizontalInset, cornerRadius: fillCornerRadius)
+                .nextChordFill(isPreviewed, hint: hint, color: theme.noteSolid(NoteAppearance.colorRole(for: note, key: context.key)), inset: fillInset, horizontalInset: fillHorizontalInset, cornerRadius: fillCornerRadius)
         }
         // Hovering shades the whole cell.
         .buttonStyle(HighlightButtonStyle(highlighted: theme.subtleHover))
         .disabled(isBelowCapo)
-        .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretDivider) }
         .help(note.description)
         .accessibilityLabel("\(context.accessibilityName(for: note)), string \(stringNumber), fret \(fret)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -159,12 +191,14 @@ struct FretboardView: View {
             // selected frets stay separate.
             ZStack {
                 // The string still runs across the cell, meeting the square's edges.
-                Rectangle().fill(theme.stringLine).frame(height: 2)
+                if !theme.fretboardGrid {
+                    Rectangle().fill(theme.stringLine).frame(height: 2)
+                }
                 NoteLabel(name: appearance.label, weight: .medium)
-                    .foregroundStyle(.white)
-                    .frame(width: fillSide, height: fillSide)
+                    .foregroundStyle(theme.noteSolidText(role))
+                    .frame(width: cellWidth - 2 * fillHorizontalInset, height: cellHeight - 2 * fillInset)
                     .noteFlash(isSounding, cornerRadius: fillCornerRadius)
-                    .background(NotePalette.solid(for: role), in: RoundedRectangle(cornerRadius: fillCornerRadius))
+                    .background(theme.noteSolid(role), in: RoundedRectangle(cornerRadius: fillCornerRadius))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -183,7 +217,7 @@ struct FretboardView: View {
 
     private var stringLine: some View {
         Rectangle()
-            .fill(theme.stringLine)
+            .fill(theme.fretboardGrid ? .clear : theme.stringLine)
             .frame(maxWidth: .infinity)
             .frame(height: 2)
     }
@@ -195,15 +229,28 @@ struct FretboardView: View {
                     .frame(width: cellWidth, height: 16)
                     .padding(.vertical, (footerRowHeight - 16) / 2)
                     .overlay(alignment: .trailing) { fretDivider(fret: fret, color: theme.fretFooterDivider) }
+                nut(after: fret, height: footerRowHeight)
             }
         }
     }
 
+    /// The line after a fret: none after the nut's fret (the nut is its own column), otherwise 1pt.
     private func fretDivider(fret: Int, color: Color) -> some View {
-        let isCapoFret = fret == fretboard.capo
-        return Rectangle()
-            .fill(isCapoFret ? Tailwind.amber500 : color)
-            .frame(width: isCapoFret ? 4 : 1)
+        Rectangle()
+            .fill(fret == fretboard.capo ? .clear : color)
+            .frame(width: 1)
+    }
+
+    /// The nut's column: a 2pt line with a 1pt fret gap on each side.
+    static let nutWidth: CGFloat = 4
+
+    /// Room for the nut: a 2pt column of its own after the open strings, or after the capo's fret
+    /// when there is one, so it moves with the capo. The line itself is drawn over the whole neck.
+    @ViewBuilder
+    private func nut(after fret: Int, height: CGFloat) -> some View {
+        if fret == fretboard.capo {
+            Color.clear.frame(width: Self.nutWidth, height: height)
+        }
     }
 
     @ViewBuilder
