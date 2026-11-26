@@ -11,7 +11,10 @@ struct PianoView: View {
 
     /// Keys are narrower on an upright iPhone so more of the keyboard fits across the screen.
     private var isNarrow: Bool { Device.isPhone && verticalSizeClass == .regular }
-    private var baseWhiteKeyWidth: CGFloat { isNarrow ? 34 : 40 }
+    private var baseWhiteKeyWidth: CGFloat {
+        guard Device.isPhone else { return 40 }
+        return isNarrow ? 31 : 36
+    }
     /// iPad and Mac: keys widen from their usual width to fill the card exactly, so the keyboard
     /// ends flush with the card (and with the guitar's, at the shared maximum width).
     private var whiteKeyWidth: CGFloat {

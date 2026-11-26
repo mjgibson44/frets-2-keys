@@ -348,7 +348,7 @@ struct ContentView: View {
         let spacing: CGFloat = 10
         let weights = options.map { $0 == .piano ? 0.75 : 1.0 }
         return GeometryReader { area in
-            let available = area.size.height - 16 - spacing * CGFloat(max(options.count - 1, 0))
+            let available = area.size.height - 2 * Self.phoneInstrumentsVerticalPadding - spacing * CGFloat(max(options.count - 1, 0))
             VStack(spacing: spacing) {
                 ForEach(Array(options.enumerated()), id: \.element) { index, option in
                     let height = max(available * weights[index] / weights.reduce(0, +), 100)
@@ -357,7 +357,7 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, padding)
-            .padding(.vertical, 8)
+            .padding(.vertical, Self.phoneInstrumentsVerticalPadding)
             .frame(maxHeight: .infinity)
         }
     }
@@ -398,6 +398,8 @@ struct ContentView: View {
     private static let instrumentSpacing: CGFloat = 16
     /// Above and below the instruments, about the space the song and chord bank leave at their tops.
     private static let instrumentsVerticalPadding: CGFloat = 24
+    /// Upright iPhone: above and below the instruments, matching the song's and chord bank's.
+    private static let phoneInstrumentsVerticalPadding: CGFloat = 16
     /// iPad and Mac: the space between the top bar and the chord panel, and the guitars in it.
     @State private var instrumentsAreaHeight: CGFloat = 0
     @State private var fretboardsHeight: CGFloat = 0

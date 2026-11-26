@@ -214,30 +214,36 @@ final class SectionTests: XCTestCase {
         state.activeSet.sections.map { $0.chords.map(\.name) }
     }
 
-    /// A set with sections "Verse" [Cmaj, Fmaj] and "Chorus" [Gmaj, Am].
+    /// A new song's "Verse" [Cmaj, Fmaj] and "Chorus" [Gmaj, Am].
     private func song() -> (AppState, verse: UUID, chorus: UUID) {
         var state = AppState()
         let verse = state.activeSet.sections[0].id
-        state.renameSection(id: verse, to: "Verse")
+        let chorus = state.activeSet.sections[1].id
+        // An empty song fills from its first section.
         state.addChord(notes: ["C4", "E4", "G4"])
         state.addChord(notes: ["F4", "A4", "C5"])
-        let chorus = state.addSection(named: "Chorus")
         state.addChord(notes: ["G3", "B3", "D4"], to: chorus)
         state.addChord(notes: ["A3", "C4", "E4"], to: chorus)
         return (state, verse, chorus)
     }
 
-    func testNewSetsHaveOneUnnamedSection() {
-        let state = AppState()
-        XCTAssertEqual(state.activeSet.sections.count, 1)
-        XCTAssertEqual(state.activeSet.sections[0].name, "")
-        XCTAssertEqual(state.activeSet.sections[0].displayName(index: 0), "Section 1")
+    func testNewSongsStartWithVerseAndChorus() {
+        var state = AppState()
+        XCTAssertEqual(state.activeSet.name, "Song 1")
+        XCTAssertEqual(state.activeSet.sections.map(\.name), ["Verse", "Chorus"])
+        state.createSet()
+        XCTAssertEqual(state.activeSet.name, "Song 2")
+        XCTAssertEqual(state.activeSet.sections.map(\.name), ["Verse", "Chorus"])
+    }
+
+    func testUnnamedSectionsAreNumbered() {
+        XCTAssertEqual(ChordSection().displayName(index: 0), "Section 1")
     }
 
     func testAddingSectionsNamesThem() {
         var state = AppState()
         state.addSection()
-        XCTAssertEqual(state.activeSet.sections.map(\.name), ["Section 1", "Section 2"])
+        XCTAssertEqual(state.activeSet.sections.map(\.name), ["Verse", "Chorus", "Section 3"])
     }
 
     func testChordsGoToTheActiveSection() {

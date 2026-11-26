@@ -13,7 +13,8 @@ struct FretboardView: View {
 
     /// Fret width: narrower on an upright iPhone so more frets fit across the screen.
     private var cellWidth: CGFloat {
-        Device.isPhone && verticalSizeClass == .regular ? 44 : 56
+        guard Device.isPhone else { return 56 }
+        return verticalSizeClass == .regular ? 40 : 50
     }
     private static let standardCellHeight: CGFloat = 40
 

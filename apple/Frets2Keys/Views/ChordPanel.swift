@@ -63,8 +63,11 @@ struct ChordPanel: View {
                         }
                         Spacer(minLength: 0)
                         HStack(spacing: 4) {
-                            // Where a section has its +.
-                            Color.clear.frame(width: 28, height: 1)
+                            // Where a section has its + (iPhone sections have no play, so the
+                            // song's play sits over their + instead).
+                            if SectionView.showsPlay {
+                                Color.clear.frame(width: 28, height: 1)
+                            }
                             SongPlayButton()
                             SongActionsMenu()
                         }
@@ -186,10 +189,15 @@ struct SetMenu: View {
         .hoverEffect(.highlight)
         #endif
         .padding(.leading, -8)
+        // A popover on iPad and Mac; on iPhone a card up from the bottom of the screen.
         .popover(isPresented: $isOpen, arrowEdge: .bottom) {
             SongSearchList { isOpen = false }
                 .environment(\.theme, theme)
-                .presentationCompactAdaptation(.popover)
+                .presentationCompactAdaptation(.sheet)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(theme.pageBackground)
+                .preferredColorScheme(.dark)
         }
         .help("Switch songs")
         .accessibilityLabel("Song: \(state.activeSet.name)")
@@ -220,8 +228,16 @@ private struct SongSearchList: View {
         }
     }
 
+    /// iPhone shows the list as a full-width card from the bottom of the screen.
+    private var isSheet: Bool { Device.isPhone }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if isSheet {
+                Text("Songs")
+                    .font(.headline)
+                    .padding(.bottom, 4)
+            }
             TextField("Search songs", text: $query)
                 .textFieldStyle(.roundedBorder)
                 .focused($isSearchFocused)
@@ -258,12 +274,14 @@ private struct SongSearchList: View {
                     }
                 }
             }
-            .frame(maxHeight: 360)
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxHeight: isSheet ? .infinity : 360)
+            .fixedSize(horizontal: false, vertical: !isSheet)
         }
-        .padding(10)
-        .frame(width: 300)
-        .onAppear { isSearchFocused = true }
+        .padding(isSheet ? 20 : 10)
+        .frame(width: isSheet ? nil : 300)
+        .frame(maxWidth: isSheet ? .infinity : nil, maxHeight: isSheet ? .infinity : nil, alignment: .top)
+        // The keyboard would cover half the card on iPhone, so the search waits for a tap there.
+        .onAppear { if !isSheet { isSearchFocused = true } }
     }
 
     private func row(_ song: ChordSet) -> some View {
@@ -479,16 +497,19 @@ private struct SectionView: View {
     var onSwitch: ((UUID) -> Void)?
 
     /// The song panel's columns (iPad and Mac): names, chords, then buttons (+, play, menu) at the right.
-    static let nameWidth: CGFloat = 96
-    static let buttonsWidth: CGFloat = 3 * 28 + 2 * 4
+    /// iPhone has no per-section play button, and a narrower name column.
+    static let showsPlay = !Device.isPhone
+    static let nameWidth: CGFloat = Device.isPhone ? 72 : 96
+    static let buttonsWidth: CGFloat = showsPlay ? 3 * 28 + 2 * 4 : 2 * 28 + 4
 
     /// iPad and Mac lay a section out as one row: name, its chords, then its buttons.
     private var isRow: Bool { onSwitch == nil }
 
     var body: some View {
         Group {
-            if isRow && isCompact {
-                // Narrow: the name and buttons on one line, the chords underneath.
+            if isRow && isCompact && !Device.isPhone {
+                // Narrow windows: the name and buttons on one line, the chords underneath.
+                // (iPhone keeps one row: name, chords, buttons.)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 12) {
                         title(name: section.displayName(index: index))
@@ -567,13 +588,15 @@ private struct SectionView: View {
                     withAnimation { model.openChordBank(section: section.id) }
                 }
             }
-            smallButton(
-                isLooping ? ActionIcon.stop : ActionIcon.play,
-                help: isLooping ? "Stop \(name)" : "Play \(name)",
-                isEnabled: chordCount > 0 || isLooping,
-                isActive: isLooping
-            ) {
-                model.toggleLoop(section: section.id)
+            if Self.showsPlay {
+                smallButton(
+                    isLooping ? ActionIcon.stop : ActionIcon.play,
+                    help: isLooping ? "Stop \(name)" : "Play \(name)",
+                    isEnabled: chordCount > 0 || isLooping,
+                    isActive: isLooping
+                ) {
+                    model.toggleLoop(section: section.id)
+                }
             }
             Menu {
                 Button("Rename…", systemImage: "pencil") { model.sectionBeingRenamed = section.id }
