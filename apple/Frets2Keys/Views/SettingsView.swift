@@ -41,7 +41,7 @@ struct SettingsView: View {
             SectionDivider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 32) {
                     switch tab {
                     case .general: general
                     case .playback: playback
@@ -222,8 +222,9 @@ private struct SettingsCard<Accessory: View, Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(theme.mutedText)
+                    // Bigger and brighter than the footer text above it, so each card's title stands out.
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.primaryText)
                 Spacer(minLength: 0)
                 accessory
             }
