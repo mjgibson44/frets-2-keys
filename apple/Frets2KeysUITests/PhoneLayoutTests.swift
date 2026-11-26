@@ -88,7 +88,12 @@ final class PhoneLayoutTests: XCTestCase {
         saveScreenshot("phone-menu")
 
         app.buttons["Settings…"].tap()
-        app.buttons["Instruments"].tap()
+        // A tap while the sheet is still settling can be lost, so tap until the tab shows.
+        XCTAssertTrue(waitUntil(timeout: 6) {
+            if self.app.switches["Guitar 2"].exists { return true }
+            self.app.buttons["Instruments"].tap()
+            return self.app.switches["Guitar 2"].waitForExistence(timeout: 1)
+        }, "the Instruments tab didn't open")
         setSwitch("Guitar 2", on: true)
         XCTAssertEqual(app.switches["Piano"].value as? String, "0")
         setSwitch("Piano", on: true)
