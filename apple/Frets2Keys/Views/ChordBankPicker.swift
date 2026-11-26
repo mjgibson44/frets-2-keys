@@ -424,7 +424,7 @@ private struct SidebarAddBar: View {
         bankChord.map { ChordBank.notes(root: $0.root, quality: $0.quality) } ?? []
     }
 
-    private func role(for note: Note) -> NoteColorRole {
+    private func noteRole(for note: Note) -> NoteColorRole {
         NoteAppearance.colorRole(for: note, key: key)
     }
 
@@ -469,7 +469,7 @@ private struct SidebarAddBar: View {
                         .fixedSize()
                     HStack(spacing: 4) {
                         ForEach(notes, id: \.self) { note in
-                            let role = role(for: note)
+                            let role = noteRole(for: note)
                             noteText(note.name, size: 12, weight: .medium)
                                 .foregroundStyle(theme.noteSolidText(role))
                                 .padding(.horizontal, 6)
@@ -493,7 +493,7 @@ private struct SidebarAddBar: View {
     private var addButton: some View {
         let canAdd = bankChord != nil && model.state.savedChords.count < AppState.maxSavedChords
         // In the bank chord's color (its root's, like the song's chips), blue until one's picked.
-        let role = bankChord.map { role(for: Note(midi: 60 + $0.root)) }
+        let role = bankChord.map { noteRole(for: Note(midi: 60 + $0.root)) }
         return AddToSectionButton(role: role, canAdd: canAdd, height: inline ? 30 : 36, fillsWidth: !inline) {
             model.addBankChord(notes)
         }
