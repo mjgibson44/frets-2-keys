@@ -106,14 +106,37 @@ struct WindowButtons: View {
         }
     }
 
-    /// Narrow windows and iPhone: the three folded into one menu to save room in the top bar.
+    #if os(iOS)
+    @State private var isMenuShowing = false
+
+    /// Narrow windows and iPhone: the panels, instruments and settings folded into one popover of
+    /// switches, to save room in the top bar.
+    private var phoneMenu: some View {
+        Button {
+            isMenuShowing = true
+        } label: {
+            menuIcon
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+        .accessibilityLabel("View and settings")
+        .popover(isPresented: $isMenuShowing, arrowEdge: .top) {
+            ViewMenuPopover(isShowing: $isMenuShowing)
+                .environment(\.theme, theme)
+                .presentationCompactAdaptation(.popover)
+                .presentationBackground(theme.pageBackground)
+                .preferredColorScheme(.dark)
+        }
+    }
+    #else
+    /// Narrow windows: the three folded into one menu to save room in the top bar.
     private var phoneMenu: some View {
         Menu {
             Toggle(isOn: Binding(
                 get: { model.isSongPanelPresented },
                 set: { on in withAnimation { model.isSongPanelPresented = on } }
             )) {
-                Label("Song", systemImage: ActionIcon.songPanel)
+                Label("Song Structure", systemImage: ActionIcon.songPanel)
             }
             Toggle(isOn: Binding(
                 get: { model.isChordBankPresented },
@@ -124,29 +147,23 @@ struct WindowButtons: View {
             Divider()
             // Which instruments show.
             Toggle("Guitar 1", isOn: Binding(
-                get: { model.state.fretboards.count >= 1 },
-                set: { on in withAnimation { model.state.setFretboardCount(on ? max(1, model.state.fretboards.count) : 0) } }
+                get: { model.showsGuitar },
+                set: { on in withAnimation { model.setShowsGuitar(on) } }
             ))
             Toggle("Guitar 2", isOn: Binding(
-                get: { model.state.fretboards.count == 2 },
-                set: { on in withAnimation { model.state.setFretboardCount(on ? 2 : 1) } }
+                get: { model.showsSecondGuitar },
+                set: { on in withAnimation { model.setShowsSecondGuitar(on) } }
             ))
             Toggle("Piano", isOn: Binding(
                 get: { model.state.showPiano },
-                set: { on in withAnimation { model.state.showPiano = on } }
+                set: { on in withAnimation { model.setShowsPiano(on) } }
             ))
             Divider()
             Button("Settings…", systemImage: ActionIcon.settings) {
                 model.isSettingsPresented = true
             }
         } label: {
-            // Sized like the top bar's other icon buttons.
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(theme.icon)
-                .frame(width: 30, height: 30)
-                .contentShape(Rectangle())
-                .iconHoverFill()
+            menuIcon
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -155,6 +172,17 @@ struct WindowButtons: View {
         // Level with the first line's buttons, which sit centered in a slightly taller row.
         .padding(.top, 2)
         .accessibilityLabel("View and settings")
+    }
+    #endif
+
+    /// Sized like the top bar's other icon buttons.
+    private var menuIcon: some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(theme.icon)
+            .frame(width: 30, height: 30)
+            .contentShape(Rectangle())
+            .iconHoverFill()
     }
 
     private var buttons: some View {
@@ -187,6 +215,69 @@ struct WindowButtons: View {
         }
     }
 }
+
+#if os(iOS)
+/// iPhone's view menu: switches for the song structure, the chord bank and the instruments, then
+/// Settings. iPhone shows two instruments at most, so a second guitar is turned on in Settings.
+private struct ViewMenuPopover: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @Binding var isShowing: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            row("Song Structure", symbol: ActionIcon.songPanel, isOn: Binding(
+                get: { model.isSongPanelPresented },
+                set: { on in withAnimation { model.isSongPanelPresented = on } }
+            ))
+            row("Chord Bank", symbol: ActionIcon.sidebar, isOn: Binding(
+                get: { model.isChordBankPresented },
+                set: { on in withAnimation { if on { model.openChordBank() } else { model.isChordBankPresented = false } } }
+            ))
+            Divider().padding(.vertical, 6)
+            row("Guitar", symbol: "guitars", isOn: Binding(
+                get: { model.showsGuitar },
+                set: { on in withAnimation { model.setShowsGuitar(on) } }
+            ))
+            .disabled(model.showsGuitar && !model.canHideGuitar)
+            if !AppModel.limitsInstruments {
+                row("Guitar 2", symbol: "guitars", isOn: Binding(
+                    get: { model.showsSecondGuitar },
+                    set: { on in withAnimation { model.setShowsSecondGuitar(on) } }
+                ))
+            }
+            row("Piano", symbol: "pianokeys", isOn: Binding(
+                get: { model.state.showPiano },
+                set: { on in withAnimation { model.setShowsPiano(on) } }
+            ))
+            .disabled(model.state.showPiano && !model.canHidePiano)
+            Divider().padding(.vertical, 6)
+            Button {
+                isShowing = false
+                model.isSettingsPresented = true
+            } label: {
+                Label("Settings…", systemImage: ActionIcon.settings)
+                    .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .font(.system(size: 15))
+        .foregroundStyle(theme.primaryText)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(width: 260)
+    }
+
+    private func row(_ title: String, symbol: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Label(title, systemImage: symbol)
+        }
+        .tint(Tailwind.green500)
+        .frame(minHeight: 40)
+    }
+}
+#endif
 
 /// Tabs for the instruments that are turned on, with full names when they fit ("Guitar 1"), or
 /// short ones ("G1", "G2", "PN") when space is tight.

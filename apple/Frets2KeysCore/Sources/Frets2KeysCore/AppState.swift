@@ -609,6 +609,13 @@ public struct AppState: Codable, Equatable, Sendable {
         }
     }
 
+    /// Two instruments at most (two guitars, or a guitar and the piano) and at least one. A saved
+    /// state with all three drops the second guitar; one with none shows a guitar.
+    public mutating func limitInstrumentsForPhone() {
+        if showPiano && fretboards.count > 1 { setFretboardCount(1) }
+        if !showPiano && fretboards.isEmpty { setFretboardCount(1) }
+    }
+
     private mutating func updateFretboard(_ id: UUID, _ change: (inout Fretboard) -> Void) {
         guard let index = fretboards.firstIndex(where: { $0.id == id }) else { return }
         change(&fretboards[index])

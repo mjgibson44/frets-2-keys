@@ -527,8 +527,9 @@ struct AddToSectionButton: View {
     var body: some View {
         let sections = model.state.activeSet.sections
         let name = target.map { $0.section.displayName(index: $0.index) }
-        let fill = role.map(theme.noteSolid) ?? theme.primaryButton
-        let textColor = role.map(theme.noteSolidText) ?? .white
+        // Gray while there's nothing to add (no chord picked), else the chord's color.
+        let fill = canAdd ? (role.map(theme.noteSolid) ?? theme.primaryButton) : theme.cardButton
+        let textColor = canAdd ? (role.map(theme.noteSolidText) ?? .white) : theme.iconDisabled
         if isCompact {
             compactBody(sections: sections, fill: fill, textColor: textColor)
         } else {
@@ -543,7 +544,6 @@ struct AddToSectionButton: View {
             }
             .buttonStyle(.plain)
             .disabled(!canAdd)
-            .opacity(canAdd ? 1 : 0.5)
             .help("Add this chord to \(name ?? model.state.activeSet.name)" + (shortcut.map { " (\($0))" } ?? ""))
 
             if sections.count > 1 {
@@ -624,15 +624,10 @@ struct AddToSectionButton: View {
     /// One "Add to …" item per section; picking one adds there and makes it the default.
     private func sectionItems(_ sections: [ChordSection]) -> some View {
         ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-            Button {
+            // No checkmark on the default: picking is the point here.
+            Button("Add to \(section.displayName(index: index))") {
                 model.bankTargetSectionID = section.id
                 if canAdd { add() }
-            } label: {
-                if target?.section.id == section.id {
-                    Label("Add to \(section.displayName(index: index))", systemImage: "checkmark")
-                } else {
-                    Text("Add to \(section.displayName(index: index))")
-                }
             }
         }
     }
@@ -681,7 +676,6 @@ struct AddToSectionButton: View {
         .font(.system(size: 14, weight: .medium))
         .foregroundStyle(textColor)
         .background(fill, in: RoundedRectangle(cornerRadius: 8))
-        .opacity(canAdd ? 1 : 0.5)
         .help("Add this chord to the song")
     }
 }

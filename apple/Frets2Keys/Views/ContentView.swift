@@ -115,26 +115,32 @@ struct ContentView: View {
                 .frame(maxHeight: .infinity)
 
                 if Device.isPhone || isNarrow {
-                    // Narrow: the song and the chord bank stacked, sharing one area that scrolls
-                    // once it would take more than half the window.
+                    // Narrow: the song above the chord bank. The bank keeps its full height at the
+                    // bottom; the song scrolls on its own once the two would take more than half
+                    // the window.
                     if showsSongPanel || showsBank {
                         SectionDivider()
-                        let stack = VStack(spacing: 0) {
-                            if showsSongPanel {
+                        if showsSongPanel {
+                            let songCap = max(proxy.size.height * 0.5 - (showsBank ? bankHeight : 0), Self.minimumSongHeight)
+                            ScrollView(.vertical) {
                                 chordPanel(padding: padding, unboundedHeight: true)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { songHeight = $0 }
                             }
-                            if showsSongPanel && showsBank {
-                                SectionDivider()
-                            }
-                            if showsBank {
-                                ChordBankPicker(inBottomPanel: true, padding: padding)
-                            }
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stackedBottomHeight = $0 }
-                        ScrollView(.vertical) { stack }
                             .scrollBounceBehavior(.basedOnSize)
-                            .frame(height: min(stackedBottomHeight, proxy.size.height * 0.5))
+                            .frame(height: min(songHeight, songCap))
+                            .accessibilityIdentifier("songPanel")
+                        }
+                        if showsSongPanel && showsBank {
+                            SectionDivider()
+                        }
+                        if showsBank {
+                            ChordBankPicker(inBottomPanel: true, padding: padding)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bankHeight = $0 }
+                                .accessibilityElement(children: .contain)
+                                .accessibilityIdentifier("chordBank")
+                        }
                     }
                 } else {
                     if showsSongPanel || showsBank {
@@ -297,8 +303,12 @@ struct ContentView: View {
     /// Below this window width, the compact layout (and on iPhone always).
     private static let compactWidth: CGFloat = 900
     @State private var windowWidth: CGFloat = 1200
-    /// The stacked song and chord bank's natural height, so their area hugs it until it's capped.
-    @State private var stackedBottomHeight: CGFloat = 0
+    /// Narrow: the song's natural height, so its area hugs it until it's capped, and the chord
+    /// bank's below it.
+    @State private var songHeight: CGFloat = 0
+    @State private var bankHeight: CGFloat = 0
+    /// Narrow: the song always keeps room for its title row and a row of chords.
+    private static let minimumSongHeight: CGFloat = 110
 
     /// From this window width, the song and the chord bank split the bottom half and half.
     private static let halfAndHalfWidth: CGFloat = 1100

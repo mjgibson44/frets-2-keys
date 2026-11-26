@@ -93,6 +93,7 @@ final class AppModel {
         } else {
             state = AppState()
         }
+        if Self.limitsInstruments { state.limitInstrumentsForPhone() }
 
         if syncWithICloud {
             let sync = ChordLibrarySync(
@@ -113,6 +114,37 @@ final class AppModel {
         guard let data = state.persistedData, data != lastSavedData else { return }
         defaults.set(data, forKey: Self.storageKey)
         lastSavedData = data
+    }
+
+    // MARK: - Instruments
+
+    /// iPhone shows two instruments at most: two guitars, a guitar and the piano, or one alone.
+    /// iPad and Mac can show all three.
+    static var limitsInstruments: Bool { Device.isPhone }
+
+    var showsGuitar: Bool { !state.fretboards.isEmpty }
+    var showsSecondGuitar: Bool { state.fretboards.count >= 2 }
+
+    /// Off isn't allowed when it would leave no instrument on iPhone.
+    var canHideGuitar: Bool { !Self.limitsInstruments || state.showPiano }
+    var canHidePiano: Bool { !Self.limitsInstruments || showsGuitar }
+
+    func setShowsGuitar(_ on: Bool) {
+        guard on || canHideGuitar else { return }
+        state.setFretboardCount(on ? max(1, state.fretboards.count) : 0)
+    }
+
+    /// On iPhone, the second guitar takes the piano's place.
+    func setShowsSecondGuitar(_ on: Bool) {
+        state.setFretboardCount(on ? 2 : 1)
+        if on && Self.limitsInstruments { state.showPiano = false }
+    }
+
+    /// On iPhone, the piano takes the second guitar's place.
+    func setShowsPiano(_ on: Bool) {
+        guard on || canHidePiano else { return }
+        if on && Self.limitsInstruments && state.fretboards.count > 1 { state.setFretboardCount(1) }
+        state.showPiano = on
     }
 
     // MARK: - Notes
