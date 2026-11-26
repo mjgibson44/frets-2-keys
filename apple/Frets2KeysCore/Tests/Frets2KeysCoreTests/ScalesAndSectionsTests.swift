@@ -430,4 +430,27 @@ final class NextChordTests: XCTestCase {
         // The earlier off-by-default setting is ignored.
         XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: Data(#"{"showNextChord":false}"#.utf8)).showNextChord)
     }
+
+    func testTurningSectionsOffKeepsThem() throws {
+        var state = AppState()
+        XCTAssertTrue(state.usesSections)
+        XCTAssertEqual(state.activeSet.sections.count, 2)
+        let original = state.activeSet
+
+        // Off only changes how songs show: their sections are kept.
+        state.usesSections = false
+        XCTAssertEqual(state.activeSet, original)
+
+        // New songs start as one list while off, and with a Verse and Chorus while on.
+        state.createSet()
+        XCTAssertEqual(state.activeSet.sections.count, 1)
+        state.usesSections = true
+        state.createSet()
+        XCTAssertEqual(state.activeSet.sections.count, 2)
+
+        // The setting is saved.
+        state.usesSections = false
+        let decoded = try JSONDecoder().decode(AppState.self, from: XCTUnwrap(state.persistedData))
+        XCTAssertFalse(decoded.usesSections)
+    }
 }

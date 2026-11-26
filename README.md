@@ -54,7 +54,7 @@ A native SwiftUI version of Frets 2 Keys lives in [`apple/`](apple). One multipl
 The native app also adds:
 
 - **iCloud sync**: chord sets sync between your iPhone, iPad and Mac through iCloud key-value storage. Each set merges independently, with the newest edit winning.
-- **iPhone landscape**: turn the phone sideways to see just the guitar or just the piano, enlarged.
+- **iPhone layout**: portrait only, with up to two instruments stacked (two guitars, or a guitar and the piano), the song structure scrolling above a pinned chord bank.
 
 ### Building
 
@@ -70,7 +70,7 @@ Pick the **Frets2Keys** scheme and choose an iPhone/iPad simulator or **My Mac**
 
 - `apple/Frets2KeysCore/`: a Swift package with the music logic (notes, keys, tunings, chord recognition, app state, loop sequencing, and the synth's sound generation), plus its unit tests. Run them with `cd apple/Frets2KeysCore && swift test`.
 - `apple/Frets2Keys/`: the SwiftUI app (views, audio engine, persistence, iCloud sync, menus and keyboard handling).
-- `apple/Frets2KeysUITests/`: UI tests (iPhone landscape mode).
+- `apple/Frets2KeysUITests/`: UI tests (iPhone layout).
 - `apple/project.yml`: the [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec the Xcode project is generated from. After adding or removing source files, run `xcodegen generate` in `apple/` (install with `brew install xcodegen`).
 
 ### Releasing to TestFlight

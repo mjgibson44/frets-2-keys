@@ -1,35 +1,27 @@
 import XCTest
 
-/// On iPhone the instruments sit between the fixed top bar and chord panel: upright, every
-/// instrument that's turned on is stacked on screen at once; sideways, one is on screen at a time
-/// and swiping pages between them. Set TEST_RUNNER_SCREENSHOT_DIR to save screenshots.
+/// On iPhone (portrait only) the instruments that are turned on are stacked between the top bar
+/// and the song structure, with the chord bank pinned along the bottom when it's open. Set
+/// SCREENSHOT_DIR to save screenshots.
 final class PhoneLayoutTests: XCTestCase {
     private var app: XCUIApplication!
 
-    override func setUp() {
+    override func setUpWithError() throws {
+        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "iPhone layout")
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments = ["-UITestFreshState"]
         app.launch()
     }
 
-    override func tearDown() {
-        XCUIDevice.shared.orientation = .portrait
-    }
+    private var menuButton: XCUIElement { app.buttons["View and settings"] }
+    private var songPanel: XCUIElement { app.scrollViews["songPanel"] }
+    private var chordBank: XCUIElement { app.descendants(matching: .any)["chordBank"] }
 
-    private func instrument(_ name: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: "instrument.\(name)").firstMatch
-    }
-
-    /// The copy of an instrument that's mostly on screen, if any. (The looping pages repeat each
-    /// instrument, and neighboring pages may exist just offscreen.)
+    /// The copy of an instrument that's on screen, if any.
     private func onScreen(_ name: String) -> XCUIElement? {
-        // Showing means its center is in the band between the top bar and the chord panel.
-        let top = app.buttons["Settings"].frame.maxY
-        let bottom = app.buttons["Add Chord"].frame.minY
-        return app.descendants(matching: .any).matching(identifier: "instrument.\(name)").allElementsBoundByIndex.first { element in
-            let frame = element.frame
-            return !frame.isEmpty && frame.midY > top && frame.midY < bottom
-        }
+        let element = app.descendants(matching: .any).matching(identifier: "instrument.\(name)").firstMatch
+        return element.exists && !element.frame.isEmpty ? element : nil
     }
 
     private var visibleInstruments: [String] {
@@ -58,123 +50,96 @@ final class PhoneLayoutTests: XCTestCase {
         }
     }
 
-    /// The instruments that are turned on: every one that exists anywhere in the hierarchy.
-    private var turnedOnInstruments: [String] {
-        ["Guitar 1", "Guitar 2", "Piano"].filter { instrument($0).exists }
+    private func openMenu() {
+        XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
+        menuButton.tap()
+        XCTAssertTrue(app.switches["Song Structure"].waitForExistence(timeout: 3))
     }
 
-    /// Upright, every turned-on instrument is on screen at once, stacked top to bottom between the
-    /// bars without overlapping.
-    func testUprightStacksEveryInstrument() throws {
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Stacked layout is iPhone-only")
-        XCUIDevice.shared.orientation = .portrait
-        XCTAssertTrue(app.buttons["Add Chord"].waitForExistence(timeout: 5))
+    /// Taps outside the popover to close it.
+    private func closeMenu() {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.95)).tap()
+        XCTAssertTrue(waitUntil { !self.app.switches["Song Structure"].exists })
+    }
 
-        let expected = turnedOnInstruments
-        XCTAssertGreaterThanOrEqual(expected.count, 2, "expected at least two instruments turned on: \(expected)")
-        XCTAssertTrue(waitUntil { self.visibleInstruments == expected }, "showing \(visibleInstruments), expected \(expected)")
-        assertStackedBetweenBars(expected)
-        // The chord panel stays on screen.
-        XCTAssertTrue(app.buttons["Add Chord"].isHittable)
+    private func setSwitch(_ name: String, on: Bool) {
+        let toggle = app.switches[name]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "no \(name) switch")
+        if (toggle.value as? String == "1") != on { toggle.switches.firstMatch.tap() }
+        XCTAssertTrue(waitUntil { (toggle.value as? String == "1") == on }, "\(name) didn't turn \(on ? "on" : "off")")
+    }
+
+    /// Every turned-on instrument is on screen at once, stacked between the bars without overlapping.
+    func testStacksEveryInstrument() throws {
+        XCTAssertTrue(songPanel.waitForExistence(timeout: 5))
+        XCTAssertTrue(waitUntil { self.visibleInstruments.count == 2 }, "\(visibleInstruments)")
+        assertStackedBetweenBars(visibleInstruments)
         saveScreenshot("phone-portrait")
     }
 
-    /// Sideways, exactly one instrument is on screen at a time, and a guitar's whole neck fits.
-    func testSidewaysShowsOneInstrumentAtATime() throws {
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Instrument paging is iPhone-only")
-        XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["Add Chord"].waitForExistence(timeout: 5))
-        XCTAssertTrue(waitUntil { self.visibleInstruments.count == 1 }, "\(visibleInstruments)")
-        XCTAssertTrue(app.buttons["Add Chord"].isHittable)
-        saveScreenshot("phone-landscape")
+    /// The menu has switches for a guitar and the piano, but not a second guitar; turning the
+    /// second guitar on in Settings turns the piano off.
+    func testInstrumentsAreLimitedToTwo() throws {
+        openMenu()
+        XCTAssertTrue(app.switches["Guitar"].exists)
+        XCTAssertTrue(app.switches["Piano"].exists)
+        XCTAssertTrue(app.switches["Chord Bank"].exists)
+        XCTAssertFalse(app.switches["Guitar 2"].exists)
+        saveScreenshot("phone-menu")
 
-        // Swipe on the instrument itself: whole-app swipes don't follow the rotation reliably.
-        if visibleInstruments.first == "Piano" { onScreen("Piano")?.swipeUp() }
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first?.hasPrefix("Guitar") == true }, "\(visibleInstruments)")
-        let guitar = try XCTUnwrap(onScreen(visibleInstruments.first ?? "Guitar 1"))
-        let screen = app.windows.firstMatch.frame
-        XCTAssertTrue(screen.contains(guitar.frame), "fretboard \(guitar.frame) not within \(screen)")
-        saveScreenshot("phone-landscape-guitar")
-
-        // Turning back upright stacks them again.
-        XCUIDevice.shared.orientation = .portrait
-        XCTAssertTrue(waitUntil { self.visibleInstruments.count >= 2 }, "\(visibleInstruments)")
+        app.buttons["Settings…"].tap()
+        // A tap while the sheet is still settling can be lost, so tap until the tab shows.
+        XCTAssertTrue(waitUntil(timeout: 6) {
+            if self.app.switches["Guitar 2"].exists { return true }
+            self.app.buttons["Instruments"].tap()
+            return self.app.switches["Guitar 2"].waitForExistence(timeout: 1)
+        }, "the Instruments tab didn't open")
+        setSwitch("Guitar 2", on: true)
+        XCTAssertEqual(app.switches["Piano"].value as? String, "0")
+        setSwitch("Piano", on: true)
+        XCTAssertEqual(app.switches["Guitar 2"].value as? String, "0")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(waitUntil { self.visibleInstruments == ["Guitar 1", "Piano"] }, "\(visibleInstruments)")
     }
 
-    /// Sideways, swiping on the instrument moves to the next one and back.
-    func testSwipingMovesBetweenInstrumentsSideways() throws {
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Instrument paging is iPhone-only")
-        XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["Add Chord"].waitForExistence(timeout: 5))
-        XCTAssertTrue(waitUntil { self.visibleInstruments.count == 1 }, "\(visibleInstruments)")
-        let first = try XCTUnwrap(visibleInstruments.first)
+    /// With the chord bank open, a growing song scrolls on its own while the bank stays whole at
+    /// the bottom and the instruments keep their place.
+    func testChordBankStaysPinnedWhenSongGrows() throws {
+        openMenu()
+        setSwitch("Chord Bank", on: true)
+        closeMenu()
+        XCTAssertTrue(chordBank.waitForExistence(timeout: 3))
+        let bankHeight = chordBank.frame.height
 
-        try XCTUnwrap(onScreen(first)).swipeUp()
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first != first }, "still on \(first)")
-        XCTAssertEqual(visibleInstruments.count, 1)
-
-        let second = try XCTUnwrap(visibleInstruments.first)
-        try XCTUnwrap(onScreen(second)).swipeDown()
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first == first }, "didn't return to \(first)")
-    }
-
-    /// Sideways the pages loop: down from the first instrument is the last, and up from the last is
-    /// the first.
-    func testSwipingWrapsAroundSideways() throws {
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Instrument paging is iPhone-only")
-        XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["Add Chord"].waitForExistence(timeout: 5))
-
-        let tabs = app.segmentedControls.firstMatch
-        XCTAssertTrue(tabs.waitForExistence(timeout: 3))
-        tabs.buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Guitar 1" }, "\(visibleInstruments)")
-        let last = try XCTUnwrap(turnedOnInstruments.last)
-
-        try XCTUnwrap(onScreen("Guitar 1")).swipeDown()
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first == last }, "\(visibleInstruments)")
-
-        try XCTUnwrap(onScreen(last)).swipeUp()
-        XCTAssertTrue(waitUntil { self.visibleInstruments.first == "Guitar 1" }, "\(visibleInstruments)")
-    }
-
-    /// Adding chords grows the chord panel; upright, the stacked instruments must all stay between
-    /// the bars.
-    func testInstrumentsStayBetweenBarsWhenChordPanelGrows() throws {
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Stacked layout is iPhone-only")
-        app.terminate()
-        app.launchArguments = ["-UITestFreshState"]
-        app.launch()
-        XCUIDevice.shared.orientation = .portrait
-
-        let addChord = app.buttons["Add Chord"]
-        XCTAssertTrue(addChord.waitForExistence(timeout: 5))
-        let expected = turnedOnInstruments
-        for _ in 0..<5 {
-            addChord.tap()
-            let add = app.buttons["Add to Set"]
+        for _ in 0..<12 {
+            // The bank's own Add (the chord bar above has one too).
+            let add = chordBank.buttons["Add to the song"]
             XCTAssertTrue(add.waitForExistence(timeout: 3))
             add.tap()
-            _ = addChord.waitForExistence(timeout: 3)
+            let verse = app.buttons["Add to Verse"]
+            if verse.waitForExistence(timeout: 1) { verse.tap() }
         }
 
-        XCTAssertTrue(waitUntil { self.visibleInstruments == expected }, "showing \(visibleInstruments), expected \(expected)")
-        assertStackedBetweenBars(expected)
-        saveScreenshot("phone-panel-grew")
+        let window = app.windows.firstMatch.frame
+        XCTAssertEqual(chordBank.frame.height, bankHeight, accuracy: 1, "the chord bank shrank")
+        XCTAssertLessThanOrEqual(chordBank.frame.maxY, window.maxY + 1)
+        XCTAssertLessThanOrEqual(songPanel.frame.maxY, chordBank.frame.minY + 1)
+        XCTAssertTrue(waitUntil { self.visibleInstruments.count == 2 }, "\(visibleInstruments)")
+        assertStackedBetweenBars(visibleInstruments)
+        saveScreenshot("phone-song-scrolls")
     }
 
-    /// Each instrument lies between the top bar and the chord panel, in order, without overlapping.
+    /// Each instrument lies between the top bar and the song, in order, without overlapping.
     private func assertStackedBetweenBars(_ names: [String], file: StaticString = #filePath, line: UInt = #line) {
-        let top = app.buttons["Settings"].frame.maxY
-        let bottom = app.buttons["Add Chord"].frame.minY
-        var previousMaxY = top
+        var previousMaxY = menuButton.frame.maxY
+        let bottom = songPanel.frame.minY
         for name in names {
             guard let element = onScreen(name) else {
                 XCTFail("\(name) not on screen", file: file, line: line); return
             }
             let frame = element.frame
             XCTAssertGreaterThanOrEqual(frame.minY, previousMaxY - 1, "\(name) \(frame) overlaps what's above it", file: file, line: line)
-            XCTAssertLessThanOrEqual(frame.maxY, bottom + 1, "\(name) \(frame) overlaps the chord panel", file: file, line: line)
+            XCTAssertLessThanOrEqual(frame.maxY, bottom + 1, "\(name) \(frame) overlaps the song", file: file, line: line)
             previousMaxY = frame.maxY
         }
     }

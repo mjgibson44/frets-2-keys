@@ -117,7 +117,7 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("b", modifiers: .command)
             .disabled(!enabled)
-            Button(model.isSongPanelPresented ? "Hide Song" : "Show Song") {
+            Button(model.isSongPanelPresented ? "Hide Song Structure" : "Show Song Structure") {
                 model.isSongPanelPresented.toggle()
             }
             .keyboardShortcut("j", modifiers: .command)

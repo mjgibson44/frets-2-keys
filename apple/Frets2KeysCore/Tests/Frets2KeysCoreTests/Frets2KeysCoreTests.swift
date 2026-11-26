@@ -275,6 +275,25 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.fretboards.count, 2)
     }
 
+    func testPhoneInstrumentLimit() {
+        var state = AppState()
+        state.setFretboardCount(2)
+        state.showPiano = true
+        state.limitInstrumentsForPhone()
+        XCTAssertEqual(state.fretboards.count, 1)
+        XCTAssertTrue(state.showPiano)
+
+        state.setFretboardCount(2)
+        state.showPiano = false
+        state.limitInstrumentsForPhone()
+        XCTAssertEqual(state.fretboards.count, 2)
+
+        state.setFretboardCount(0)
+        state.limitInstrumentsForPhone()
+        XCTAssertEqual(state.fretboards.count, 1)
+        XCTAssertFalse(state.showPiano)
+    }
+
     func testPianoRange() {
         var state = AppState()
         XCTAssertEqual(state.pianoNotes.first, "C2")

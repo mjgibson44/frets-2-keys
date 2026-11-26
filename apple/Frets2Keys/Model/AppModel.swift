@@ -93,6 +93,7 @@ final class AppModel {
         } else {
             state = AppState()
         }
+        if Self.limitsInstruments { state.limitInstrumentsForPhone() }
 
         if syncWithICloud {
             let sync = ChordLibrarySync(
@@ -113,6 +114,37 @@ final class AppModel {
         guard let data = state.persistedData, data != lastSavedData else { return }
         defaults.set(data, forKey: Self.storageKey)
         lastSavedData = data
+    }
+
+    // MARK: - Instruments
+
+    /// iPhone shows two instruments at most: two guitars, a guitar and the piano, or one alone.
+    /// iPad and Mac can show all three.
+    static var limitsInstruments: Bool { Device.isPhone }
+
+    var showsGuitar: Bool { !state.fretboards.isEmpty }
+    var showsSecondGuitar: Bool { state.fretboards.count >= 2 }
+
+    /// Off isn't allowed when it would leave no instrument on iPhone.
+    var canHideGuitar: Bool { !Self.limitsInstruments || state.showPiano }
+    var canHidePiano: Bool { !Self.limitsInstruments || showsGuitar }
+
+    func setShowsGuitar(_ on: Bool) {
+        guard on || canHideGuitar else { return }
+        state.setFretboardCount(on ? max(1, state.fretboards.count) : 0)
+    }
+
+    /// On iPhone, the second guitar takes the piano's place.
+    func setShowsSecondGuitar(_ on: Bool) {
+        state.setFretboardCount(on ? 2 : 1)
+        if on && Self.limitsInstruments { state.showPiano = false }
+    }
+
+    /// On iPhone, the piano takes the second guitar's place.
+    func setShowsPiano(_ on: Bool) {
+        guard on || canHidePiano else { return }
+        if on && Self.limitsInstruments && state.fretboards.count > 1 { state.setFretboardCount(1) }
+        state.showPiano = on
     }
 
     // MARK: - Notes
@@ -148,6 +180,7 @@ final class AppModel {
     /// The section Add buttons add to, when one's been picked (with a section's + or an Add
     /// button's menu) and it's in the current song. Otherwise adding goes to the active section.
     var addTargetSectionID: UUID? {
+        guard state.usesSections else { return state.activeSet.sections.last?.id }
         guard let id = bankTargetSectionID, state.activeSet.sections.contains(where: { $0.id == id }) else { return nil }
         return id
     }
@@ -201,7 +234,7 @@ final class AppModel {
     }
 
     func addScale(_ scale: MusicalKey) {
-        handle(state.addScale(scale, to: bankTargetSectionID))
+        handle(state.addScale(scale, to: addTargetSectionID))
         if state.selectedKey == scale { previewScale(scale) }
     }
 
@@ -262,6 +295,22 @@ final class AppModel {
     }
 
     // MARK: - Sections
+
+    /// Turning sections off only changes how songs look: each shows as one list of chords.
+    func setUsesSections(_ on: Bool) {
+        if !on {
+            if loopingSectionID != nil { stopLoop() }
+            bankTargetSectionID = nil
+        }
+        state.usesSections = on
+    }
+
+    /// The sections to offer as places to add to: with sections off, just the last one, so a
+    /// song reads as one list and new chords go on its end.
+    var visibleSections: [ChordSection] {
+        let sections = state.activeSet.sections
+        return state.usesSections ? sections : Array(sections.suffix(1))
+    }
 
     func addSection() {
         let id = state.addSection()

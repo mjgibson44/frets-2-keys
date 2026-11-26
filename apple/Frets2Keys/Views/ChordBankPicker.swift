@@ -34,7 +34,7 @@ struct ChordBankPicker: View {
     /// The section additions go to, named on the button when the set has sections.
     private var targetSection: ChordSection? {
         let set = model.state.activeSet
-        guard set.sections.count > 1 else { return nil }
+        guard set.sections.count > 1, model.state.usesSections else { return nil }
         let id = model.bankTargetSectionID ?? model.state.activeSectionID
         return set.sections.first { $0.id == id } ?? set.sections.last
     }
@@ -517,7 +517,8 @@ struct AddToSectionButton: View {
     let add: () -> Void
 
     private var target: (section: ChordSection, index: Int)? {
-        let sections = model.state.activeSet.sections
+        // Sections off: one list, so no section to name.
+        let sections = model.visibleSections
         guard sections.count > 1 else { return nil }
         let id = model.addTargetSectionID ?? model.state.activeSectionID
         let index = sections.firstIndex { $0.id == id } ?? sections.count - 1
@@ -525,10 +526,11 @@ struct AddToSectionButton: View {
     }
 
     var body: some View {
-        let sections = model.state.activeSet.sections
+        let sections = model.visibleSections
         let name = target.map { $0.section.displayName(index: $0.index) }
-        let fill = role.map(theme.noteSolid) ?? theme.primaryButton
-        let textColor = role.map(theme.noteSolidText) ?? .white
+        // Gray while there's nothing to add (no chord picked), else the chord's color.
+        let fill = canAdd ? (role.map(theme.noteSolid) ?? theme.primaryButton) : theme.cardButton
+        let textColor = canAdd ? (role.map(theme.noteSolidText) ?? .white) : theme.iconDisabled
         if isCompact {
             compactBody(sections: sections, fill: fill, textColor: textColor)
         } else {
@@ -543,7 +545,6 @@ struct AddToSectionButton: View {
             }
             .buttonStyle(.plain)
             .disabled(!canAdd)
-            .opacity(canAdd ? 1 : 0.5)
             .help("Add this chord to \(name ?? model.state.activeSet.name)" + (shortcut.map { " (\($0))" } ?? ""))
 
             if sections.count > 1 {
@@ -624,15 +625,10 @@ struct AddToSectionButton: View {
     /// One "Add to …" item per section; picking one adds there and makes it the default.
     private func sectionItems(_ sections: [ChordSection]) -> some View {
         ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-            Button {
+            // No checkmark on the default: picking is the point here.
+            Button("Add to \(section.displayName(index: index))") {
                 model.bankTargetSectionID = section.id
                 if canAdd { add() }
-            } label: {
-                if target?.section.id == section.id {
-                    Label("Add to \(section.displayName(index: index))", systemImage: "checkmark")
-                } else {
-                    Text("Add to \(section.displayName(index: index))")
-                }
             }
         }
     }
@@ -681,7 +677,6 @@ struct AddToSectionButton: View {
         .font(.system(size: 14, weight: .medium))
         .foregroundStyle(textColor)
         .background(fill, in: RoundedRectangle(cornerRadius: 8))
-        .opacity(canAdd ? 1 : 0.5)
         .help("Add this chord to the song")
     }
 }

@@ -3,17 +3,17 @@ import Frets2KeysCore
 
 struct SettingsView: View {
     enum Tab: String, CaseIterable, Identifiable {
-        case general = "General"
         case playback = "Playback"
         case labels = "Labels"
         case instruments = "Instruments"
+        case general = "General"
         var id: Self { self }
     }
 
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("settingsTab") private var tab = Tab.general
+    @AppStorage("settingsTab") private var tab = Tab.playback
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +40,7 @@ struct SettingsView: View {
             SectionDivider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 32) {
                     switch tab {
                     case .general: general
                     case .playback: playback
@@ -91,6 +91,12 @@ struct SettingsView: View {
                 }
                 .buttonStyle(SettingsButtonStyle())
             }
+        }
+        SettingsCard(title: "Songs", footer: "Show songs in sections like Verse and Chorus. Turned off, each song shows as one list of chords; its sections come back when you turn this on.") {
+            Toggle("Sections", isOn: Binding(
+                get: { model.state.usesSections },
+                set: { model.setUsesSections($0) }
+            ))
         }
         SettingsCard(title: "Sync") {
             Label("Your songs sync through iCloud to your other devices signed in to the same Apple Account.", systemImage: "icloud")
@@ -162,16 +168,21 @@ struct SettingsView: View {
     @ViewBuilder
     private var instruments: some View {
         @Bindable var model = model
-        SettingsCard(title: "Show") {
+        SettingsCard(title: "Show", footer: AppModel.limitsInstruments ? "iPhone shows two instruments at a time: two guitars, or a guitar and the piano." : nil) {
             Toggle("Guitar 1", isOn: Binding(
-                get: { model.state.fretboards.count >= 1 },
-                set: { model.state.setFretboardCount($0 ? max(1, model.state.fretboards.count) : 0) }
+                get: { model.showsGuitar },
+                set: { model.setShowsGuitar($0) }
             ))
+            .disabled(model.showsGuitar && !model.canHideGuitar)
             Toggle("Guitar 2", isOn: Binding(
-                get: { model.state.fretboards.count == 2 },
-                set: { model.state.setFretboardCount($0 ? 2 : 1) }
+                get: { model.showsSecondGuitar },
+                set: { model.setShowsSecondGuitar($0) }
             ))
-            Toggle("Piano", isOn: $model.state.showPiano)
+            Toggle("Piano", isOn: Binding(
+                get: { model.state.showPiano },
+                set: { model.setShowsPiano($0) }
+            ))
+            .disabled(model.state.showPiano && !model.canHidePiano)
         }
         ForEach(0..<AppState.maxFretboards, id: \.self) { index in
             TuningSection(index: index)
@@ -198,8 +209,9 @@ private struct SettingsCard<Accessory: View, Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(theme.mutedText)
+                    // Bigger and brighter than the footer text above it, so each card's title stands out.
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.primaryText)
                 Spacer(minLength: 0)
                 accessory
             }
