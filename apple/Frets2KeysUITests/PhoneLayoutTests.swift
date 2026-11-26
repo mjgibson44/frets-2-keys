@@ -107,7 +107,8 @@ final class PhoneLayoutTests: XCTestCase {
         let bankHeight = chordBank.frame.height
 
         for _ in 0..<12 {
-            let add = app.buttons["Add to the song"]
+            // The bank's own Add (the chord bar above has one too).
+            let add = chordBank.buttons["Add to the song"]
             XCTAssertTrue(add.waitForExistence(timeout: 3))
             add.tap()
             let verse = app.buttons["Add to Verse"]
